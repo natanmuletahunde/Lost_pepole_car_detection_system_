@@ -693,7 +693,7 @@ export default function AlertPage() {
                               backdropFilter: "blur(4px)",
                               border: "1px solid rgba(255, 255, 255, 0.2)",
                             }}
-                            onClick={() => router.push(`/alert-detail/${alert.id}`)}
+                            onClick={() => router.push(`/user/alert/alert-detail/${alert.id}`)}
                           >
                             <IconBell size={18} />
                           </ActionIcon>

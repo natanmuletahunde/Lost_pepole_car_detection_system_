@@ -34,7 +34,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useMediaQuery } from "@mantine/hooks";
-import MainFooter from "../../components/MainFooter.jsx";
+import MainFooter from "../../../components/MainFooter";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function SubscriptionPage() {
@@ -90,7 +90,7 @@ export default function SubscriptionPage() {
         const registrationCount = parseInt(localStorage.getItem("registrationCount") || "0");
         
         if (registrationCount === 0) {
-          router.push("/register-person");
+          router.push("/user/register");
           return;
         }
       }

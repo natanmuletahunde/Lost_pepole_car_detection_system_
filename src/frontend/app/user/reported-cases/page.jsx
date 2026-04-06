@@ -85,7 +85,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import MainFooter from '../../components/MainFooter';
+import MainFooter from '../../../components/MainFooter';
 import { useMediaQuery } from '@mantine/hooks';
 
 // API URLs (same as register page)
@@ -247,7 +247,7 @@ export default function ReportedCasesPage() {
       // Get current user from localStorage
       const userData = localStorage.getItem('currentUser');
       if (!userData) {
-        router.push('/login');
+        router.push('/authentication/login');
         return;
       }
       const user = JSON.parse(userData);
@@ -1393,7 +1393,7 @@ export default function ReportedCasesPage() {
                   color="blue"
                   leftSection={<IconUserPlus size={16} />}
                   component={Link}
-                  href="/register"
+                  href="/user/register"
                 >
                   Report New Case
                 </Button>
@@ -1590,7 +1590,7 @@ export default function ReportedCasesPage() {
                 color="blue"
                 leftSection={<IconUserPlus size={16} />}
                 component={Link}
-                href="/register"
+                href="/user/register"
               >
                 Report New Case
               </Button>

@@ -137,6 +137,17 @@ export default function Dashboard() {
   // Helper to get dynamic background colors
   const getBg = (light, dark) => (colorScheme === 'dark' ? dark : light);
 
+  // Helper to prefix user routes
+  const getUserRoute = (path) => {
+    if (!user) return path;
+    // Don't prefix public routes
+    const publicRoutes = ['/login', '/signup', '/how-it-works', '/'];
+    if (publicRoutes.includes(path)) return path;
+    // If path already starts with /user, return as is
+    if (path.startsWith('/user')) return path;
+    return `/user${path}`;
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       const userData = localStorage.getItem("currentUser");
@@ -435,7 +446,7 @@ export default function Dashboard() {
                     )}
                   </ScrollArea>
                   <Menu.Divider />
-                  <Menu.Item component={Link} href="/notifications">View all</Menu.Item>
+                  <Menu.Item component={Link} href={getUserRoute("/notifications")}>View all</Menu.Item>
                 </Menu.Dropdown>
               </Menu>
 
@@ -539,7 +550,7 @@ export default function Dashboard() {
                         fullWidth
                         variant="light"
                         component={Link}
-                        href="/profile"
+                        href={getUserRoute("/profile")}
                         leftSection={<IconUser size={16} />}
                         size="sm"
                       >
@@ -551,34 +562,34 @@ export default function Dashboard() {
                       <Menu.Item
                         leftSection={<IconUser size={18} />}
                         component={Link}
-                        href="/profile"
+                        href={getUserRoute("/profile")}
                       >
                         My Profile
                       </Menu.Item>
                       <Menu.Item
                         leftSection={<IconFileReport size={18} />}
                         component={Link}
-                        href="/reported-cases"
+                        href={getUserRoute("/reported-cases")}
                       >
                         Reported Cases
                       </Menu.Item>
                       <Menu.Item
                         leftSection={<IconBell size={18} />}
-                        onClick={() => router.push("/alert")}
+                        onClick={() => router.push(getUserRoute("/alert"))}
                       >
                         My Notifications
                       </Menu.Item>
                       <Menu.Item
                         leftSection={<IconHistory size={18} />}
                         component={Link}
-                        href="/history"
+                        href={getUserRoute("/history")}
                       >
                         Search History
                       </Menu.Item>
                       <Menu.Item
                         leftSection={<IconSettings size={18} />}
                         component={Link}
-                        href="/settings"
+                        href={getUserRoute("/settings")}
                       >
                         Account Settings
                       </Menu.Item>
@@ -745,7 +756,7 @@ export default function Dashboard() {
                     {user ? (
                       <Button
                         component={Link}
-                        href="/subscribe"
+                        href={getUserRoute("/user/subscribe")}
                         size={isMobile ? "md" : "xl"}
                         bg="black"
                         color="white"
@@ -767,7 +778,7 @@ export default function Dashboard() {
                     ) : (
                       <Button
                         component={Link}
-                        href="/signup"
+                        href="/authentication/signup"
                         size={isMobile ? "md" : "xl"}
                         bg="black"
                         color="white"
@@ -792,7 +803,7 @@ export default function Dashboard() {
                       radius="xl"
                       rightSection={<IconArrowRight size={20} />}
                       component={Link}
-                      href="/how-it-works"
+                      href="/user/how-it-works"
                       fullWidth={isMobile}
                       style={{
                         borderWidth: 2,
@@ -867,7 +878,7 @@ export default function Dashboard() {
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg" mb="xl">
           <Button
             component={Link}
-            href="/register"
+            href={getUserRoute("/user/register")}
             size="lg"
             radius="md"
             leftSection={<IconPlus size={20} />}
@@ -882,7 +893,7 @@ export default function Dashboard() {
           </Button>
           <Button
             component={Link}
-            href="/report-sighting"
+            href={getUserRoute("/user/report-sighting")}
             size="lg"
             radius="md"
             leftSection={<IconMap size={20} />}
@@ -1103,7 +1114,7 @@ export default function Dashboard() {
                             color="blue"
                             size="sm"
                             component={Link}
-                            href={`/case/${caseItem.id}`}
+                            href={getUserRoute(`/case/${caseItem.id}`)}
                           >
                             <IconEye size={16} />
                           </ActionIcon>
@@ -1139,7 +1150,7 @@ export default function Dashboard() {
                   color="blue"
                   rightSection={<IconChevronRight size={16} />}
                   component={Link}
-                  href="/reported-cases"
+                  href={getUserRoute("/reported-cases")}
                   radius="xl"
                 >
                   View All Cases
@@ -1178,7 +1189,7 @@ export default function Dashboard() {
               radius="xl"
               color="blue"
               component={Link}
-              href="/cars"
+              href={getUserRoute("/cars")}
               size="lg"
             >
               <IconChevronRight />
@@ -1264,7 +1275,7 @@ export default function Dashboard() {
                       {/* Report Sighting Button */}
                       <Button
                         component={Link}
-                        href={`/report-sighting?type=Vehicle&caseId=${vehicle.caseId || vehicle.id}&plateNumber=${encodeURIComponent(vehicle.plateNumber || '')}&brand=${encodeURIComponent(vehicle.brand)}&model=${encodeURIComponent(vehicle.model)}&location=${encodeURIComponent(vehicle.location || '')}`}
+                        href={getUserRoute(`/report-sighting?type=Vehicle&caseId=${vehicle.caseId || vehicle.id}&plateNumber=${encodeURIComponent(vehicle.plateNumber || '')}&brand=${encodeURIComponent(vehicle.brand)}&model=${encodeURIComponent(vehicle.model)}&location=${encodeURIComponent(vehicle.location || '')}`)}
                         size="xs"
                         variant="light"
                         color="blue"
@@ -1308,7 +1319,7 @@ export default function Dashboard() {
               radius="xl"
               color="blue"
               component={Link}
-              href="/people"
+              href={getUserRoute("/people")}
               size="lg"
             >
               <IconChevronRight />
@@ -1394,7 +1405,7 @@ export default function Dashboard() {
                       {/* Report Sighting Button */}
                       <Button
                         component={Link}
-                        href={`/report-sighting?type=Person&caseId=${person.caseId || person.id}&name=${encodeURIComponent(person.firstName + ' ' + person.lastName)}&location=${encodeURIComponent(person.location || '')}`}
+                        href={getUserRoute(`/report-sighting?type=Person&caseId=${person.caseId || person.id}&name=${encodeURIComponent(person.firstName + ' ' + person.lastName)}&location=${encodeURIComponent(person.location || '')}`)}
                         size="xs"
                         variant="light"
                         color="blue"
@@ -1772,7 +1783,7 @@ export default function Dashboard() {
                 <Flex justify={{ base: "flex-start", md: "flex-end" }}>
                   <Button
                     component={Link}
-                    href={user ? "/help" : "/signup"}
+                    href={user ? getUserRoute("/help") : "/signup"}
                     bg="blue.6"
                     size={isMobile ? "md" : "lg"}
                     radius="md"

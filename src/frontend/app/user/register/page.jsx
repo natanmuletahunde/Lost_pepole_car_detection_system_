@@ -25,8 +25,8 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import MainFooter from '../../components/MainFooter';
-import carData from '../data/carData';
+import MainFooter from '../../../components/MainFooter';
+import carData from '../register/data/carData';
 import { useMediaQuery } from '@mantine/hooks';
 import dynamic from 'next/dynamic';
 
@@ -48,7 +48,7 @@ const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : lig
 const gradientIconBox = { background: PRIMARY_GRADIENT, padding: '10px', borderRadius: '10px', color: 'white' };
 
 // Dynamic import of the map (no SSR) – now using the optimized component
-const LocationPicker = dynamic(() => import('../../components/LocationPicker'), {
+const LocationPicker = dynamic(() => import('../../../components/LocationPicker'), {
   ssr: false,
   loading: () => (
     <Box style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f5ff' }}>
