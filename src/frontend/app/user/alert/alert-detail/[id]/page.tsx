@@ -60,7 +60,7 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 import Image from "next/image";
-import MainFooter from "../../../../../components/MainFooter";
+import MainFooter from "../../../../components/MainFooter";
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 

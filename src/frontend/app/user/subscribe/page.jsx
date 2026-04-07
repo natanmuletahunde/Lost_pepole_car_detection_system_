@@ -34,7 +34,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { useMediaQuery } from "@mantine/hooks";
-import MainFooter from "../../../components/MainFooter";
+import MainFooter from "../../components/MainFooter";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function SubscriptionPage() {

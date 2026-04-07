@@ -14,6 +14,8 @@ import {
   Alert,
   useMantineTheme,
   useMantineColorScheme,
+  Center,
+  Loader,
 } from '@mantine/core';
 import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
 import Image from 'next/image';
@@ -54,6 +56,7 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState('');
   const [isCheckingUser, setIsCheckingUser] = useState(false);
   const [userExists, setUserExists] = useState(null);
+  const [authChecking, setAuthChecking] = useState(true); // new: check if already logged in
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
@@ -64,7 +67,7 @@ export default function LoginPage() {
   // Dynamic colors
   const mainBg = getBg(colorScheme, '#EAF2FF', theme.colors.dark[7]);
   const paperBg = getBg(colorScheme, '#dbeafe', theme.colors.blue[9]);
-  const textColor = getBg(colorScheme, undefined, theme.colors.gray[3]); // use default in light, gray[3] in dark
+  const textColor = getBg(colorScheme, undefined, theme.colors.gray[3]);
 
   const currentSchema = type === 'email' ? passwordLoginSchema : phoneLoginSchema;
 
@@ -89,6 +92,35 @@ export default function LoginPage() {
 
   const watchedValue = watch('loginValue');
   const watchedPassword = watch('password');
+
+  // *** NEW: Check if user is already logged in, redirect if so ***
+  useEffect(() => {
+    const userData = localStorage.getItem('currentUser');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        if (user.role && user.role.toLowerCase() === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/user/dashboard');
+        }
+      } catch (e) {
+        console.error('Error parsing user data', e);
+        setAuthChecking(false);
+      }
+    } else {
+      setAuthChecking(false);
+    }
+  }, [router]);
+
+  // If still checking authentication, show a loader
+  if (authChecking) {
+    return (
+      <Center style={{ minHeight: '100vh', background: mainBg }}>
+        <Loader size="xl" color="blue" />
+      </Center>
+    );
+  }
 
   // Check if user exists when login value changes (with debounce)
   useEffect(() => {
@@ -131,7 +163,6 @@ export default function LoginPage() {
       }
     };
 
-    // Debounce the API call
     const timeoutId = setTimeout(() => {
       checkUserExists();
     }, 500);
@@ -166,10 +197,8 @@ export default function LoginPage() {
     setLoginError('');
 
     try {
-      // Determine which field to query by
       const queryField = type === 'email' ? 'email' : 'phone';
       
-      // Check if user exists with the provided credentials
       const response = await fetch(
         `http://localhost:3001/users?${queryField}=${encodeURIComponent(data.loginValue)}`,
         {
@@ -200,10 +229,7 @@ export default function LoginPage() {
 
       const user = users[0];
 
-      // In a real app, you would compare hashed passwords
-      // For demo purposes, we're comparing plain text (not secure for production)
       if (user.password === data.password) {
-        // Login successful
         showNotification(
           'Login Successful!',
           `Welcome back, ${user.firstName}!`,
@@ -211,7 +237,6 @@ export default function LoginPage() {
           <IconCheck size={18} />
         );
         
-        // Store user data in localStorage (for demo only - use proper auth in production)
         localStorage.setItem('currentUser', JSON.stringify({
           id: user.id,
           firstName: user.firstName,
@@ -224,7 +249,6 @@ export default function LoginPage() {
 
         localStorage.setItem('isAuthenticated', 'true');
         
-        // Update last login time in the database
         await fetch(`http://localhost:3001/users/${user.id}`, {
           method: 'PATCH',
           headers: {
@@ -236,18 +260,15 @@ export default function LoginPage() {
           }),
         });
 
-        // Redirect based on user role
         setTimeout(() => {
-          // Check if the user has an admin role (case-insensitive)
           if (user.role && user.role.toLowerCase() === 'admin') {
-            router.push('/admin'); // redirect to admin dashboard
+            router.push('/admin');
           } else {
-            router.push('/'); // redirect to user dashboard (current home page)
+            router.push('/');
           }
         }, 1000);
         
       } else {
-        // Password doesn't match
         setLoginError('Invalid password. Please try again.');
         showNotification(
           'Login Failed',
@@ -271,7 +292,6 @@ export default function LoginPage() {
     }
   };
 
-  // Handle forgot password
   const handleForgotPassword = async () => {
     if (!watchedValue || errors.loginValue) {
       showNotification(
@@ -422,7 +442,6 @@ export default function LoginPage() {
 
           <SocialLoginIcons isMobile={isMobile} />
 
-          {/* Demo credentials alert */}
           <Alert
             mt="lg"
             icon={<IconAlertCircle size={16} />}

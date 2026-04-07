@@ -4,7 +4,7 @@ import '@mantine/carousel/styles.css';
 import '@mantine/notifications/styles.css';
 import '@mantine/dates/styles.css';
 import Providers from './providers'; // adjust the path if needed
-import DarkModeFloatingButton from '../components/DarkModeFloatingButton'; // adjust path
+import DarkModeFloatingButton from './components/DarkModeFloatingButton'; // adjust path
 
 export const metadata = {
   title: 'Auth UI',
