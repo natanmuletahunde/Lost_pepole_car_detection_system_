@@ -41,9 +41,10 @@ interface DashboardHeaderProps {
   unreadCount: number;
   colorScheme: "light" | "dark";
   toggleColorScheme: () => void;
-  onLogout: () => void;
   getUserInitials: (firstName: string, lastName: string) => string;
   getUserRoute: (path: string) => string;
+  // onLogout is now optional – we handle logout internally
+  onLogout?: () => void;
 }
 
 export default function DashboardHeader({
@@ -52,13 +53,42 @@ export default function DashboardHeader({
   unreadCount,
   colorScheme,
   toggleColorScheme,
-  onLogout,
   getUserInitials,
   getUserRoute,
 }: DashboardHeaderProps) {
   const router = useRouter();
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const getBg = (light: string, dark: string) => (colorScheme === "dark" ? dark : light);
+  const getBg = (light: string, dark: string) =>
+    colorScheme === "dark" ? dark : light;
+
+  // Internal logout handler
+  const handleLogout = async () => {
+    if (user?.id) {
+      try {
+        // Optional: Log the logout event
+        await fetch("http://localhost:3001/logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user.id,
+            userEmail: user.email,
+            action: "logout",
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to log logout", error);
+      }
+    }
+
+    // Clear authentication data
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("isAuthenticated");
+
+    // Redirect to the login page
+    router.push("/authentication/login");
+  };
 
   return (
     <Box
@@ -75,7 +105,7 @@ export default function DashboardHeader({
     >
       <Container size="xl">
         <Group justify="space-between" wrap="nowrap">
-          <Link href="/" style={{ flexShrink: 0 }}>
+          <Link href="/user/dashboard" style={{ flexShrink: 0 }}>
             <Image
               src="/logo.jpg"
               alt="Logo"
@@ -151,7 +181,7 @@ export default function DashboardHeader({
                   )}
                 </ScrollArea>
                 <Menu.Divider />
-                <Menu.Item component={Link} href={getUserRoute("/notifications")}>
+                <Menu.Item component={Link} href={getUserRoute("/user/notifications")}>
                   View all
                 </Menu.Item>
               </Menu.Dropdown>
@@ -251,7 +281,7 @@ export default function DashboardHeader({
                       fullWidth
                       variant="light"
                       component={Link}
-                      href={getUserRoute("/profile")}
+                      href={getUserRoute("/user/profile")}
                       leftSection={<IconUser size={16} />}
                       size="sm"
                     >
@@ -262,34 +292,34 @@ export default function DashboardHeader({
                     <Menu.Item
                       leftSection={<IconUser size={18} />}
                       component={Link}
-                      href={getUserRoute("/profile")}
+                      href={getUserRoute("/user/profile")}
                     >
                       My Profile
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconFileReport size={18} />}
                       component={Link}
-                      href={getUserRoute("/reported-cases")}
+                      href={getUserRoute("/user/reported-cases")}
                     >
                       Reported Cases
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconBell size={18} />}
-                      onClick={() => router.push(getUserRoute("/alert"))}
+                      onClick={() => router.push(getUserRoute("/user/alert"))}
                     >
                       My Notifications
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconHistory size={18} />}
                       component={Link}
-                      href={getUserRoute("/history")}
+                      href={getUserRoute("/user/history")}
                     >
                       Search History
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconSettings size={18} />}
                       component={Link}
-                      href={getUserRoute("/settings")}
+                      href={getUserRoute("/user/settings")}
                     >
                       Account Settings
                     </Menu.Item>
@@ -298,7 +328,7 @@ export default function DashboardHeader({
                   <Menu.Item
                     color="red"
                     leftSection={<IconLogout size={18} />}
-                    onClick={onLogout}
+                    onClick={handleLogout}
                   >
                     Logout
                   </Menu.Item>
@@ -311,7 +341,7 @@ export default function DashboardHeader({
                   color="blue"
                   leftSection={<IconLogin size={16} />}
                   component={Link}
-                  href="/login"
+                  href="/authentication/login"
                   radius="xl"
                   size={isMobile ? "xs" : "sm"}
                 >
@@ -321,7 +351,7 @@ export default function DashboardHeader({
                   color="blue"
                   leftSection={<IconUserPlus size={16} />}
                   component={Link}
-                  href="/signup"
+                  href="/authentication/signup"
                   radius="xl"
                   size={isMobile ? "xs" : "sm"}
                 >
