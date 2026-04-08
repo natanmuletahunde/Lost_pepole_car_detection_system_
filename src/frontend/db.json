@@ -273,10 +273,10 @@
       "phone": "+251911111111",
       "password": "User@1111",
       "createdAt": "2026-02-05T06:52:23.735Z",
-      "updatedAt": "2026-04-06T07:14:20.126Z",
+      "updatedAt": "2026-04-07T21:38:29.252Z",
       "isActive": true,
       "role": "user",
-      "lastLogin": "2026-04-05T23:52:45.725Z",
+      "lastLogin": "2026-04-07T21:38:29.252Z",
       "registrations": 9,
       "hasPaidSubscription": true
     },
@@ -387,6 +387,18 @@
       "address": "Addis Ababa, Kazanchis",
       "location": "Kazanchis, Addis Ababa",
       "timestamp": "2025-03-30T11:45:00Z"
+    }
+  ],
+  "logs": [
+    {
+      "userId": "97a39fa6-4d93-4b98-a4e0-204c225eb368",
+      "userEmail": "User1@gmail.com",
+      "userPhone": "+251911111111",
+      "loginType": "email",
+      "loginTime": "2026-04-07T21:38:29.110Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "ipAddress": "196.191.52.70",
+      "id": "4xF3du67XQQ"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
