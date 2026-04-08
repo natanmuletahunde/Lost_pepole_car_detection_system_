@@ -33,13 +33,11 @@ import SocialLoginIcons from '../../components/SocialLoginIcons';
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 
 /* ---------------- Validation schemas ---------------- */
-// Password login schema
 const passwordLoginSchema = z.object({
   loginValue: z.string().email('Please enter a valid email'),
   password: z.string().min(1, 'Password is required'),
 });
 
-// Phone login schema
 const phoneLoginSchema = z.object({
   loginValue: z
     .string()
@@ -50,24 +48,20 @@ const phoneLoginSchema = z.object({
 });
 
 export default function LoginPage() {
-  const [type, setType] = useState('email'); // 'email' or 'phone'
+  // All hooks called unconditionally at the top
+  const [type, setType] = useState('email');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isCheckingUser, setIsCheckingUser] = useState(false);
   const [userExists, setUserExists] = useState(null);
-  const [authChecking, setAuthChecking] = useState(true); // new: check if already logged in
+  const [authChecking, setAuthChecking] = useState(true);
+  
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
-
   const isMobile = useMediaQuery('(max-width: 576px)');
   const isTablet = useMediaQuery('(max-width: 768px)');
-
-  // Dynamic colors
-  const mainBg = getBg(colorScheme, '#EAF2FF', theme.colors.dark[7]);
-  const paperBg = getBg(colorScheme, '#dbeafe', theme.colors.blue[9]);
-  const textColor = getBg(colorScheme, undefined, theme.colors.gray[3]);
 
   const currentSchema = type === 'email' ? passwordLoginSchema : phoneLoginSchema;
 
@@ -79,21 +73,19 @@ export default function LoginPage() {
     trigger,
     setValue,
     watch,
-    setError,
     clearErrors,
   } = useForm({
     resolver: zodResolver(currentSchema),
     mode: 'onChange',
-    defaultValues: { 
-      loginValue: '', 
-      password: '' 
+    defaultValues: {
+      loginValue: '',
+      password: '',
     },
   });
 
   const watchedValue = watch('loginValue');
-  const watchedPassword = watch('password');
 
-  // *** NEW: Check if user is already logged in, redirect if so ***
+  // Check if user is already logged in
   useEffect(() => {
     const userData = localStorage.getItem('currentUser');
     if (userData) {
@@ -112,15 +104,6 @@ export default function LoginPage() {
       setAuthChecking(false);
     }
   }, [router]);
-
-  // If still checking authentication, show a loader
-  if (authChecking) {
-    return (
-      <Center style={{ minHeight: '100vh', background: mainBg }}>
-        <Loader size="xl" color="blue" />
-      </Center>
-    );
-  }
 
   // Check if user exists when login value changes (with debounce)
   useEffect(() => {
@@ -170,6 +153,7 @@ export default function LoginPage() {
     return () => clearTimeout(timeoutId);
   }, [watchedValue, type, clearErrors]);
 
+  // All other functions (showNotification, handleTypeSwitch, createLoginLog, onSubmit, etc.)
   const showNotification = (title, message, color, icon) => {
     notifications.show({
       title,
@@ -190,6 +174,37 @@ export default function LoginPage() {
     setUserExists(null);
     setLoginError('');
     reset();
+  };
+
+  const createLoginLog = async (user) => {
+    try {
+      let ipAddress = 'unknown';
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        ipAddress = ipData.ip;
+      } catch (ipError) {
+        console.warn('Could not fetch IP address', ipError);
+      }
+
+      const logEntry = {
+        userId: user.id,
+        userEmail: user.email,
+        userPhone: user.phone,
+        loginType: type,
+        loginTime: new Date().toISOString(),
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        ipAddress,
+      };
+
+      await fetch('http://localhost:3001/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(logEntry),
+      });
+    } catch (error) {
+      console.error('Failed to create login log:', error);
+    }
   };
 
   const onSubmit = async (data) => {
@@ -230,6 +245,8 @@ export default function LoginPage() {
       const user = users[0];
 
       if (user.password === data.password) {
+        await createLoginLog(user).catch(err => console.error('Log error:', err));
+
         showNotification(
           'Login Successful!',
           `Welcome back, ${user.firstName}!`,
@@ -310,6 +327,19 @@ export default function LoginPage() {
       <IconCheck size={18} />
     );
   };
+
+  // Conditional rendering after all hooks are defined
+  if (authChecking) {
+    return (
+      <Center style={{ minHeight: '100vh', background: getBg(colorScheme, '#EAF2FF', theme.colors.dark[7]) }}>
+        <Loader size="xl" color="blue" />
+      </Center>
+    );
+  }
+
+  const mainBg = getBg(colorScheme, '#EAF2FF', theme.colors.dark[7]);
+  const paperBg = getBg(colorScheme, '#dbeafe', theme.colors.blue[9]);
+  const textColor = getBg(colorScheme, undefined, theme.colors.gray[3]);
 
   return (
     <Box
