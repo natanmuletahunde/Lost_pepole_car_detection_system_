@@ -114,6 +114,39 @@ export default function SignupPage() {
     return requirements;
   };
 
+  // ************ NEW: Create signup log entry ************
+  const createSignupLog = async (user) => {
+    try {
+      // Optionally fetch IP address
+      let ipAddress = 'unknown';
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        ipAddress = ipData.ip;
+      } catch (ipError) {
+        console.warn('Could not fetch IP address', ipError);
+      }
+
+      const logEntry = {
+        userId: user.id,
+        userEmail: user.email,
+        action: 'signup',
+        timestamp: new Date().toISOString(),
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        ipAddress,
+      };
+
+      await fetch('http://localhost:3001/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(logEntry),
+      });
+    } catch (error) {
+      console.error('Failed to create signup log:', error);
+      // Non‑blocking – signup still succeeds
+    }
+  };
+
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     
@@ -151,6 +184,9 @@ export default function SignupPage() {
       }
 
       const result = await response.json();
+
+      // ************ NEW: Log the signup ************
+      await createSignupLog(result).catch(err => console.error('Signup log error:', err));
       
       showNotification(
         'Success!',
