@@ -25,6 +25,7 @@ import { z } from 'zod';
 import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { v4 as uuidv4 } from 'uuid';
+import { useRouter } from 'next/navigation';
 
 // Helper to get dynamic background/color values
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
@@ -62,6 +63,7 @@ export default function SignupPage() {
   const isTablet = useMediaQuery('(max-width: 768px)');
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
+  const router = useRouter();
 
   // Dynamic colors
   const mainBg = getBg(colorScheme, '#EAF2FF', theme.colors.dark[7]);
@@ -114,7 +116,7 @@ export default function SignupPage() {
     return requirements;
   };
 
-  // ************ NEW: Create signup log entry ************
+  // Create signup log entry
   const createSignupLog = async (user) => {
     try {
       // Optionally fetch IP address
@@ -149,12 +151,12 @@ export default function SignupPage() {
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
-    
+
     try {
       // Generate UUID for the new user
       const userId = uuidv4();
       const createdAt = new Date().toISOString();
-      
+
       // Prepare user data for API
       const userData = {
         id: userId,
@@ -171,13 +173,13 @@ export default function SignupPage() {
       const { confirmPassword, ...userDataToSave } = userData;
 
       // Send POST request to JSON Server
-      const response = await fetch('http://localhost:3001/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userDataToSave),
-      });
+    //   const response = await fetch('http://localhost:3001/users', {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify(userDataToSave),
+    //   });
 
       if (!response.ok) {
         throw new Error('Failed to create account');
@@ -185,22 +187,27 @@ export default function SignupPage() {
 
       const result = await response.json();
 
-      // ************ NEW: Log the signup ************
+      // Log the signup
       await createSignupLog(result).catch(err => console.error('Signup log error:', err));
-      
+
       showNotification(
         'Success!',
-        'Account created successfully!',
+        'Account created successfully! Redirecting to login...',
         'green',
         <IconCheck size={18} />
       );
-      
+
       console.log('User created:', result);
       reset();
-      
+
+      // Redirect to login page after a short delay
+      setTimeout(() => {
+        router.push('/authentication/login');
+      }, 1500);
+
     } catch (error) {
       console.error('Signup error:', error);
-      
+
       showNotification(
         'Error',
         error.message || 'Failed to create account. Please try again.',
@@ -276,7 +283,7 @@ export default function SignupPage() {
               onBlur={() => trigger('email')}
               disabled={isSubmitting}
             />
-            
+
             <TextInput
               mt="md"
               label="Phone"
@@ -286,7 +293,7 @@ export default function SignupPage() {
               onBlur={() => trigger('phone')}
               disabled={isSubmitting}
             />
-            
+
             <PasswordInput
               mt="md"
               label="Password"
@@ -296,7 +303,7 @@ export default function SignupPage() {
               onBlur={() => trigger('password')}
               disabled={isSubmitting}
             />
-            
+
             <PasswordInput
               mt="md"
               label="Confirm Password"

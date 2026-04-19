@@ -1,0 +1,963 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Missing Person & Vehicle Detection API",
+    "description": "API for reporting and tracking missing persons and vehicles",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "JSON Server (Development)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Missing Persons",
+      "description": "Missing persons reports"
+    },
+    {
+      "name": "Missing Vehicles",
+      "description": "Missing vehicles reports"
+    },
+    {
+      "name": "Sightings",
+      "description": "Reported sightings"
+    },
+    {
+      "name": "Users",
+      "description": "User management"
+    },
+    {
+      "name": "GPS Devices",
+      "description": "GPS tracking devices"
+    },
+    {
+      "name": "GPS Locations",
+      "description": "Location history"
+    },
+    {
+      "name": "Logs",
+      "description": "Activity logs"
+    }
+  ],
+  "paths": {
+    "/missingPersons": {
+      "get": {
+        "tags": ["Missing Persons"],
+        "summary": "Get all missing persons",
+        "responses": {
+          "200": {
+            "description": "List of missing persons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/MissingPerson" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Missing Persons"],
+        "summary": "Create a missing person report",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MissingPerson" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created missing person",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissingPerson" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/missingPersons/{id}": {
+      "get": {
+        "tags": ["Missing Persons"],
+        "summary": "Get missing person by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Missing person found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissingPerson" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Missing Persons"],
+        "summary": "Update missing person",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MissingPerson" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated missing person",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissingPerson" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Missing Persons"],
+        "summary": "Delete missing person",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully"
+          }
+        }
+      }
+    },
+    "/missingVehicles": {
+      "get": {
+        "tags": ["Missing Vehicles"],
+        "summary": "Get all missing vehicles",
+        "responses": {
+          "200": {
+            "description": "List of missing vehicles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/MissingVehicle" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Missing Vehicles"],
+        "summary": "Create a missing vehicle report",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MissingVehicle" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created missing vehicle",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissingVehicle" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/missingVehicles/{id}": {
+      "get": {
+        "tags": ["Missing Vehicles"],
+        "summary": "Get missing vehicle by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Missing vehicle found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissingVehicle" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Missing Vehicles"],
+        "summary": "Update missing vehicle",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MissingVehicle" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated missing vehicle",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MissingVehicle" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Missing Vehicles"],
+        "summary": "Delete missing vehicle",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully"
+          }
+        }
+      }
+    },
+    "/sightings": {
+      "get": {
+        "tags": ["Sightings"],
+        "summary": "Get all sightings",
+        "responses": {
+          "200": {
+            "description": "List of sightings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Sighting" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Sightings"],
+        "summary": "Create a sighting report",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Sighting" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created sighting",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Sighting" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sightings/{id}": {
+      "get": {
+        "tags": ["Sightings"],
+        "summary": "Get sighting by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sighting found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Sighting" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Sightings"],
+        "summary": "Update sighting",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Sighting" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated sighting",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Sighting" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Sightings"],
+        "summary": "Delete sighting",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully"
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get all users",
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/User" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Users"],
+        "summary": "Create a user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/User" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created user",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Users"],
+        "summary": "Update user",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/User" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Delete user",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully"
+          }
+        }
+      }
+    },
+    "/gpsDevices": {
+      "get": {
+        "tags": ["GPS Devices"],
+        "summary": "Get all GPS devices",
+        "responses": {
+          "200": {
+            "description": "List of GPS devices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GPSDevice" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["GPS Devices"],
+        "summary": "Create a GPS device",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GPSDevice" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created GPS device",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GPSDevice" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gpsDevices/{id}": {
+      "get": {
+        "tags": ["GPS Devices"],
+        "summary": "Get GPS device by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "GPS device found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GPSDevice" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["GPS Devices"],
+        "summary": "Update GPS device",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GPSDevice" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated GPS device",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GPSDevice" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["GPS Devices"],
+        "summary": "Delete GPS device",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully"
+          }
+        }
+      }
+    },
+    "/gpsLocations": {
+      "get": {
+        "tags": ["GPS Locations"],
+        "summary": "Get all GPS locations",
+        "responses": {
+          "200": {
+            "description": "List of GPS locations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GPSLocation" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["GPS Locations"],
+        "summary": "Create a GPS location",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GPSLocation" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created GPS location",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GPSLocation" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gpsLocations/{id}": {
+      "get": {
+        "tags": ["GPS Locations"],
+        "summary": "Get GPS location by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "GPS location found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GPSLocation" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["GPS Locations"],
+        "summary": "Update GPS location",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GPSLocation" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated GPS location",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GPSLocation" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["GPS Locations"],
+        "summary": "Delete GPS location",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully"
+          }
+        }
+      }
+    },
+    "/logs": {
+      "get": {
+        "tags": ["Logs"],
+        "summary": "Get all activity logs",
+        "responses": {
+          "200": {
+            "description": "List of activity logs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Log" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Logs"],
+        "summary": "Create an activity log",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Log" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created activity log",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Log" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/logs/{id}": {
+      "get": {
+        "tags": ["Logs"],
+        "summary": "Get log by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Log found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Log" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Logs"],
+        "summary": "Delete log",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted successfully"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MissingPerson": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "caseId": { "type": "string" },
+          "type": { "type": "string", "enum": ["Person"] },
+          "firstName": { "type": "string" },
+          "middleName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "gender": { "type": "string" },
+          "age": { "type": "integer" },
+          "height": { "type": "integer" },
+          "weight": { "type": "integer" },
+          "description": { "type": "string" },
+          "location": { "type": "string" },
+          "lastSeenDate": { "type": "string", "format": "date" },
+          "lastSeenTime": { "type": "string" },
+          "status": { "type": "string" },
+          "reportDate": { "type": "string", "format": "date-time" },
+          "lastUpdated": { "type": "string", "format": "date-time" },
+          "verified": { "type": "boolean" },
+          "latitude": { "type": "string" },
+          "longitude": { "type": "string" },
+          "reportedBy": { "$ref": "#/components/schemas/ReportedBy" }
+        }
+      },
+      "MissingVehicle": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "caseId": { "type": "string" },
+          "type": { "type": "string", "enum": ["Vehicle"] },
+          "brand": { "type": "string" },
+          "model": { "type": "string" },
+          "submodel": { "type": "string" },
+          "color": { "type": "string" },
+          "vehicleDescription": { "type": "string" },
+          "plateType": { "type": "string" },
+          "region": { "type": "string" },
+          "code": { "type": "string" },
+          "plateNumber": { "type": "string" },
+          "location": { "type": "string" },
+          "lastSeenDate": { "type": "string", "format": "date" },
+          "lastSeenTime": { "type": "string" },
+          "status": { "type": "string" },
+          "reportDate": { "type": "string", "format": "date-time" },
+          "lastUpdated": { "type": "string", "format": "date-time" },
+          "verified": { "type": "boolean" },
+          "latitude": { "type": "string" },
+          "longitude": { "type": "string" },
+          "reportedBy": { "$ref": "#/components/schemas/ReportedBy" }
+        }
+      },
+      "Sighting": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["Person", "Vehicle"] },
+          "name": { "type": "string" },
+          "plateNumber": { "type": "string" },
+          "description": { "type": "string" },
+          "location": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "time": { "type": "string" },
+          "latitude": { "type": "number" },
+          "longitude": { "type": "number" },
+          "originalCaseId": { "type": "string" },
+          "status": { "type": "string" },
+          "reportDate": { "type": "string", "format": "date-time" },
+          "reportedBy": { "$ref": "#/components/schemas/ReportedBy" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "phone": { "type": "string" },
+          "password": { "type": "string" },
+          "role": { "type": "string", "enum": ["user", "admin"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "isActive": { "type": "boolean" },
+          "lastLogin": { "type": "string", "format": "date-time" }
+        }
+      },
+      "GPSDevice": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "serialNumber": { "type": "string" },
+          "assignedTo": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "inactive", "low_battery"] },
+          "battery": { "type": "integer" },
+          "lastLocation": { "$ref": "#/components/schemas/Location" },
+          "geofence": { "$ref": "#/components/schemas/Geofence" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "GPSLocation": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "deviceId": { "type": "string" },
+          "lat": { "type": "number" },
+          "lng": { "type": "number" },
+          "address": { "type": "string" },
+          "location": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Log": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "userId": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "userPhone": { "type": "string" },
+          "loginType": { "type": "string" },
+          "loginTime": { "type": "string", "format": "date-time" },
+          "action": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "userAgent": { "type": "string" },
+          "ipAddress": { "type": "string" }
+        }
+      },
+      "ReportedBy": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "role": { "type": "string" },
+          "telegramUsername": { "type": "string" }
+        }
+      },
+      "Location": {
+        "type": "object",
+        "properties": {
+          "lat": { "type": "number" },
+          "lng": { "type": "number" },
+          "address": { "type": "string" },
+          "location": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Geofence": {
+        "type": "object",
+        "properties": {
+          "lat": { "type": "number" },
+          "lng": { "type": "number" },
+          "radius": { "type": "integer" }
+        }
+      }
+    }
+  }
+}
