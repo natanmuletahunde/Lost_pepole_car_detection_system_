@@ -137,6 +137,58 @@
       "longitude": "38.80974054336548",
       "imagePreview": null,
       "id": "e9IJVIW2yRc"
+    },
+    {
+      "caseId": "CASE-MNQ3RXAJ-N06K",
+      "type": "Person",
+      "reportedBy": {
+        "userId": "A3qoWZVohqk",
+        "firstName": "tesfa",
+        "lastName": "badeg",
+        "email": "tesfabadeg@gmail.com",
+        "phone": "0973671282",
+        "role": "user",
+        "telegramUsername": "tesfa"
+      },
+      "reportDate": "2026-04-08T13:47:46.123Z",
+      "status": "Active",
+      "lastUpdated": "2026-04-08T13:47:46.123Z",
+      "verified": false,
+      "matches": [],
+      "notes": [],
+      "contactMethods": {
+        "email": "tesfabadeg@gmail.com",
+        "phone": "0973671282",
+        "telegram": "tesfa"
+      },
+      "firstName": "biniyam",
+      "middleName": "Feleqe",
+      "lastName": "Ferede",
+      "gender": "Male",
+      "age": 24,
+      "height": 180,
+      "weight": 80,
+      "description": "any description",
+      "specialCase": "mentally-ill",
+      "brand": "",
+      "model": "",
+      "submodel": "",
+      "color": "",
+      "vehicleDescription": "",
+      "plateType": "",
+      "region": "",
+      "code": "",
+      "plateNumber": "",
+      "specialCategory": null,
+      "location": "Aroge Kera, Piassa (piazza), Addis Ababa, Arada, Addis Ababa, 1415, Ethiopia",
+      "lastSeenDate": "2026-04-01",
+      "lastSeenTime": "18:44",
+      "telegramUsername": "tesfa",
+      "additionalContactInfo": "",
+      "latitude": "9.024261226356899",
+      "longitude": "38.75523269176484",
+      "imagePreview": null,
+      "id": "4wSA1Ntljvk"
     }
   ],
   "missingVehicles": [
@@ -320,6 +372,19 @@
       "isActive": true,
       "role": "user",
       "lastLogin": "2026-04-08T06:24:01.586Z"
+    },
+    {
+      "id": "A3qoWZVohqk",
+      "firstName": "tesfa",
+      "lastName": "badeg",
+      "email": "tesfabadeg@gmail.com",
+      "phone": "0973671282",
+      "password": "Tesfa@2345",
+      "createdAt": "2026-04-08T13:38:27.847Z",
+      "updatedAt": "2026-04-08T13:47:47.742Z",
+      "isActive": true,
+      "role": "user",
+      "registrations": 1
     }
   ],
   "gpsDevices": [
@@ -439,6 +504,41 @@
       "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
       "ipAddress": "196.189.123.61",
       "id": "ZcVxPkCEYqE"
+    },
+    {
+      "userId": "BIkE6yYmUHs",
+      "userEmail": "abebekebede@gmail.com",
+      "action": "logout",
+      "timestamp": "2026-04-08T13:36:09.035Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "id": "ue-moAkRVcI"
+    },
+    {
+      "userId": "A3qoWZVohqk",
+      "userEmail": "tesfabadeg@gmail.com",
+      "action": "signup",
+      "timestamp": "2026-04-08T13:38:28.804Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "ipAddress": "196.189.123.61",
+      "id": "fVBsSqEWvz4"
+    },
+    {
+      "userId": "A3qoWZVohqk",
+      "userEmail": "tesfabadeg@gmail.com",
+      "userPhone": "0973671282",
+      "loginType": "email",
+      "loginTime": "2026-04-08T13:38:57.211Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "ipAddress": "196.189.123.61",
+      "id": "gdh0j3Nb_94"
+    },
+    {
+      "userId": "A3qoWZVohqk",
+      "userEmail": "tesfabadeg@gmail.com",
+      "action": "logout",
+      "timestamp": "2026-04-21T12:05:56.222Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+      "id": "yqJ5lN1YCCU"
     }
   ],
   "$schema": "./node_modules/json-server/schema.json"
