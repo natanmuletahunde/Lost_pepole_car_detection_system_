@@ -56,7 +56,7 @@ export default function LoginPage() {
   const [isCheckingUser, setIsCheckingUser] = useState(false);
   const [userExists, setUserExists] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
-  
+
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
@@ -115,7 +115,7 @@ export default function LoginPage() {
 
       setIsCheckingUser(true);
       setLoginError('');
-      
+
       try {
         let queryField = type === 'email' ? 'email' : 'phone';
         const response = await fetch(
@@ -131,7 +131,7 @@ export default function LoginPage() {
         if (response.ok) {
           const users = await response.json();
           setUserExists(users.length > 0);
-          
+
           if (users.length === 0) {
             setLoginError(`No account found with this ${type === 'email' ? 'email' : 'phone number'}`);
           } else {
@@ -213,7 +213,7 @@ export default function LoginPage() {
 
     try {
       const queryField = type === 'email' ? 'email' : 'phone';
-      
+
       const response = await fetch(
         `http://localhost:3001/users?${queryField}=${encodeURIComponent(data.loginValue)}`,
         {
@@ -253,7 +253,7 @@ export default function LoginPage() {
           'green',
           <IconCheck size={18} />
         );
-        
+
         localStorage.setItem('currentUser', JSON.stringify({
           id: user.id,
           firstName: user.firstName,
@@ -265,7 +265,7 @@ export default function LoginPage() {
         }));
 
         localStorage.setItem('isAuthenticated', 'true');
-        
+
         await fetch(`http://localhost:3001/users/${user.id}`, {
           method: 'PATCH',
           headers: {
@@ -284,7 +284,7 @@ export default function LoginPage() {
             router.push('/');
           }
         }, 1000);
-        
+
       } else {
         setLoginError('Invalid password. Please try again.');
         showNotification(
@@ -440,9 +440,9 @@ export default function LoginPage() {
           </form>
 
           <Box mt="sm" style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Text 
-              c="blue" 
-              onClick={handleTypeSwitch} 
+            <Text
+              c="blue"
+              onClick={handleTypeSwitch}
               style={{ cursor: 'pointer' }}
               size="sm"
             >
@@ -450,10 +450,10 @@ export default function LoginPage() {
                 ? 'Login using phone number'
                 : 'Login using email'}
             </Text>
-            
-            <Text 
-              c="blue" 
-              onClick={handleForgotPassword} 
+
+            <Text
+              c="blue"
+              onClick={handleForgotPassword}
               style={{ cursor: 'pointer' }}
               size="sm"
             >

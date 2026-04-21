@@ -151,12 +151,12 @@ export default function SignupPage() {
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
-    
+
     try {
       // Generate UUID for the new user
       const userId = uuidv4();
       const createdAt = new Date().toISOString();
-      
+
       // Prepare user data for API
       const userData = {
         id: userId,
@@ -173,13 +173,13 @@ export default function SignupPage() {
       const { confirmPassword, ...userDataToSave } = userData;
 
       // Send POST request to JSON Server
-      const response = await fetch('http://localhost:3001/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userDataToSave),
-      });
+    //   const response = await fetch('http://localhost:3001/users', {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //     },
+    //     body: JSON.stringify(userDataToSave),
+    //   });
 
       if (!response.ok) {
         throw new Error('Failed to create account');
@@ -189,25 +189,25 @@ export default function SignupPage() {
 
       // Log the signup
       await createSignupLog(result).catch(err => console.error('Signup log error:', err));
-      
+
       showNotification(
         'Success!',
         'Account created successfully! Redirecting to login...',
         'green',
         <IconCheck size={18} />
       );
-      
+
       console.log('User created:', result);
       reset();
-      
+
       // Redirect to login page after a short delay
       setTimeout(() => {
         router.push('/authentication/login');
       }, 1500);
-      
+
     } catch (error) {
       console.error('Signup error:', error);
-      
+
       showNotification(
         'Error',
         error.message || 'Failed to create account. Please try again.',
@@ -283,7 +283,7 @@ export default function SignupPage() {
               onBlur={() => trigger('email')}
               disabled={isSubmitting}
             />
-            
+
             <TextInput
               mt="md"
               label="Phone"
@@ -293,7 +293,7 @@ export default function SignupPage() {
               onBlur={() => trigger('phone')}
               disabled={isSubmitting}
             />
-            
+
             <PasswordInput
               mt="md"
               label="Password"
@@ -303,7 +303,7 @@ export default function SignupPage() {
               onBlur={() => trigger('password')}
               disabled={isSubmitting}
             />
-            
+
             <PasswordInput
               mt="md"
               label="Confirm Password"
