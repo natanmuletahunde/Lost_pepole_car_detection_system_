@@ -23,11 +23,17 @@ const searchRoutes = require('./routes/search.routes');
 const detectionRoutes = require('./routes/detection.routes');
 const adminRoutes = require('./routes/admin.routes');
 
+// 🧠 NEW IMPORTS (IMPORTANT)
+const missingPersonRoutes = require('./routes/missingPerson.routes');
+const missingVehicleRoutes = require('./routes/missingVehicle.routes');
+
 const app = express();
 
 connectDB();
 
+// ================= SECURITY MIDDLEWARE =================
 app.use(helmet());
+
 app.use(cors({
   origin: config.cors.origin,
   credentials: true,
@@ -40,27 +46,22 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// ================= BODY PARSING =================
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 app.use(sanitizeRequest);
 app.use(expressSanitizer());
 
-/**
- * @swagger
- * /api/v1/health:
- *   get:
- *     tags:
- *       - Health
- *     summary: Health check
- *     responses:
- *       200:
- *         description: API is up
- */
+// ================= HEALTH CHECK =================
 app.get('/api/v1/health', (req, res) => {
-  res.status(200).json({ success: true, message: 'Server is running' });
+  res.status(200).json({
+    success: true,
+    message: 'Server is running'
+  });
 });
 
+// ================= SWAGGER =================
 if (isSwaggerEnabled()) {
   const docsGuards = [];
 
@@ -79,24 +80,52 @@ if (isSwaggerEnabled()) {
       },
     })
   );
+
   app.get('/api-docs.json', ...docsGuards, (req, res) => {
     res.json(swaggerSpec);
   });
 }
 
+// ================= ROUTES =================
+
+// Auth & Core
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
+
+// Detection system
 app.use('/api/v1/sightings', sightingRoutes);
+app.use('/api/v1/detections', detectionRoutes);
+
+// Communication
 app.use('/api/v1/feedback', feedbackRoutes);
 app.use('/api/v1/alerts', alertRoutes);
+
+// Uploads & Search
 app.use('/api/v1/uploads', uploadRoutes);
 app.use('/api/v1/search', searchRoutes);
-app.use('/api/v1/detections', detectionRoutes);
+
+// Admin
 app.use('/api/v1/admin', adminRoutes);
 
+// 🧠 NEW: Missing Persons System
+app.use('/api/v1/missing-persons', missingPersonRoutes);
+
+// 🚗 NEW: Missing Vehicles System
+app.use('/api/v1/missing-vehicles', missingVehicleRoutes);
+
+// ML test route
+app.get('/api/v1/ml/test', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'ML connection is working 🚀'
+  });
+});
+
+// ================= ERROR HANDLING =================
 app.use(notFound);
 app.use(errorHandler);
 
+// ================= SERVER =================
 const PORT = config.server.port;
 const HOST = '0.0.0.0';
 
@@ -104,20 +133,17 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`Server running in ${config.server.nodeEnv} mode on http://${HOST}:${PORT}`);
 });
 
+// ================= PROCESS SAFETY =================
 process.on('unhandledRejection', (err) => {
   console.error('UNHANDLED REJECTION! Shutting down...');
   console.error(err);
-  server.close(() => {
-    process.exit(1);
-  });
+  server.close(() => process.exit(1));
 });
 
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION! Shutting down...');
   console.error(err);
-  server.close(() => {
-    process.exit(1);
-  });
+  server.close(() => process.exit(1));
 });
 
 module.exports = app;

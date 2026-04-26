@@ -1,13 +1,20 @@
 const User = require('../models/User');
 const ApiResponse = require('../utils/ApiResponse');
-const { signToken, signRefreshToken, verifyToken, verifyRefreshToken } = require('../utils/jwt');
+const {
+  signToken,
+  signRefreshToken,
+  verifyToken,
+  verifyRefreshToken
+} = require('../utils/jwt');
 
+
+// ================= REGISTER =================
 const register = async (req, res, next) => {
   try {
     const { firstName, lastName, email, phone, password } = req.body;
 
     const existingUser = await User.findOne({
-      $or: [{ email }, { phone }],
+      $or: [{ email }, { phone }]
     });
 
     if (existingUser) {
@@ -20,39 +27,48 @@ const register = async (req, res, next) => {
       lastName,
       email,
       phone,
-      password,
+      password
     });
 
     const token = signToken(user._id);
     const refreshToken = signRefreshToken(user._id);
 
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    // store refresh token safely (no validation triggers)
+    await User.findByIdAndUpdate(user._id, {
+      refreshToken
+    });
 
-    user.password = undefined;
+    return ApiResponse.success(
+      res,
+      'User registered successfully',
+      {
+        user, // schema toJSON will clean sensitive fields
+        token,
+        refreshToken
+      },
+      201
+    );
 
-    return ApiResponse.success(res, 'User registered successfully', {
-      user,
-      token,
-      refreshToken,
-    }, 201);
   } catch (error) {
     next(error);
   }
 };
 
+
+// ================= LOGIN =================
 const login = async (req, res, next) => {
   try {
     const { loginValue, password } = req.body;
 
-    let user;
-    const isEmail = loginValue.includes('@');
-    
-    if (isEmail) {
-      user = await User.findOne({ email: loginValue }).select('+password');
-    } else {
-      user = await User.findOne({ phone: loginValue }).select('+password');
+    if (!loginValue || !password) {
+      return ApiResponse.error(res, 'Login value and password required', 400);
     }
+
+    const isEmail = loginValue.includes('@');
+
+    const user = await User.findOne(
+      isEmail ? { email: loginValue } : { phone: loginValue }
+    ).select('+password +refreshToken');
 
     if (!user) {
       return ApiResponse.error(
@@ -72,36 +88,46 @@ const login = async (req, res, next) => {
       return ApiResponse.error(res, 'Invalid password', 401);
     }
 
-    user.lastLogin = new Date();
-    await user.save({ validateBeforeSave: false });
+    // update last login WITHOUT triggering hooks
+    await User.findByIdAndUpdate(user._id, {
+      lastLogin: new Date()
+    });
 
     const token = signToken(user._id);
     const refreshToken = signRefreshToken(user._id);
 
-    user.refreshToken = refreshToken;
-    user.password = undefined;
-    await user.save({ validateBeforeSave: false });
+    await User.findByIdAndUpdate(user._id, {
+      refreshToken
+    });
 
     return ApiResponse.success(res, 'Login successful', {
-      user,
+      user, // cleaned by toJSON
       token,
-      refreshToken,
+      refreshToken
     });
+
   } catch (error) {
     next(error);
   }
 };
 
+
+// ================= GET ME =================
 const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
 
-    return ApiResponse.success(res, 'User retrieved successfully', { user });
+    return ApiResponse.success(res, 'User retrieved successfully', {
+      user
+    });
+
   } catch (error) {
     next(error);
   }
 };
 
+
+// ================= UPDATE PROFILE =================
 const updateProfile = async (req, res, next) => {
   try {
     const { firstName, lastName, phone, address, profileImage } = req.body;
@@ -119,12 +145,17 @@ const updateProfile = async (req, res, next) => {
       { new: true, runValidators: true }
     );
 
-    return ApiResponse.success(res, 'Profile updated successfully', { user });
+    return ApiResponse.success(res, 'Profile updated successfully', {
+      user
+    });
+
   } catch (error) {
     next(error);
   }
 };
 
+
+// ================= CHANGE PASSWORD =================
 const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -139,26 +170,33 @@ const changePassword = async (req, res, next) => {
 
     user.password = newPassword;
     user.passwordChangedAt = Date.now();
-    await user.save();
+
+    await user.save(); // safe now (password exists)
 
     return ApiResponse.success(res, 'Password changed successfully');
+
   } catch (error) {
     next(error);
   }
 };
 
+
+// ================= LOGOUT =================
 const logout = async (req, res, next) => {
   try {
     await User.findByIdAndUpdate(req.user._id, {
-      refreshToken: null,
+      refreshToken: null
     });
 
     return ApiResponse.success(res, 'Logged out successfully');
+
   } catch (error) {
     next(error);
   }
 };
 
+
+// ================= REFRESH TOKEN =================
 const refreshToken = async (req, res, next) => {
   try {
     const { refreshToken: token } = req.body;
@@ -171,29 +209,29 @@ const refreshToken = async (req, res, next) => {
 
     const user = await User.findById(decoded.id).select('+refreshToken');
 
-    if (!user) {
-      return ApiResponse.error(res, 'Invalid refresh token', 401);
-    }
-
-    if (user.refreshToken !== token) {
+    if (!user || user.refreshToken !== token) {
       return ApiResponse.error(res, 'Invalid refresh token', 401);
     }
 
     const newToken = signToken(user._id);
     const newRefreshToken = signRefreshToken(user._id);
 
-    user.refreshToken = newRefreshToken;
-    await user.save({ validateBeforeSave: false });
+    await User.findByIdAndUpdate(user._id, {
+      refreshToken: newRefreshToken
+    });
 
     return ApiResponse.success(res, 'Token refreshed successfully', {
       token: newToken,
-      refreshToken: newRefreshToken,
+      refreshToken: newRefreshToken
     });
+
   } catch (error) {
     next(error);
   }
 };
 
+
+// ================= EXPORTS =================
 module.exports = {
   register,
   login,
@@ -201,5 +239,5 @@ module.exports = {
   updateProfile,
   changePassword,
   logout,
-  refreshToken,
+  refreshToken
 };

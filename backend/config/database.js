@@ -1,33 +1,22 @@
 const mongoose = require('mongoose');
 
+
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-    
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
-    });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
-    });
-    
-    process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      process.exit(0);
-    });
-    
-    return conn;
-  } catch (error) {
-    console.error('Error connecting to MongoDB:', error.message);
+    // DEBUG: Let's see if the variable actually exists
+    console.log('Checking MONGODB_URI:', process.env.MONGODB_URI ? 'Exists' : 'UNDEFINED');
+
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI is missing from .env file!');
+    }
+
+    await mongoose.connect(process.env.MONGODB_URI); 
+    console.log('✅ MongoDB connected...');
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err.message);
     process.exit(1);
   }
 };
+
 
 module.exports = connectDB;

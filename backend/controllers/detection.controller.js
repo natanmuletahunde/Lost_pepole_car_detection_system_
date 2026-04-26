@@ -1,50 +1,195 @@
-const Sighting = require('../models/Sighting');
-const ApiResponse = require('../utils/ApiResponse');
-const { paginate } = require('../utils/helpers');
+const nodemailer = require('nodemailer');
+const bot = require('../telegramBot');
+const Detection = require('../models/Detection');
+const User = require('../models/User');
+;
+const { SerialPort } = require('serialport');
 
-const createVehicleDetection = async (req, res, next) => {
+
+// ==============================
+// GSM SETUP
+// ==============================
+let gsmPort;
+
+try {
+  gsmPort = new SerialPort({
+    path: process.env.SERIAL_PORT || 'COM5',
+    baudRate: 9600,
+  });
+
+  gsmPort.on('open', () => console.log('GSM Serial Port opened'));
+  gsmPort.on('error', (err) => console.error('SerialPort Error:', err.message));
+
+} catch (err) {
+  console.error('Failed to initialize GSM port:', err.message);
+}
+
+// ==============================
+// EMAIL SETUP
+// ==============================
+
+
+// ==============================
+// CREATE DETECTION (FROM ML)
+// ==============================
+exports.createDetection = async (req, res) => {
   try {
-    const { description, location, images } = req.body;
-
-    const sighting = await Sighting.create({
-      user: req.user._id,
-      type: 'vehicle',
-      description,
+    const {
+      type,
+      userId,
+      name,
+      licensePlate,
+      timestamp,
       location,
-      images: images || [],
+      detectionImage,
+      confidence,
+      priority,
+      behavior,
+      confidenceThreshold
+    } = req.body;
+
+    // ==============================
+    // CONFIDENCE CHECK
+    // ==============================
+
+
+
+    
+
+    // ==============================
+    // USER CHECK (NO REGISTRATION MODEL)
+    // ==============================
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (!user.consent) {
+      return res.status(403).json({
+        success: false,
+        message: 'User consent required'
+      });
+    }
+
+    // ==============================
+    // SAVE DETECTION
+    // ==============================
+    const detection = new Detection({
+      type,
+      userId,
+      name,
+      licensePlate,
+      timestamp,
+      location,
+      detectionImage: detectionImage || null,
+      confidence,
+      priority,
+      behavior
     });
 
-    await sighting.populate('user', 'firstName lastName email phone');
+    await detection.save();
 
-    return ApiResponse.success(res, 'Vehicle detection reported successfully', { sighting }, 201);
+    const alertMessage =
+      `🚨 ${type} detected at ${location} on ${new Date(timestamp).toLocaleString('en-US', {
+        timeZone: 'Africa/Nairobi'
+      })}: ${name || licensePlate}`;
+
+    const tasks = [];
+
+    // ==============================
+    // EMAIL
+    // ==============================
+ 
+
+    // ==============================
+    // SMS (GSM MODULE)
+    // ==============================
+    if (user.contact && gsmPort?.isOpen) {
+      gsmPort.write(`${user.contact}|${alertMessage}\n`);
+    }
+
+    // ==============================
+    // TELEGRAM
+    // ==============================
+    if (user.telegramChatId) {
+      tasks.push(
+        bot.sendMessage(user.telegramChatId, alertMessage)
+      );
+    }
+
+    await Promise.all(tasks);
+
+    // ==============================
+    // AUDIT LOG
+    // ==============================
+ 
+
+    res.status(201).json({
+      success: true,
+      detectionId: detection._id
+    });
+
   } catch (error) {
-    next(error);
+    console.error('Detection Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
-const getVehicleDetections = async (req, res, next) => {
+// ==============================
+// GET ALL DETECTIONS
+// ==============================
+exports.getDetections = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const { status } = req.query;
+    const detections = await Detection.find().sort({ createdAt: -1 });
 
-    const query = { type: 'vehicle' };
-    if (status) query.status = status;
+    res.json({
+      success: true,
+      detections
+    });
 
-    const total = await Sighting.countDocuments(query);
-    const detections = await paginate(
-      Sighting.find(query).populate('user', 'firstName lastName email phone'),
-      page,
-      limit
-    ).sort('-reportedAt');
-
-    return ApiResponse.paginated(res, 'Vehicle detections retrieved successfully', detections, page, limit, total);
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
 
-module.exports = {
-  createVehicleDetection,
-  getVehicleDetections,
+// ==============================
+// UPDATE DETECTION STATUS
+// ==============================
+exports.updateDetection = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const detection = await Detection.findById(req.params.id);
+
+    if (!detection) {
+      return res.status(404).json({
+        success: false,
+        message: 'Detection not found'
+      });
+    }
+
+    detection.status = status;
+    await detection.save();
+
+    res.json({
+      success: true,
+      message: 'Detection updated'
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
