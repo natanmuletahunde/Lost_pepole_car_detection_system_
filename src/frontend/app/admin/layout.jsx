@@ -28,10 +28,10 @@ export default function AdminLayout({ children }) {
   const menuItems = [
     { icon: <IconLayoutDashboard size={22} />, label: 'Dashboard', path: '/admin' },
     { icon: <IconUsers size={22} />, label: 'Accounts', path: '/admin/accounts' },
-    { icon: <IconDatabase size={22} />, label: 'Data Management', path: '/admin/data' },
-    { icon: <IconFileCheck size={22} />, label: 'Document Validation', path: '/admin/docs' },
+    { icon: <IconDatabase size={22} />, label: 'Data Management', path: '/admin/registered_data' },
+    { icon: <IconFileCheck size={22} />, label: 'Document Validation', path: '/admin/document_validation' },
     { icon: <IconCoin size={22} />, label: 'Finance', path: '/admin/finance' },
-    { icon: <IconBell size={22} />, label: 'Notifications', path: '/admin/notifications' },
+    { icon: <IconBell size={22} />, label: 'Notifications', path: '/admin/notification' },
     { icon: <IconMessageDots size={22} />, label: 'Feedback', path: '/admin/feedback' },
     { icon: <IconSettings size={22} />, label: 'Setting', path: '/admin/settings' },
     { icon: <IconHistory size={22} />, label: 'Activities', path: '/admin/activities' },

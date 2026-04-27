@@ -10,7 +10,7 @@ import {
 import { IconArrowLeft, IconEdit, IconAlertCircle } from '@tabler/icons-react';
 import Link from 'next/link';
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:3001';
 
 // Map API person to display shape
 const formatPerson = (p) => ({
@@ -201,7 +201,7 @@ export default function RecordDetailPage() {
           <Divider my="lg" />
 
           <Group justify="flex-end">
-            <Button variant="subtle" onClick={() => router.push('/admin/data')}>
+            <Button variant="subtle" onClick={() => router.push('/admin/registered_data')}>
               Back to List
             </Button>
           </Group>

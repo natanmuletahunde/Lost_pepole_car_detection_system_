@@ -38,7 +38,7 @@ import {
 } from "@tabler/icons-react";
 
 // ✅ Changed base URL to port 3000
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = "http://localhost:3001";
 
 // Helper functions
 const formatDate = (dateString) => {

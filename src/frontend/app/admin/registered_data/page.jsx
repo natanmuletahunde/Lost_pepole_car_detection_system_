@@ -21,19 +21,28 @@ import {
 } from '@tabler/icons-react';
 
 // API base URL – using port 3000
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = "http://localhost:3001";
 
 // Helpers
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 const getTextColor = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 const formatDateForInput = (date) => date.toISOString().split('T')[0];
 
+// Helper to safely extract reporter name (handles both string and object)
+const getReporterName = (reportedBy) => {
+  if (!reportedBy) return 'N/A';
+  if (typeof reportedBy === 'string') return reportedBy;
+  // If it's an object, try to combine first and last name
+  const name = `${reportedBy.firstName || ''} ${reportedBy.lastName || ''}`.trim();
+  return name || reportedBy.email || 'N/A';
+};
+
 // Map a person from the API to our unified record shape
 const mapPersonToRecord = (person) => ({
   id: person.id,
   brand: `${person.firstName} ${person.lastName}`.trim(),
   model: 'Person',
-  user: person.reportedBy || 'N/A',
+  user: getReporterName(person.reportedBy),
   plate: 'N/A',
   date: new Date(person.dateReported).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric'
@@ -48,7 +57,7 @@ const mapVehicleToRecord = (vehicle) => ({
   id: vehicle.id,
   brand: vehicle.make || vehicle.brand,
   model: vehicle.model,
-  user: vehicle.reportedBy || 'N/A',
+  user: getReporterName(vehicle.reportedBy),
   plate: vehicle.plateNumber || vehicle.plate,
   date: new Date(vehicle.dateReported).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric'
@@ -187,11 +196,6 @@ export default function DataManagementPage() {
   }, [searchQuery, typeFilter, dateFilter, pageSize]);
 
   // ---------- CRUD OPERATIONS ----------
-  // Note: Since we are using a json-server, we can implement real API calls for add/update/delete.
-  // For demo purposes, we simulate local changes because the endpoints are read-only? 
-  // To keep the demo fully functional, we'll use client-side updates and a refresh option.
-  // But the original component did local state changes; we'll do the same.
-
   const addRecord = (values) => {
     const newId = Math.max(...data.map(d => d.id), 0) + 1;
     const dateObj = new Date(values.date);
@@ -349,7 +353,7 @@ export default function DataManagementPage() {
         </Group>
       </Group>
 
-      {/* STATS CARDS (same as before) */}
+      {/* STATS CARDS */}
       <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="lg" mb="xl">
         {[
           { label: 'Total Records', value: stats.total, color: '#4318FF', icon: IconCar },
@@ -413,7 +417,7 @@ export default function DataManagementPage() {
         </Group>
       </Paper>
 
-      {/* MAIN TABLE (same structure) */}
+      {/* MAIN TABLE */}
       <Paper radius="lg" shadow="sm" withBorder style={{ overflow: 'hidden' }}>
         <Table.ScrollContainer minWidth={1000}>
           <Table verticalSpacing="md" highlightOnHover striped>
@@ -449,7 +453,7 @@ export default function DataManagementPage() {
                       <Text size="sm" c="dimmed">{item.model}</Text>
                     </Table.Td>
                     <Table.Td>
-                      <Text size="sm">{item.user}</Text>
+                      <Text size="sm">{item.user}</Text>  {/* Now safely a string */}
                     </Table.Td>
                     <Table.Td>
                       <Badge color={item.status === 'Verified' ? 'green' : 'gray'} variant="light" radius="xl">
@@ -510,7 +514,7 @@ export default function DataManagementPage() {
                           </Menu.Dropdown>
                         </Menu>
                         <Tooltip label="Full details">
-                          <Link href={`/admin/data/${item.id}`} passHref>
+                          <Link href={`/admin/registered_data/${item.id}`} passHref>
                             <ActionIcon component="a" variant="filled" color="blue" size="md" style={{ marginLeft: 4 }}>
                               <IconChevronRight size={16} />
                             </ActionIcon>
@@ -551,7 +555,7 @@ export default function DataManagementPage() {
         </Group>
       </Paper>
 
-      {/* ---------- MODALS (unchanged) ---------- */}
+      {/* MODALS */}
       <Modal opened={addModalOpened} onClose={addModalHandlers.close} title={<Text fw={700} size="lg">Add New Record</Text>} centered size="lg" radius="md">
         <form onSubmit={addForm.onSubmit(addRecord)}>
           <Stack gap="sm">

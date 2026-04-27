@@ -47,7 +47,7 @@ import {
 import { useRouter } from "next/navigation";
 
 // ✅ Changed base URL to port 3000
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = "http://localhost:3001";
 
 // Helper functions
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
