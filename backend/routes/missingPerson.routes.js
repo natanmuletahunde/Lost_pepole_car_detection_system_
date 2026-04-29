@@ -2,7 +2,7 @@ const router = require('express').Router();
 const controller = require('../controllers/missingPerson.controller');
 const upload = require('../config/multer');
 
-// 📸 MUST BE 8 IMAGES
+// 📸 MUST BE  IMAGES
 router.post('/', upload.array('images', 2), controller.createMissingPerson);
 
 router.get('/', controller.getMissingPersons);

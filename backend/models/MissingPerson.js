@@ -52,7 +52,7 @@ const missingPersonSchema = new mongoose.Schema({
       validator: function (val) {
         return val.length >= 2;
       },
-      message: 'At least 8 images are required'
+      message: 'At least 2 images are required'
     }
   },
 

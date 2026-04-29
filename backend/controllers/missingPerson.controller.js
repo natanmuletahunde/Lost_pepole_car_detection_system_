@@ -1,106 +1,96 @@
-const MissingPerson = require('../models/MissingPerson');
-const Sighting = require('../models/Sighting');
-const Detection = require('../models/Detection');
+const MissingPerson = require("../models/MissingPerson");
+const Sighting = require("../models/Sighting");
+const Detection = require("../models/Detection");
 
 // ==============================
-// CREATE Missing Person (WITH 8 IMAGE RULE)
+// CREATE Missing Person
 // ==============================
 exports.createMissingPerson = async (req, res) => {
   try {
-    const data = req.body;
+    console.log("BODY:", req.body);
+    console.log("FILES:", req.files);
 
-    // 📸 enforce images
-    if (!req.files || req.files.length < 2) {
+    const files = req.files;
+
+    if (!files || files.length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Minimum 2 images are required'
+        message: "Minimum 2 images required",
       });
     }
 
-    const images = req.files.map(file => file.path);
-
-    const caseId = `CASE-MP-${Date.now()}`;
+    const images = files.map(file => `/uploads/${file.filename}`);
 
     const person = new MissingPerson({
-      ...data,
+      ...req.body, // text fields still here
       images,
-      caseId,
-      status: 'Active',
-      reportDate: new Date()
+      caseId: `CASE-MP-${Date.now()}`,
+      status: "Active",
+      reportDate: new Date(),
     });
 
     await person.save();
 
     res.status(201).json({
       success: true,
-      message: 'Missing person case created',
-      data: person
+      data: person,
     });
 
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  } catch (err) {
+    console.error("CREATE ERROR:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
   }
 };
-
+// ==============================
+// GET ALL
 // ==============================
 exports.getMissingPersons = async (req, res) => {
-  try {
-    const persons = await MissingPerson.find().sort({ createdAt: -1 });
-    res.json({ success: true, data: persons });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
+  const persons = await MissingPerson.find().sort({ createdAt: -1 });
+  res.json({ success: true, data: persons });
 };
 
+// ==============================
+// GET ONE
 // ==============================
 exports.getMissingPersonById = async (req, res) => {
-  try {
-    const person = await MissingPerson.findById(req.params.id);
+  const person = await MissingPerson.findById(req.params.id);
 
-    if (!person) {
-      return res.status(404).json({ success: false, message: 'Not found' });
-    }
-
-    const sightings = await Sighting.find({
-      type: 'person',
-      description: { $regex: person.firstName, $options: 'i' }
-    });
-
-    const detections = await Detection.find({
-      name: { $regex: person.firstName, $options: 'i' }
-    });
-
-    res.json({
-      success: true,
-      data: { person, sightings, detections }
-    });
-
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  if (!person) {
+    return res.status(404).json({ success: false });
   }
+
+  const sightings = await Sighting.find({
+    type: "person",
+    description: { $regex: person.firstName, $options: "i" }
+  });
+
+  const detections = await Detection.find({
+    name: { $regex: person.firstName, $options: "i" }
+  });
+
+  res.json({
+    success: true,
+    data: { person, sightings, detections }
+  });
 };
 
 // ==============================
+// UPDATE
+// ==============================
 exports.updateMissingPerson = async (req, res) => {
-  try {
-    const person = await MissingPerson.findById(req.params.id);
+  const person = await MissingPerson.findById(req.params.id);
 
-    if (!person) {
-      return res.status(404).json({ success: false });
-    }
-
-    Object.assign(person, req.body);
-    person.lastUpdated = new Date();
-
-    await person.save();
-
-    res.json({
-      success: true,
-      message: 'Case updated',
-      data: person
-    });
-
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  if (!person) {
+    return res.status(404).json({ success: false });
   }
+
+  Object.assign(person, req.body);
+  person.lastUpdated = new Date();
+
+  await person.save();
+
+  res.json({ success: true, data: person });
 };

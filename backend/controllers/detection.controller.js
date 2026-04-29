@@ -1,13 +1,11 @@
-const nodemailer = require('nodemailer');
-const bot = require('../telegramBot');
 const Detection = require('../models/Detection');
-const User = require('../models/User');
-;
+const MissingPerson = require('../models/MissingPerson');
+const MissingVehicle = require('../models/MissingVehicle');
+const bot = require('../telegramBot');
 const { SerialPort } = require('serialport');
 
-
 // ==============================
-// GSM SETUP
+// GSM SETUP (optional)
 // ==============================
 let gsmPort;
 
@@ -17,120 +15,140 @@ try {
     baudRate: 9600,
   });
 
-  gsmPort.on('open', () => console.log('GSM Serial Port opened'));
-  gsmPort.on('error', (err) => console.error('SerialPort Error:', err.message));
-
+  gsmPort.on('open', () => console.log('📡 GSM connected'));
+  gsmPort.on('error', (err) => console.log('GSM error:', err.message));
 } catch (err) {
-  console.error('Failed to initialize GSM port:', err.message);
+  console.log('⚠️ GSM not available');
 }
 
 // ==============================
-// EMAIL SETUP
-// ==============================
-
-
-// ==============================
-// CREATE DETECTION (FROM ML)
+// CREATE DETECTION (SMART CORE)
 // ==============================
 exports.createDetection = async (req, res) => {
   try {
     const {
       type,
-      userId,
       name,
       licensePlate,
-      timestamp,
       location,
       detectionImage,
       confidence,
-      priority,
-      behavior,
-      confidenceThreshold
+      behavior
     } = req.body;
 
-    // ==============================
-    // CONFIDENCE CHECK
-    // ==============================
-
-
-
-    
-
-    // ==============================
-    // USER CHECK (NO REGISTRATION MODEL)
-    // ==============================
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({
+    // 🧪 Basic validation
+    if (!type || !location || confidence === undefined) {
+      return res.status(400).json({
         success: false,
-        message: 'User not found'
+        message: 'type, location and confidence are required'
       });
     }
 
-    if (!user.consent) {
-      return res.status(403).json({
+    // 🎯 Ignore weak detections
+    if (confidence < 0.5) {
+      return res.status(200).json({
         success: false,
-        message: 'User consent required'
+        message: 'Low confidence ignored'
       });
     }
 
+    let matchedPerson = null;
+    let matchedVehicle = null;
+    let reporter = null;
+
     // ==============================
-    // SAVE DETECTION
+    // 🔍 PERSON MATCHING
+    // ==============================
+    if (type === 'Person' && name) {
+      matchedPerson = await MissingPerson.findOne({
+        status: 'Active',
+        $or: [
+          { firstName: { $regex: name, $options: 'i' } },
+          { lastName: { $regex: name, $options: 'i' } }
+        ]
+      });
+
+      if (matchedPerson) {
+        reporter = matchedPerson.reportedBy;
+      }
+    }
+
+    // ==============================
+    // 🚗 VEHICLE MATCHING
+    // ==============================
+    if (type === 'Vehicle' && licensePlate) {
+      matchedVehicle = await MissingVehicle.findOne({
+        plateNumber: licensePlate.toUpperCase(),
+        status: 'Active'
+      });
+
+      if (matchedVehicle) {
+        reporter = matchedVehicle.reportedBy;
+      }
+    }
+
+    // ==============================
+    // 💾 SAVE DETECTION
     // ==============================
     const detection = new Detection({
       type,
-      userId,
-      name,
-      licensePlate,
-      timestamp,
+      name: name || null,
+      licensePlate: licensePlate || null,
       location,
       detectionImage: detectionImage || null,
       confidence,
-      priority,
-      behavior
+      behavior: behavior || 'Detected',
+      priority: confidence > 0.7 ? 'High' : 'Normal',
+      personId: matchedPerson?._id || null,
+      vehicleId: matchedVehicle?._id || null
     });
 
     await detection.save();
 
-    const alertMessage =
-      `🚨 ${type} detected at ${location} on ${new Date(timestamp).toLocaleString('en-US', {
-        timeZone: 'Africa/Nairobi'
-      })}: ${name || licensePlate}`;
+    // ==============================
+    // 🚨 ALERT SYSTEM (ONLY IF MATCH FOUND)
+    // ==============================
+    if (reporter) {
+      const message = `
+🚨 MATCH FOUND!
 
-    const tasks = [];
+Type: ${type}
+${name ? `👤 Name: ${name}` : ''}
+${licensePlate ? `🚗 Plate: ${licensePlate}` : ''}
 
-    // ==============================
-    // EMAIL
-    // ==============================
- 
+📍 Location: ${location}
+🎯 Confidence: ${(confidence * 100).toFixed(1)}%
+🕒 ${new Date().toLocaleString()}
+`;
 
-    // ==============================
-    // SMS (GSM MODULE)
-    // ==============================
-    if (user.contact && gsmPort?.isOpen) {
-      gsmPort.write(`${user.contact}|${alertMessage}\n`);
+      // 📲 TELEGRAM
+      if (reporter.telegramUsername) {
+        try {
+          await bot.sendMessage(`@${reporter.telegramUsername}`, message);
+        } catch (err) {
+          console.log('Telegram failed:', err.message);
+        }
+      }
+
+      // 📡 SMS (GSM)
+      if (reporter.phone && gsmPort?.isOpen) {
+        try {
+          gsmPort.write(`${reporter.phone}|${message}\n`);
+        } catch (err) {
+          console.log('SMS failed:', err.message);
+        }
+      }
+
+      console.log('🚨 Alert sent to reporter');
     }
 
     // ==============================
-    // TELEGRAM
+    // ✅ RESPONSE
     // ==============================
-    if (user.telegramChatId) {
-      tasks.push(
-        bot.sendMessage(user.telegramChatId, alertMessage)
-      );
-    }
-
-    await Promise.all(tasks);
-
-    // ==============================
-    // AUDIT LOG
-    // ==============================
- 
-
     res.status(201).json({
       success: true,
-      detectionId: detection._id
+      message: reporter ? 'Match found and alert sent' : 'Detection stored',
+      data: detection
     });
 
   } catch (error) {
@@ -147,11 +165,14 @@ exports.createDetection = async (req, res) => {
 // ==============================
 exports.getDetections = async (req, res) => {
   try {
-    const detections = await Detection.find().sort({ createdAt: -1 });
+    const detections = await Detection.find()
+      .populate('personId')
+      .populate('vehicleId')
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
-      detections
+      data: detections
     });
 
   } catch (err) {
@@ -163,7 +184,7 @@ exports.getDetections = async (req, res) => {
 };
 
 // ==============================
-// UPDATE DETECTION STATUS
+// UPDATE STATUS
 // ==============================
 exports.updateDetection = async (req, res) => {
   try {
@@ -178,12 +199,13 @@ exports.updateDetection = async (req, res) => {
       });
     }
 
-    detection.status = status;
+    detection.status = status || detection.status;
     await detection.save();
 
     res.json({
       success: true,
-      message: 'Detection updated'
+      message: 'Detection updated',
+      data: detection
     });
 
   } catch (err) {

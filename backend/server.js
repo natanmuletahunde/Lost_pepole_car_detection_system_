@@ -1,164 +1,116 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const expressSanitizer = require('express-sanitizer');
-const swaggerUi = require('swagger-ui-express');
+require("dotenv").config();
 
-const connectDB = require('./config/database');
-const config = require('./config');
-const { errorHandler, notFound } = require('./middlewares/errorHandler');
-const sanitizeRequest = require('./middlewares/mongoSanitize');
-const { swaggerSpec, isSwaggerEnabled, isSwaggerAdminOnly } = require('./config/swagger');
-const { protect, authorize } = require('./middlewares/auth');
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const expressSanitizer = require("express-sanitizer");
+const swaggerUi = require("swagger-ui-express");
+const path = require("path");
 
-const authRoutes = require('./routes/auth.routes');
-const userRoutes = require('./routes/user.routes');
-const sightingRoutes = require('./routes/sighting.routes');
-const feedbackRoutes = require('./routes/feedback.routes');
-const alertRoutes = require('./routes/alert.routes');
-const uploadRoutes = require('./routes/upload.routes');
-const searchRoutes = require('./routes/search.routes');
-const detectionRoutes = require('./routes/detection.routes');
-const adminRoutes = require('./routes/admin.routes');
+const connectDB = require("./config/database");
+const config = require("./config");
+const { errorHandler, notFound } = require("./middlewares/errorHandler");
+const sanitizeRequest = require("./middlewares/mongoSanitize");
+const { swaggerSpec, isSwaggerEnabled, isSwaggerAdminOnly } = require("./config/swagger");
+const { protect, authorize } = require("./middlewares/auth");
 
-// 🧠 NEW IMPORTS (IMPORTANT)
-const missingPersonRoutes = require('./routes/missingPerson.routes');
-const missingVehicleRoutes = require('./routes/missingVehicle.routes');
-
-const analyticsRoutes = require('./routes/analytics.routes');
-const subscriptionRoutes = require('./routes/subscription.routes');
-const gpsRoutes = require('./routes/gps.routes');
-const logsRoutes = require('./routes/logs.routes');
+// routes
+const authRoutes = require("./routes/auth.routes");
+const userRoutes = require("./routes/user.routes");
+const sightingRoutes = require("./routes/sighting.routes");
+const feedbackRoutes = require("./routes/feedback.routes");
+const alertRoutes = require("./routes/alert.routes");
+const uploadRoutes = require("./routes/upload.routes");
+const searchRoutes = require("./routes/search.routes");
+const detectionRoutes = require("./routes/detection.routes");
+const adminRoutes = require("./routes/admin.routes");
+const missingPersonRoutes = require("./routes/missingPerson.routes");
+const missingVehicleRoutes = require("./routes/missingVehicle.routes");
 
 const app = express();
 
 connectDB();
 
-// ================= SECURITY MIDDLEWARE =================
+// ================= SECURITY =================
 app.use(helmet());
 app.use(cors({
   origin: '*',
   credentials: true
 }));
 
-const limiter = rateLimit({
-  windowMs: config.rateLimit.windowMs,
-  max: config.rateLimit.max,
-  message: 'Too many requests from this IP, please try again later.',
-});
-app.use(limiter);
+app.use(
+  rateLimit({
+    windowMs: config.rateLimit.windowMs,
+    max: config.rateLimit.max,
+    message: "Too many requests, slow down.",
+  })
+);
 
-// ================= BODY PARSING =================
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// ================= BODY =================
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 
 app.use(sanitizeRequest);
 app.use(expressSanitizer());
 
-// ================= HEALTH CHECK =================
-app.get('/api/v1/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server is running'
-  });
+// ================= 🔥 UNIFIED UPLOAD PATH =================
+const uploadPath = path.join(process.cwd(), "uploads");
+
+// IMPORTANT: static MUST be BEFORE routes
+app.use("/uploads", express.static(uploadPath, {
+  maxAge: "1d",
+  etag: true,
+}));
+
+// ================= HEALTH =================
+app.get("/api/v1/health", (req, res) => {
+  res.json({ success: true, message: "Server running" });
 });
 
 // ================= SWAGGER =================
 if (isSwaggerEnabled()) {
-  const docsGuards = [];
-
-  if (isSwaggerAdminOnly()) {
-    docsGuards.push(protect, authorize('admin'));
-  }
+  const guards = isSwaggerAdminOnly()
+    ? [protect, authorize("admin")]
+    : [];
 
   app.use(
-    '/api-docs',
-    ...docsGuards,
+    "/api-docs",
+    ...guards,
     swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec, {
-      explorer: true,
-      swaggerOptions: {
-        persistAuthorization: true,
-      },
-    })
+    swaggerUi.setup(swaggerSpec)
   );
-
-  app.get('/api-docs.json', ...docsGuards, (req, res) => {
-    res.json(swaggerSpec);
-  });
 }
 
 // ================= ROUTES =================
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/sightings", sightingRoutes);
+app.use("/api/v1/detections", detectionRoutes);
+app.use("/api/v1/feedback", feedbackRoutes);
+app.use("/api/v1/alerts", alertRoutes);
+app.use("/api/v1/uploads", uploadRoutes);
+app.use("/api/v1/search", searchRoutes);
+app.use("/api/v1/admin", adminRoutes);
+app.use("/api/v1/missing-persons", missingPersonRoutes);
+app.use("/api/v1/missing-vehicles", missingVehicleRoutes);
 
-// Auth & Core
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/users', userRoutes);
-
-// Detection system
-app.use('/api/v1/sightings', sightingRoutes);
-app.use('/api/v1/detections', detectionRoutes);
-
-// Communication
-app.use('/api/v1/feedback', feedbackRoutes);
-app.use('/api/v1/alerts', alertRoutes);
-
-// Uploads & Search
-app.use('/api/v1/uploads', uploadRoutes);
-app.use('/api/v1/search', searchRoutes);
-
-// Admin
-app.use('/api/v1/admin', adminRoutes);
-
-// 🧠 NEW: Missing Persons System
-app.use('/api/v1/missing-persons', missingPersonRoutes);
-
-// 🚗 NEW: Missing Vehicles System
-app.use('/api/v1/missing-vehicles', missingVehicleRoutes);
-
-// Analytics & Stats
-app.use('/api/v1/analytics', analyticsRoutes);
-
-// Subscriptions & Payments
-app.use('/api/v1/subscriptions', subscriptionRoutes);
-
-// GPS Tracking
-app.use('/api/v1/gps', gpsRoutes);
-
-// Logs
-app.use('/logs', logsRoutes);
-
-// ML test route
-app.get('/api/v1/ml/test', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'ML connection is working 🚀'
-  });
-});
-
-// ================= ERROR HANDLING =================
+// ================= ERROR =================
 app.use(notFound);
 app.use(errorHandler);
 
 // ================= SERVER =================
-const PORT = config.server.port;
-const HOST = '0.0.0.0';
-
-const server = app.listen(PORT, HOST, () => {
-  console.log(`Server running in ${config.server.nodeEnv} mode on http://${HOST}:${PORT}`);
+const server = app.listen(config.server.port, "0.0.0.0", () => {
+  console.log(`Server running on http://0.0.0.0:${config.server.port}`);
 });
 
-// ================= PROCESS SAFETY =================
-process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! Shutting down...');
+// ================= SAFETY =================
+process.on("unhandledRejection", (err) => {
   console.error(err);
   server.close(() => process.exit(1));
 });
 
-process.on('uncaughtException', (err) => {
-  console.error('UNCAUGHT EXCEPTION! Shutting down...');
+process.on("uncaughtException", (err) => {
   console.error(err);
   server.close(() => process.exit(1));
 });

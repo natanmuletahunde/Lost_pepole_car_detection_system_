@@ -3,14 +3,24 @@ const Sighting = require('../models/Sighting');
 const Detection = require('../models/Detection');
 
 // ==============================
+// CREATE VEHICLE CASE (OPTIONAL IMAGE SUPPORT)
+// ==============================
 exports.createMissingVehicle = async (req, res) => {
   try {
     const data = req.body;
+
+    // 🚗 vehicle images optional (but support multiple if provided)
+    let images = [];
+
+    if (req.files && req.files.length > 0) {
+      images = req.files.map(file => file.path);
+    }
 
     const caseId = `CASE-MV-${Date.now()}`;
 
     const vehicle = new MissingVehicle({
       ...data,
+      images,
       caseId,
       status: 'Active',
       reportDate: new Date()
@@ -20,12 +30,15 @@ exports.createMissingVehicle = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Missing vehicle case created',
+      message: 'Missing vehicle case created successfully',
       data: vehicle
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -45,7 +58,10 @@ exports.getMissingVehicleById = async (req, res) => {
     const vehicle = await MissingVehicle.findById(req.params.id);
 
     if (!vehicle) {
-      return res.status(404).json({ success: false });
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
     }
 
     const sightings = await Sighting.find({
@@ -73,7 +89,10 @@ exports.updateMissingVehicle = async (req, res) => {
     const vehicle = await MissingVehicle.findById(req.params.id);
 
     if (!vehicle) {
-      return res.status(404).json({ success: false });
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
     }
 
     Object.assign(vehicle, req.body);
@@ -83,7 +102,7 @@ exports.updateMissingVehicle = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Vehicle updated',
+      message: 'Vehicle updated successfully',
       data: vehicle
     });
 
