@@ -1,7 +1,7 @@
 // JSON Server URLs
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-export const MISSING_PERSONS_API = `${API_BASE_URL}/missingPersons`;
-export const MISSING_VEHICLES_API = `${API_BASE_URL}/missingVehicles`;
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+export const MISSING_PERSONS_API = `${API_BASE_URL}/missing-persons`;
+export const MISSING_VEHICLES_API = `${API_BASE_URL}/missing-vehicles`;
 export const USERS_API = `${API_BASE_URL}/users`;
 
 // Theme constants

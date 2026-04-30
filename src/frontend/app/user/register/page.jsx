@@ -68,6 +68,7 @@ export default function UnifiedRegisterPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState([false, false, false, false, false]);
   const [imagePreview, setImagePreview] = useState(null);
+  const [uploadedImages, setUploadedImages] = useState([]);
   const [showContactModal, setShowContactModal] = useState(false);
   const [isHelpVisible, setIsHelpVisible] = useState(false);
   const [mapCenter, setMapCenter] = useState([9.03, 38.74]);
@@ -110,38 +111,7 @@ export default function UnifiedRegisterPage() {
   ];
 
   // ------------------- LOGGING FUNCTION -------------------
-  const createReportLog = async (reportData) => {
-    try {
-      let ipAddress = 'unknown';
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipRes.json();
-        ipAddress = ipData.ip;
-      } catch (ipError) {
-        console.warn('Could not fetch IP address', ipError);
-      }
-
-      const logEntry = {
-        userId: currentUser?.id,
-        userEmail: currentUser?.email,
-        action: 'report_submission',
-        reportType: regType,
-        reportId: reportData.caseId,
-        timestamp: new Date().toISOString(),
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        ipAddress,
-      };
-
-      await fetch('http://localhost:3001/logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(logEntry),
-      });
-    } catch (error) {
-      console.error('Failed to create report submission log:', error);
-      // Non-blocking
-    }
-  };
+  // Removed: createReportLog function that sent to JSON Server
   // ---------------------------------------------------------
 
   // Authentication and registration check
@@ -159,28 +129,11 @@ export default function UnifiedRegisterPage() {
         }
 
         const parsedUser = JSON.parse(userData);
-        const response = await fetch(`${USERS_API}/${parsedUser.id}`);
-        if (response.ok) {
-          const userFromServer = await response.json();
-          setCurrentUser(userFromServer);
-          if (!userFromServer.isActive) {
-            notifications.show({ title: 'Account Inactive', message: 'Your account has been deactivated. Please contact support.', color: 'red', icon: <IconAlertCircle size={20} /> });
-            router.push('/login');
-            return;
-          }
-          const registrationCount = userFromServer.registrations || 0;
-          if (registrationCount >= 1 && !userFromServer.hasPaidSubscription) {
-            setShowSubscriptionRedirect(true);
-            setTimeout(() => router.push('/subscribe'), 3000);
-            setLoading(false);
-            return;
-          }
-        } else {
-          throw new Error('Failed to fetch user data');
-        }
+        // Assume user is active since authenticated
+        setCurrentUser(parsedUser);
         setLoading(false);
       } catch (error) {
-        console.error('Error checking registration and auth:', error);
+        console.error('Error checking auth:', error);
         setLoading(false);
       }
     };
@@ -238,6 +191,7 @@ export default function UnifiedRegisterPage() {
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
+      setUploadedImages(prev => [...prev, file]); // Store the file
     }
   };
 
@@ -363,33 +317,39 @@ export default function UnifiedRegisterPage() {
   const saveToJsonServer = async (data) => {
     try {
       const endpoint = regType === 'Vehicle' ? MISSING_VEHICLES_API : MISSING_PERSONS_API;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      let response;
+      if (regType === 'Person' && uploadedImages.length > 0) {
+        // Use FormData for persons with images
+        const formData = new FormData();
+        Object.keys(data).forEach(key => {
+          if (data[key] !== null && data[key] !== undefined) {
+            formData.append(key, data[key]);
+          }
+        });
+        uploadedImages.forEach((file, index) => {
+          formData.append('images', file);
+        });
+        response = await fetch(endpoint, {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        // Use JSON for vehicles or persons without images
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+      }
       if (!response.ok) throw new Error(`Failed to save data: ${response.statusText}`);
       return await response.json();
     } catch (error) {
-      console.error('Error saving to JSON Server:', error);
+      console.error('Error saving to server:', error);
       throw error;
     }
   };
 
-  const updateUserRegistrationCount = async (userId, newCount) => {
-    try {
-      const response = await fetch(`${USERS_API}/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registrations: newCount, updatedAt: new Date().toISOString() }),
-      });
-      if (!response.ok) throw new Error('Failed to update user registration count');
-      return await response.json();
-    } catch (error) {
-      console.error('Error updating user:', error);
-      throw error;
-    }
-  };
+  // Removed: updateUserRegistrationCount function that updated JSON Server
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -432,17 +392,18 @@ export default function UnifiedRegisterPage() {
         imagePreview: imagePreview || null,
       };
 
-      // Save the report (unchanged)
+      // Save the report
       await saveToJsonServer(reportData);
-      const currentRegistrations = currentUser.registrations || 0;
-      const newCount = currentRegistrations + 1;
-      const updatedUser = await updateUserRegistrationCount(currentUser.id, newCount);
-      const newUserData = { ...currentUser, registrations: newCount, updatedAt: updatedUser.updatedAt };
-      setCurrentUser(newUserData);
-      localStorage.setItem('currentUser', JSON.stringify(newUserData));
+      // Removed user registration count update as it's not supported in backend
+      // const currentRegistrations = currentUser.registrations || 0;
+      // const newCount = currentRegistrations + 1;
+      // const updatedUser = await updateUserRegistrationCount(currentUser.id, newCount);
+      // const newUserData = { ...currentUser, registrations: newCount, updatedAt: updatedUser.updatedAt };
+      // setCurrentUser(newUserData);
+      // localStorage.setItem('currentUser', JSON.stringify(newUserData));
 
-      // ✅ LOG THE REPORT SUBMISSION
-      await createReportLog(reportData).catch(err => console.error('Log error:', err));
+      // Removed logging to JSON Server
+      // await createReportLog(reportData).catch(err => console.error('Log error:', err));
 
       notifications.show({
         title: '🎉 Report Submitted Successfully!',
@@ -482,6 +443,7 @@ export default function UnifiedRegisterPage() {
     setActiveStep(0);
     setCompletedSteps([false, false, false, false, false]);
     setImagePreview(null);
+    setUploadedImages([]);
     setSelectedBrand(null);
     setSelectedModel(null);
     setSelectedSubmodel(null);
