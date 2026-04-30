@@ -89,9 +89,9 @@ import MainFooter from '../../components/MainFooter';
 import { useMediaQuery } from '@mantine/hooks';
 
 // API URLs
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-const MISSING_PERSONS_API = `${API_BASE_URL}/missingPersons`;
-const MISSING_VEHICLES_API = `${API_BASE_URL}/missingVehicles`;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+const MISSING_PERSONS_API = `${API_BASE_URL}/missing-persons`;
+const MISSING_VEHICLES_API = `${API_BASE_URL}/missing-vehicles`;
 
 // Primary Colors
 const PRIMARY_COLOR = '#0034D1';
@@ -102,6 +102,12 @@ const PRIMARY_GRADIENT_HOVER = `linear-gradient(135deg, ${PRIMARY_DARK} 0%, #005
 
 // Helper for dynamic backgrounds
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
+
+const normalizeStatus = (status) => (status || 'active').toString().toLowerCase();
+const toBackendStatus = (status) => {
+  const normalized = normalizeStatus(status);
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
 
 // Status options
 const STATUS_OPTIONS = [
@@ -224,38 +230,21 @@ export default function ReportedCasesPage() {
   const [sortBy, setSortBy] = useState('date');
   const [sortDirection, setSortDirection] = useState('desc');
 
-  // ********** LOGGING FUNCTION **********
-  const createActionLog = async (action, details = {}) => {
-    try {
-      if (!currentUser) return;
-      let ip = 'unknown';
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipRes.json();
-        ip = ipData.ip;
-      } catch (e) { /* ignore */ }
-      
-      const logEntry = {
-        userId: currentUser.id,
-        userEmail: currentUser.email,
-        action,
-        ...details,
-        timestamp: new Date().toISOString(),
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        ipAddress: ip,
-      };
-      
-      await fetch('http://localhost:3001/logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(logEntry),
-      });
-    } catch (error) {
-      console.error('Logging failed:', error);
-      // Non-blocking
-    }
+  const getAuthToken = () => {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('accessToken') || localStorage.getItem('token');
   };
-  // **************************************
+
+  const getAuthHeaders = (includeJson = false) => {
+    const token = getAuthToken();
+    const headers = {};
+    if (includeJson) headers['Content-Type'] = 'application/json';
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return headers;
+  };
+
+  // Placeholder for future backend audit logging integration.
+  const createActionLog = async () => {};
 
   const formatUserInfo = (user) => {
     if (!user) return 'Unknown';
@@ -284,22 +273,33 @@ export default function ReportedCasesPage() {
       const user = JSON.parse(userData);
       setCurrentUser(user);
 
+      const requestHeaders = getAuthHeaders();
       const [personsResponse, vehiclesResponse] = await Promise.all([
-        fetch(`${MISSING_PERSONS_API}?reportedBy.userId=${user.id}`),
-        fetch(`${MISSING_VEHICLES_API}?reportedBy.userId=${user.id}`)
+        fetch(MISSING_PERSONS_API, { headers: requestHeaders }),
+        fetch(MISSING_VEHICLES_API, { headers: requestHeaders })
       ]);
 
       if (!personsResponse.ok || !vehiclesResponse.ok) {
         throw new Error('Failed to fetch data');
       }
 
-      const personsData = await personsResponse.json();
-      const vehiclesData = await vehiclesResponse.json();
+      const personsResult = await personsResponse.json();
+      const vehiclesResult = await vehiclesResponse.json();
+      const personsData = Array.isArray(personsResult?.data) ? personsResult.data : [];
+      const vehiclesData = Array.isArray(vehiclesResult?.data) ? vehiclesResult.data : [];
+
+      const userId = String(user.id || '');
+      const userEmail = (user.email || '').toLowerCase();
+      const isOwnCase = (item) =>
+        String(item?.reportedBy?.userId || '') === userId ||
+        (item?.reportedBy?.email || '').toLowerCase() === userEmail;
+      const myPersons = personsData.filter(isOwnCase);
+      const myVehicles = vehiclesData.filter(isOwnCase);
 
       const allCases = [
-        ...personsData.map(item => ({
-          id: item.id,
-          caseId: item.caseId || `PERSON-${item.id}`,
+        ...myPersons.map(item => ({
+          id: item._id || item.id,
+          caseId: item.caseId || `PERSON-${item._id || item.id}`,
           type: 'Person',
           displayName: `${item.firstName || ''} ${item.lastName || ''}`.trim(),
           firstName: item.firstName,
@@ -317,7 +317,7 @@ export default function ReportedCasesPage() {
           contactPhone: item.contactPhone,
           contactEmail: item.contactEmail,
           telegramUsername: item.telegramUsername,
-          status: item.status || 'active',
+          status: normalizeStatus(item.status),
           priority: item.priority || 'medium',
           reportDate: item.reportDate || new Date().toISOString(),
           lastUpdated: item.lastUpdated || item.reportDate || new Date().toISOString(),
@@ -325,9 +325,9 @@ export default function ReportedCasesPage() {
           icon: <IconUser size={16} />,
           category: 'person'
         })),
-        ...vehiclesData.map(item => ({
-          id: item.id,
-          caseId: item.caseId || `VEHICLE-${item.id}`,
+        ...myVehicles.map(item => ({
+          id: item._id || item.id,
+          caseId: item.caseId || `VEHICLE-${item._id || item.id}`,
           type: 'Vehicle',
           displayName: `${item.brand || ''} ${item.model || ''}`.trim(),
           brand: item.brand,
@@ -347,7 +347,7 @@ export default function ReportedCasesPage() {
           contactPhone: item.contactPhone,
           contactEmail: item.contactEmail,
           telegramUsername: item.telegramUsername,
-          status: item.status || 'active',
+          status: normalizeStatus(item.status),
           priority: item.priority || 'medium',
           reportDate: item.reportDate || new Date().toISOString(),
           lastUpdated: item.lastUpdated || item.reportDate || new Date().toISOString(),
@@ -500,17 +500,24 @@ export default function ReportedCasesPage() {
     try {
       const endpoint = type === 'Person' ? MISSING_PERSONS_API : MISSING_VEHICLES_API;
       const response = await fetch(`${endpoint}/${caseId}`, {
-        method: 'DELETE'
+        method: 'PATCH',
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          status: 'Closed',
+          lastUpdated: new Date().toISOString(),
+        }),
       });
 
       if (response.ok) {
-        setCases(prev => prev.filter(c => c.id !== caseId));
+        setCases(prev => prev.map(c => (
+          c.id === caseId ? { ...c, status: 'closed', lastUpdated: new Date().toISOString() } : c
+        )));
         setDeleteModalOpen(false);
         setSelectedCase(null);
         
         showNotification(
-          'Case Deleted',
-          'Case has been successfully deleted.',
+          'Case Closed',
+          'Case has been marked as closed.',
           'success'
         );
         createActionLog('case_delete', { caseId, reportType: type });
@@ -701,8 +708,11 @@ export default function ReportedCasesPage() {
       
       const response = await fetch(endpoint, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          ...updateData,
+          status: updateData.status ? toBackendStatus(updateData.status) : undefined,
+        }),
       });
       
       if (response.ok) {
@@ -1309,7 +1319,7 @@ export default function ReportedCasesPage() {
                   No cases found
                 </Text>
                 <Text c="dimmed" mb={20}>
-                  You haven't reported any cases yet. Click below to report a new case.
+                  You haven&apos;t reported any cases yet. Click below to report a new case.
                 </Text>
                 <Button
                   color="blue"
