@@ -30,6 +30,7 @@ const missingVehicleRoutes = require('./routes/missingVehicle.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const subscriptionRoutes = require('./routes/subscription.routes');
 const gpsRoutes = require('./routes/gps.routes');
+const logsRoutes = require('./routes/logs.routes');
 
 const app = express();
 
@@ -37,10 +38,9 @@ connectDB();
 
 // ================= SECURITY MIDDLEWARE =================
 app.use(helmet());
-
 app.use(cors({
-  origin: config.cors.origin,
-  credentials: true,
+  origin: '*',
+  credentials: true
 }));
 
 const limiter = rateLimit({
@@ -95,6 +95,7 @@ if (isSwaggerEnabled()) {
 // Auth & Core
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/users', userRoutes);
 
 // Detection system
 app.use('/api/v1/sightings', sightingRoutes);
@@ -125,6 +126,9 @@ app.use('/api/v1/subscriptions', subscriptionRoutes);
 
 // GPS Tracking
 app.use('/api/v1/gps', gpsRoutes);
+
+// Logs
+app.use('/logs', logsRoutes);
 
 // ML test route
 app.get('/api/v1/ml/test', (req, res) => {
