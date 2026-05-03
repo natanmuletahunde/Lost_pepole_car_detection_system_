@@ -29,7 +29,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import SocialLoginIcons from '../../components/SocialLoginIcons';
 
-// Helper to get dynamic background/color values
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
 
@@ -49,12 +48,12 @@ const phoneLoginSchema = z.object({
 });
 
 export default function LoginPage() {
-  // All hooks called unconditionally at the top
   const [type, setType] = useState('email');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [authChecking, setAuthChecking] = useState(true);
+  const [userExists, setUserExists] = useState(null);
+  const [isCheckingUser, setIsCheckingUser] = useState(false);
 
   const router = useRouter();
   const theme = useMantineTheme();
@@ -72,6 +71,7 @@ export default function LoginPage() {
     trigger,
     setValue,
     watch,
+    clearErrors,
   } = useForm({
     resolver: zodResolver(currentSchema),
     mode: 'onChange',
@@ -80,6 +80,8 @@ export default function LoginPage() {
       password: '',
     },
   });
+
+  const watchedValue = watch('loginValue');
 
   // Check if user is already logged in
   useEffect(() => {
@@ -102,7 +104,7 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  // Check if user exists when login value changes (with debounce)
+  // Check if user exists when login value changes (with debounce) – optional
   useEffect(() => {
     const checkUserExists = async () => {
       if (!watchedValue || watchedValue.length < 3) {
@@ -114,21 +116,18 @@ export default function LoginPage() {
       setLoginError('');
 
       try {
-let queryField = type === 'email' ? 'email' : 'phone';
+        const queryField = type === 'email' ? 'email' : 'phone';
         const response = await fetch(
           `http://localhost:3001/users/check?${queryField}=${encodeURIComponent(watchedValue)}`,
           {
             method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
           }
         );
 
         if (response.ok) {
           const users = await response.json();
           setUserExists(users.length > 0);
-
           if (users.length === 0) {
             setLoginError(`No account found with this ${type === 'email' ? 'email' : 'phone number'}`);
           } else {
@@ -150,7 +149,6 @@ let queryField = type === 'email' ? 'email' : 'phone';
     return () => clearTimeout(timeoutId);
   }, [watchedValue, type, clearErrors]);
 
-  // All other functions (showNotification, handleTypeSwitch, createLoginLog, onSubmit, etc.)
   const showNotification = (title, message, color, icon) => {
     notifications.show({
       title,
@@ -172,43 +170,28 @@ let queryField = type === 'email' ? 'email' : 'phone';
     reset();
   };
 
+  // Fixed onSubmit: send { loginValue, password } to backend
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     setLoginError('');
 
     try {
-      const queryField = type === 'email' ? 'email' : 'phone';
-
-const response = await fetch(
-        `http://localhost:3001/users/check?${queryField}=${encodeURIComponent(data.loginValue)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || 'Login failed');
-      }
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          loginValue: data.loginValue,   // ✅ unified field as expected by backend
+          password: data.password,
+        }),
+      });
 
       const result = await response.json();
 
-      if (!result.data?.exists) {
-        setLoginError(`No account found with this ${type === 'email' ? 'email' : 'phone number'}`);
-        showNotification(
-          'Account Not Found',
-          `Please check your ${type === 'email' ? 'email' : 'phone number'} or sign up for a new account.`,
-          'red',
-          <IconX size={18} />
-        );
-        setIsSubmitting(false);
-        return;
+      if (!response.ok) {
+        throw new Error(result.message || 'Invalid credentials');
       }
 
-      const user = result.data.user;
+      const { user, accessToken } = result.data;
 
       showNotification(
         'Login Successful!',
@@ -217,60 +200,42 @@ const response = await fetch(
         <IconCheck size={18} />
       );
 
-        showNotification(
-          'Login Successful!',
-          `Welcome back, ${user.firstName}!`,
-          'green',
-          <IconCheck size={18} />
-        );
+      localStorage.setItem('currentUser', JSON.stringify({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
+      }));
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('isAuthenticated', 'true');
 
-        localStorage.setItem('currentUser', JSON.stringify({
-          id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          isActive: user.isActive,
-        }));
+      // Optional: update lastLogin timestamp
+      await fetch(`${API_BASE_URL}/users/${user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ lastLogin: new Date().toISOString() }),
+      }).catch(err => console.warn('Failed to update lastLogin', err));
 
-        localStorage.setItem('isAuthenticated', 'true');
-
-        await fetch(`http://localhost:3001/users/${user.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            lastLogin: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }),
-        });
-
-setTimeout(() => {
-          if (user.role && user.role.toLowerCase() === 'admin') {
-            router.push('/admin');
-          } else {
-            router.push('/user/dashboard');
-          }
-        }, 1000);
-
-      } else {
-        setLoginError('Invalid password. Please try again.');
-        showNotification(
-          'Login Failed',
-          'The password you entered is incorrect.',
-          'red',
-          <IconX size={18} />
-        );
-      }
+      setTimeout(() => {
+        if (user.role?.toLowerCase() === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/user/dashboard');
+        }
+      }, 1000);
 
     } catch (error) {
       console.error('Login error:', error);
       setLoginError(error.message || 'An error occurred. Please try again.');
       showNotification(
-        'Error',
-        error.message || 'Failed to connect to server. Please check your connection.',
+        'Login Failed',
+        error.message || 'Invalid email/phone or password',
         'red',
         <IconX size={18} />
       );
@@ -280,8 +245,8 @@ setTimeout(() => {
   };
 
   const handleForgotPassword = async () => {
-    const watchedValue = watch('loginValue');
-    if (!watchedValue || errors.loginValue) {
+    const currentValue = watch('loginValue');
+    if (!currentValue || errors.loginValue) {
       showNotification(
         'Error',
         'Please enter a valid email or phone number first.',
@@ -299,7 +264,6 @@ setTimeout(() => {
     );
   };
 
-  // Conditional rendering after all hooks are defined
   if (authChecking) {
     return (
       <Center style={{ minHeight: '100vh', background: getBg(colorScheme, '#EAF2FF', theme.colors.dark[7]) }}>
