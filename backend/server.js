@@ -15,21 +15,25 @@ const sanitizeRequest = require("./middlewares/mongoSanitize");
 const { swaggerSpec, isSwaggerEnabled, isSwaggerAdminOnly } = require("./config/swagger");
 const { protect, authorize } = require("./middlewares/auth");
 
-// routes
+// ================= ROUTES =================
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
 const sightingRoutes = require("./routes/sighting.routes");
-const feedbackRoutes = require("./routes/feedback.routes");
+const detectionRoutes = require("./routes/detection.routes");
 const alertRoutes = require("./routes/alert.routes");
 const uploadRoutes = require("./routes/upload.routes");
 const searchRoutes = require("./routes/search.routes");
-const detectionRoutes = require("./routes/detection.routes");
 const adminRoutes = require("./routes/admin.routes");
 const missingPersonRoutes = require("./routes/missingPerson.routes");
 const missingVehicleRoutes = require("./routes/missingVehicle.routes");
+const notificationAdminRoutes = require("./routes/notification.admin.route");
+// 🔥 NEW: split feedback routes
+const feedbackUserRoutes = require("./routes/feedback.user.routes");
+const feedbackAdminRoutes = require("./routes/feedback.admin.route");
 
 const app = express();
 
+// ================= DB =================
 connectDB();
 
 // ================= SECURITY =================
@@ -48,20 +52,22 @@ app.use(
 );
 
 // ================= BODY =================
-app.use(express.json({ limit: "10kb" }));
-app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use(sanitizeRequest);
 app.use(expressSanitizer());
 
-// ================= 🔥 UNIFIED UPLOAD PATH =================
+// ================= FILES =================
 const uploadPath = path.join(process.cwd(), "uploads");
 
-// IMPORTANT: static MUST be BEFORE routes
-app.use("/uploads", express.static(uploadPath, {
-  maxAge: "1d",
-  etag: true,
-}));
+app.use(
+  "/uploads",
+  express.static(uploadPath, {
+    maxAge: "1d",
+    etag: true,
+  })
+);
 
 // ================= HEALTH =================
 app.get("/api/v1/health", (req, res) => {
@@ -87,7 +93,23 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/sightings", sightingRoutes);
 app.use("/api/v1/detections", detectionRoutes);
-app.use("/api/v1/feedback", feedbackRoutes);
+app.use(
+  "/api/v1/admin/notifications",
+  protect,
+  authorize("admin"),
+  notificationAdminRoutes
+);
+// 🔥 USER feedback
+app.use("/api/v1/feedback", protect, feedbackUserRoutes);
+
+// 🔥 ADMIN feedback
+app.use(
+  "/api/v1/admin/feedback",
+  protect,
+  authorize("admin"),
+  feedbackAdminRoutes
+);
+
 app.use("/api/v1/alerts", alertRoutes);
 app.use("/api/v1/uploads", uploadRoutes);
 app.use("/api/v1/search", searchRoutes);
@@ -101,7 +123,7 @@ app.use(errorHandler);
 
 // ================= SERVER =================
 const server = app.listen(config.server.port, "0.0.0.0", () => {
-  console.log(`Server running on http://0.0.0.0:${config.server.port}`);
+  console.log(`🚀 Server running on http://0.0.0.0:${config.server.port}`);
 });
 
 // ================= SAFETY =================
