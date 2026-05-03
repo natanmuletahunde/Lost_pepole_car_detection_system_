@@ -176,18 +176,24 @@ export default function SignupPage() {
         body: JSON.stringify(userDataToSave),
       });
 
-      if (!response.ok) {
+if (!response.ok) {
         throw new Error('Failed to create account');
       }
 
       const result = await response.json();
+      const user = result.data?.user || result.user || result;
 
-      // Log the signup with the newly created user's ID
-      await createSignupLog(result).catch(err => console.error('Signup log error:', err));
+      localStorage.setItem('currentUser', JSON.stringify({
+        id: user.id || user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role || 'user'
+      }));
 
       showNotification(
         'Success!',
-        'Account created successfully! Redirecting to login...',
+        'Account created successfully! Redirecting to dashboard...',
         'green',
         <IconCheck size={18} />
       );
@@ -195,9 +201,8 @@ export default function SignupPage() {
       console.log('User created:', result);
       reset();
 
-      // Redirect to login page after a short delay
       setTimeout(() => {
-        router.push('/authentication/login');
+        router.push('/user/dashboard');
       }, 1500);
 
     } catch (error) {
@@ -353,7 +358,7 @@ export default function SignupPage() {
 
           <Text ta="center" mt="md" size="sm" c="dimmed">
             Already have an account?{' '}
-            <Link href="/login" style={{ color: '#228be6', textDecoration: 'none' }}>
+<Link href="/authentication/login" style={{ color: '#228be6', textDecoration: 'none' }}>
               Sign in
             </Link>
           </Text>

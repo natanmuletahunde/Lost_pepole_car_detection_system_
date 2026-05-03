@@ -117,9 +117,9 @@ export default function LoginPage() {
       setLoginError('');
 
       try {
-        let queryField = type === 'email' ? 'email' : 'phone';
+let queryField = type === 'email' ? 'email' : 'phone';
         const response = await fetch(
-          `http://localhost:3001/users?${queryField}=${encodeURIComponent(watchedValue)}`,
+          `http://localhost:3001/users/check?${queryField}=${encodeURIComponent(watchedValue)}`,
           {
             method: 'GET',
             headers: {
@@ -214,8 +214,8 @@ export default function LoginPage() {
     try {
       const queryField = type === 'email' ? 'email' : 'phone';
 
-      const response = await fetch(
-        `http://localhost:3001/users?${queryField}=${encodeURIComponent(data.loginValue)}`,
+const response = await fetch(
+        `http://localhost:3001/users/check?${queryField}=${encodeURIComponent(data.loginValue)}`,
         {
           method: 'GET',
           headers: {
@@ -228,9 +228,9 @@ export default function LoginPage() {
         throw new Error('Failed to connect to server');
       }
 
-      const users = await response.json();
+      const result = await response.json();
 
-      if (users.length === 0) {
+      if (!result.data?.exists) {
         setLoginError(`No account found with this ${type === 'email' ? 'email' : 'phone number'}`);
         showNotification(
           'Account Not Found',
@@ -242,7 +242,7 @@ export default function LoginPage() {
         return;
       }
 
-      const user = users[0];
+      const user = result.data.user;
 
       if (user.password === data.password) {
         await createLoginLog(user).catch(err => console.error('Log error:', err));
@@ -277,11 +277,11 @@ export default function LoginPage() {
           }),
         });
 
-        setTimeout(() => {
+setTimeout(() => {
           if (user.role && user.role.toLowerCase() === 'admin') {
             router.push('/admin');
           } else {
-            router.push('/');
+            router.push('/user/dashboard');
           }
         }, 1000);
 
