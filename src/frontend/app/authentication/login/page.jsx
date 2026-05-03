@@ -31,6 +31,7 @@ import SocialLoginIcons from '../../components/SocialLoginIcons';
 
 // Helper to get dynamic background/color values
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
 
 /* ---------------- Validation schemas ---------------- */
 const passwordLoginSchema = z.object({
@@ -53,8 +54,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [isCheckingUser, setIsCheckingUser] = useState(false);
-  const [userExists, setUserExists] = useState(null);
   const [authChecking, setAuthChecking] = useState(true);
 
   const router = useRouter();
@@ -73,7 +72,6 @@ export default function LoginPage() {
     trigger,
     setValue,
     watch,
-    clearErrors,
   } = useForm({
     resolver: zodResolver(currentSchema),
     mode: 'onChange',
@@ -83,12 +81,11 @@ export default function LoginPage() {
     },
   });
 
-  const watchedValue = watch('loginValue');
-
   // Check if user is already logged in
   useEffect(() => {
     const userData = localStorage.getItem('currentUser');
-    if (userData) {
+    const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    if (userData && accessToken) {
       try {
         const user = JSON.parse(userData);
         if (user.role && user.role.toLowerCase() === 'admin') {
@@ -104,54 +101,6 @@ export default function LoginPage() {
       setAuthChecking(false);
     }
   }, [router]);
-
-  // Check if user exists when login value changes (with debounce)
-  useEffect(() => {
-    const checkUserExists = async () => {
-      if (!watchedValue || watchedValue.length < 3) {
-        setUserExists(null);
-        return;
-      }
-
-      setIsCheckingUser(true);
-      setLoginError('');
-
-      try {
-        let queryField = type === 'email' ? 'email' : 'phone';
-        const response = await fetch(
-          `http://localhost:3001/users?${queryField}=${encodeURIComponent(watchedValue)}`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        if (response.ok) {
-          const users = await response.json();
-          setUserExists(users.length > 0);
-
-          if (users.length === 0) {
-            setLoginError(`No account found with this ${type === 'email' ? 'email' : 'phone number'}`);
-          } else {
-            clearErrors('loginValue');
-          }
-        }
-      } catch (error) {
-        console.error('Error checking user:', error);
-        setUserExists(null);
-      } finally {
-        setIsCheckingUser(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      checkUserExists();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [watchedValue, type, clearErrors]);
 
   // All other functions (showNotification, handleTypeSwitch, createLoginLog, onSubmit, etc.)
   const showNotification = (title, message, color, icon) => {
@@ -171,40 +120,8 @@ export default function LoginPage() {
     setType(newType);
     setValue('loginValue', '');
     setValue('password', '');
-    setUserExists(null);
     setLoginError('');
     reset();
-  };
-
-  const createLoginLog = async (user) => {
-    try {
-      let ipAddress = 'unknown';
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipRes.json();
-        ipAddress = ipData.ip;
-      } catch (ipError) {
-        console.warn('Could not fetch IP address', ipError);
-      }
-
-      const logEntry = {
-        userId: user.id,
-        userEmail: user.email,
-        userPhone: user.phone,
-        loginType: type,
-        loginTime: new Date().toISOString(),
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        ipAddress,
-      };
-
-      await fetch('http://localhost:3001/logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(logEntry),
-      });
-    } catch (error) {
-      console.error('Failed to create login log:', error);
-    }
   };
 
   const onSubmit = async (data) => {
@@ -212,95 +129,65 @@ export default function LoginPage() {
     setLoginError('');
 
     try {
-      const queryField = type === 'email' ? 'email' : 'phone';
-
-      const response = await fetch(
-        `http://localhost:3001/users?${queryField}=${encodeURIComponent(data.loginValue)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          loginValue: data.loginValue.trim(),
+          password: data.password,
+        }),
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to connect to server');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Login failed');
       }
 
-      const users = await response.json();
+      const result = await response.json();
+      const user = result?.data?.user;
+      const token = result?.data?.token;
+      const refreshToken = result?.data?.refreshToken;
 
-      if (users.length === 0) {
-        setLoginError(`No account found with this ${type === 'email' ? 'email' : 'phone number'}`);
-        showNotification(
-          'Account Not Found',
-          `Please check your ${type === 'email' ? 'email' : 'phone number'} or sign up for a new account.`,
-          'red',
-          <IconX size={18} />
-        );
-        setIsSubmitting(false);
-        return;
-      }
+      if (!user || !token) throw new Error('Invalid login response');
 
-      const user = users[0];
+      localStorage.setItem('currentUser', JSON.stringify({
+        id: user._id || user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
+        address: user.address || '',
+        profileImage: user.profileImage || '',
+      }));
+      localStorage.setItem('accessToken', token);
+      if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('isAuthenticated', 'true');
 
-      if (user.password === data.password) {
-        await createLoginLog(user).catch(err => console.error('Log error:', err));
+      showNotification(
+        'Login Successful!',
+        `Welcome back, ${user.firstName}!`,
+        'green',
+        <IconCheck size={18} />
+      );
 
-        showNotification(
-          'Login Successful!',
-          `Welcome back, ${user.firstName}!`,
-          'green',
-          <IconCheck size={18} />
-        );
-
-        localStorage.setItem('currentUser', JSON.stringify({
-          id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          isActive: user.isActive,
-        }));
-
-        localStorage.setItem('isAuthenticated', 'true');
-
-        await fetch(`http://localhost:3001/users/${user.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            lastLogin: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }),
-        });
-
-        setTimeout(() => {
-          if (user.role && user.role.toLowerCase() === 'admin') {
-            router.push('/admin');
-          } else {
-            router.push('/');
-          }
-        }, 1000);
-
-      } else {
-        setLoginError('Invalid password. Please try again.');
-        showNotification(
-          'Login Failed',
-          'The password you entered is incorrect.',
-          'red',
-          <IconX size={18} />
-        );
-      }
+      setTimeout(() => {
+        if (user.role && user.role.toLowerCase() === 'admin') {
+          router.push('/admin');
+        } else {
+          router.push('/');
+        }
+      }, 500);
 
     } catch (error) {
       console.error('Login error:', error);
-      setLoginError('An error occurred. Please try again.');
+      setLoginError(error.message || 'An error occurred. Please try again.');
       showNotification(
         'Error',
-        'Failed to connect to server. Please check your connection.',
+        error.message || 'Failed to connect to server. Please check your connection.',
         'red',
         <IconX size={18} />
       );
@@ -310,6 +197,7 @@ export default function LoginPage() {
   };
 
   const handleForgotPassword = async () => {
+    const watchedValue = watch('loginValue');
     if (!watchedValue || errors.loginValue) {
       showNotification(
         'Error',
@@ -391,17 +279,6 @@ export default function LoginPage() {
               error={errors.loginValue?.message}
               onBlur={() => trigger('loginValue')}
               disabled={isSubmitting}
-              rightSection={
-                isCheckingUser ? (
-                  <Text size="xs" c="blue">
-                    Checking...
-                  </Text>
-                ) : userExists === true ? (
-                  <IconCheck size={16} color="green" />
-                ) : userExists === false ? (
-                  <IconX size={16} color="red" />
-                ) : null
-              }
             />
 
             <PasswordInput
@@ -433,7 +310,7 @@ export default function LoginPage() {
               mt="md"
               type="submit"
               loading={isSubmitting}
-              disabled={!isValid || isSubmitting || userExists === false}
+              disabled={!isValid || isSubmitting}
             >
               {isSubmitting ? 'Logging in...' : 'Login'}
             </Button>

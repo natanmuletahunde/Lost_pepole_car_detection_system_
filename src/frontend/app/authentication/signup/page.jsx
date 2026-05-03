@@ -24,12 +24,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMediaQuery } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'next/navigation';
 
 // Helper to get dynamic background/color values
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 const getTextColor = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
 
 /* ---------------- Zod schema ---------------- */
 const signupSchema = z.object({
@@ -115,90 +115,63 @@ export default function SignupPage() {
     return requirements;
   };
 
-  // Create signup log entry
-  const createSignupLog = async (user) => {
-    try {
-      // Optionally fetch IP address
-      let ipAddress = 'unknown';
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const ipData = await ipRes.json();
-        ipAddress = ipData.ip;
-      } catch (ipError) {
-        console.warn('Could not fetch IP address', ipError);
-      }
-
-      const logEntry = {
-        userId: user.id,
-        userEmail: user.email,
-        action: 'signup',
-        timestamp: new Date().toISOString(),
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        ipAddress,
-      };
-
-      await fetch('http://localhost:3001/logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(logEntry),
-      });
-    } catch (error) {
-      console.error('Failed to create signup log:', error);
-      // Non‑blocking – signup still succeeds
-    }
-  };
-
   const onSubmit = async (data) => {
     setIsSubmitting(true);
 
     try {
-      // Generate UUID for the new user
-      const userId = uuidv4();
-      const createdAt = new Date().toISOString();
-
-      // Prepare user data for API (remove confirmPassword)
-      const { confirmPassword, ...userDataToSave } = {
-        id: userId,
-        ...data,
-        confirmPassword: undefined,
-        createdAt,
-        updatedAt: createdAt,
-        isActive: true,
-        role: 'user',
-      };
-
-      // ✅ Uncommented user creation fetch
-      const response = await fetch('http://localhost:3001/users', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userDataToSave),
+        body: JSON.stringify({
+          firstName: data.firstName.trim(),
+          lastName: data.lastName.trim(),
+          email: data.email.trim(),
+          phone: data.phone.trim(),
+          password: data.password,
+          confirmPassword: data.confirmPassword,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create account');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to create account');
       }
 
       const result = await response.json();
+      const user = result?.data?.user;
+      const token = result?.data?.token;
+      const refreshToken = result?.data?.refreshToken;
 
-      // Log the signup with the newly created user's ID
-      await createSignupLog(result).catch(err => console.error('Signup log error:', err));
+      if (user && token) {
+        localStorage.setItem('currentUser', JSON.stringify({
+          id: user._id || user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          isActive: user.isActive,
+          address: user.address || '',
+          profileImage: user.profileImage || '',
+        }));
+        localStorage.setItem('accessToken', token);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('isAuthenticated', 'true');
+      }
 
       showNotification(
         'Success!',
-        'Account created successfully! Redirecting to login...',
+        'Account created successfully! Redirecting...',
         'green',
         <IconCheck size={18} />
       );
-
-      console.log('User created:', result);
       reset();
 
-      // Redirect to login page after a short delay
       setTimeout(() => {
-        router.push('/authentication/login');
-      }, 1500);
+        router.push('/');
+      }, 800);
 
     } catch (error) {
       console.error('Signup error:', error);
@@ -353,7 +326,7 @@ export default function SignupPage() {
 
           <Text ta="center" mt="md" size="sm" c="dimmed">
             Already have an account?{' '}
-            <Link href="/login" style={{ color: '#228be6', textDecoration: 'none' }}>
+            <Link href="/authentication/login" style={{ color: '#228be6', textDecoration: 'none' }}>
               Sign in
             </Link>
           </Text>
