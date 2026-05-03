@@ -26,6 +26,7 @@ import { z } from "zod";
 import { notifications } from "@mantine/notifications";
 
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
 // Password schema
 const passwordSchema = z
@@ -98,14 +99,44 @@ export default function SecurityTab({ colorScheme }) {
   }, [passwordForm.watch("newPassword")]);
 
   const handlePasswordChange = async (data) => {
-    notifications.show({
-      title: "Password Updated",
-      message: "Your password has been changed successfully",
-      color: "green",
-      icon: <IconCheck size={18} />,
-    });
-    closePwd();
-    passwordForm.reset();
+    try {
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      if (!token) throw new Error("Please login again.");
+
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+          confirmPassword: data.confirmPassword,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || "Failed to update password");
+      }
+
+      notifications.show({
+        title: "Password Updated",
+        message: "Your password has been changed successfully",
+        color: "green",
+        icon: <IconCheck size={18} />,
+      });
+      closePwd();
+      passwordForm.reset();
+    } catch (error) {
+      notifications.show({
+        title: "Password Update Failed",
+        message: error.message || "Could not change password.",
+        color: "red",
+        icon: <IconX size={18} />,
+      });
+    }
   };
 
   const getPasswordStrengthColor = () => {

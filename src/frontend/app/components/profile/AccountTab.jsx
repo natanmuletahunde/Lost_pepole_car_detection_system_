@@ -18,13 +18,12 @@ import { notifications } from "@mantine/notifications";
 
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
 const getTextColor = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
-export default function AccountTab({ user, setUser, setDirty, colorScheme }) {
+export default function AccountTab({ user, setUser, setDirty, colorScheme, onSave }) {
   const fileInputRef = useRef(null);
   const [profileImage, setProfileImage] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [userId, setUserId] = useState(user?.id);
-
   const handleInputChange = (field, value) => {
     setUser((prev) => ({ ...prev, [field]: value }));
     setDirty(true);
@@ -40,24 +39,51 @@ export default function AccountTab({ user, setUser, setDirty, colorScheme }) {
   };
 
   const handleSaveChanges = async () => {
-    if (!userId) return;
+    const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+    if (!token) {
+      notifications.show({
+        title: "Authentication Required",
+        message: "Please login again to update your profile.",
+        color: "yellow",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      const response = await fetch(`http://localhost:3001/users/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           firstName: user.firstName,
           lastName: user.lastName,
           phone: user.phone,
           address: user.address,
+          profileImage: profileImage || user?.profileImage || "",
         }),
       });
 
       if (!response.ok) throw new Error("Failed to update profile");
 
-      const updatedUser = await response.json();
+      const result = await response.json();
+      const apiUser = result?.data?.user || {};
+      const updatedUser = {
+        ...user,
+        id: apiUser._id || apiUser.id || user?.id,
+        firstName: apiUser.firstName || user?.firstName,
+        lastName: apiUser.lastName || user?.lastName,
+        email: apiUser.email || user?.email,
+        phone: apiUser.phone || user?.phone,
+        address: apiUser.address || "",
+        profileImage: apiUser.profileImage || profileImage || "",
+        role: apiUser.role || user?.role,
+      };
+      setUser(updatedUser);
       localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+      if (onSave) onSave(updatedUser);
       setDirty(false);
 
       notifications.show({
@@ -88,8 +114,8 @@ export default function AccountTab({ user, setUser, setDirty, colorScheme }) {
             <Text size="xs" c="dimmed">Your photo helps others recognize you</Text>
           </Box>
           <Group gap="lg">
-            <Avatar size={64} radius={64} src={profileImage} color="blue">
-              {!profileImage && <IconUser size={32} />}
+            <Avatar size={64} radius={64} src={profileImage || user?.profileImage || null} color="blue">
+              {!profileImage && !user?.profileImage && <IconUser size={32} />}
             </Avatar>
             <input
               type="file"

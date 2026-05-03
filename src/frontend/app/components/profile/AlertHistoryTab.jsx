@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, Text, Group, Badge, Button, Stack, Loader, Box } from "@mantine/core";
 import { IconClock } from "@tabler/icons-react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
 const getTextColor = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
@@ -13,39 +13,52 @@ const getBorderColor = (colorScheme) => (colorScheme === "dark" ? "#2c2e33" : "#
 export default function AlertHistoryTab({ colorScheme }) {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState(null);
-
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
         const userData = localStorage.getItem("currentUser");
+        const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+        if (!token) throw new Error("No token found");
+        let currentUserId = null;
         if (userData) {
           const parsedUser = JSON.parse(userData);
-          setUserId(parsedUser.id);
+          currentUserId = parsedUser.id;
         }
 
-        // Fetch alerts from JSON Server
+        const requestHeaders = {
+          Authorization: `Bearer ${token}`,
+        };
+
         const [vehiclesRes, personsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/missingVehicles`),
-          fetch(`${API_BASE_URL}/missingPersons`),
+          fetch(`${API_BASE_URL}/missing-vehicles`, { headers: requestHeaders }),
+          fetch(`${API_BASE_URL}/missing-persons`, { headers: requestHeaders }),
         ]);
 
-        const vehicles = await vehiclesRes.json();
-        const persons = await personsRes.json();
+        if (!vehiclesRes.ok || !personsRes.ok) {
+          throw new Error("Failed to fetch alert history");
+        }
+
+        const vehiclesData = await vehiclesRes.json();
+        const personsData = await personsRes.json();
+        const vehicles = Array.isArray(vehiclesData?.data) ? vehiclesData.data : [];
+        const persons = Array.isArray(personsData?.data) ? personsData.data : [];
+
+        const isMine = (item) =>
+          currentUserId && String(item?.reportedBy?.userId || "") === String(currentUserId);
 
         // Transform and combine alerts
-        const vehicleAlerts = vehicles.map((v) => ({
-          id: v.id,
+        const vehicleAlerts = vehicles.filter(isMine).map((v) => ({
+          id: v._id || v.id,
           type: "Vehicle",
-          location: v.lastSeenLocation || "Unknown",
+          location: v.location || "Unknown",
           time: v.reportDate ? new Date(v.reportDate).toLocaleDateString() : "Unknown",
           status: v.status || "Active",
         }));
 
-        const personAlerts = persons.map((p) => ({
-          id: p.id,
+        const personAlerts = persons.filter(isMine).map((p) => ({
+          id: p._id || p.id,
           type: "Person",
-          location: p.lastSeenLocation || "Unknown",
+          location: p.location || "Unknown",
           time: p.reportDate ? new Date(p.reportDate).toLocaleDateString() : "Unknown",
           status: p.status || "Active",
         }));

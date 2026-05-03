@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Box, Group, Title, ActionIcon, Button, Flex, Container } from "@mantine/core";
+import { Box, Group, Title, ActionIcon, Flex, Container } from "@mantine/core";
 import { useMantineColorScheme } from "@mantine/core";
-import { IconArrowLeft, IconDeviceFloppy } from "@tabler/icons-react";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 
 // Import components
@@ -16,6 +16,7 @@ import AlertHistoryTab from "../../components/profile/AlertHistoryTab";
 // Helper
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
 const getBorderColor = (colorScheme) => (colorScheme === "dark" ? "#2c2e33" : "#eaeef2");
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -23,14 +24,48 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("account");
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [dirty, setDirty] = useState(false);
+  const [, setDirty] = useState(false);
 
   useEffect(() => {
-    const userData = localStorage.getItem("currentUser");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-    setLoading(false);
+    const loadProfile = async () => {
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      const userData = localStorage.getItem("currentUser");
+
+      if (!token) {
+        if (userData) setUser(JSON.parse(userData));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to load profile");
+        const data = await res.json();
+        const apiUser = data?.data?.user || null;
+        if (apiUser) {
+          const normalizedUser = {
+            id: apiUser._id || apiUser.id,
+            firstName: apiUser.firstName,
+            lastName: apiUser.lastName,
+            email: apiUser.email,
+            phone: apiUser.phone,
+            role: apiUser.role,
+            address: apiUser.address || "",
+            profileImage: apiUser.profileImage || "",
+          };
+          setUser(normalizedUser);
+          localStorage.setItem("currentUser", JSON.stringify(normalizedUser));
+        }
+      } catch {
+        if (userData) setUser(JSON.parse(userData));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
   }, []);
 
   // --------------------- LOGGING FUNCTION ---------------------
@@ -42,7 +77,7 @@ export default function ProfilePage() {
         const ipRes = await fetch("https://api.ipify.org?format=json");
         const ipData = await ipRes.json();
         ip = ipData.ip;
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
 
       const logEntry = {
         userId: user.id,
@@ -54,11 +89,8 @@ export default function ProfilePage() {
         ipAddress: ip,
       };
 
-      await fetch("http://localhost:3001/logs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(logEntry),
-      });
+      // TODO: wire profile audit logs to backend when log endpoint exists.
+      void logEntry;
     } catch (error) {
       console.error("Profile log failed:", error);
       // Non‑blocking
