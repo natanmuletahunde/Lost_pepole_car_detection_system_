@@ -260,6 +260,13 @@ export default function ReportedCasesPage() {
     return user;
   };
 
+  // Helper to safely extract data array from response
+  const extractDataArray = (responseData) => {
+    if (Array.isArray(responseData)) return responseData;
+    if (responseData && Array.isArray(responseData.data)) return responseData.data;
+    return [];
+  };
+
   // Fetch cases
   const fetchData = async (showLoadingNotification = false) => {
     try {
@@ -274,9 +281,11 @@ export default function ReportedCasesPage() {
       setCurrentUser(user);
 
       const requestHeaders = getAuthHeaders();
+      
+      // Use cache: 'no-store' to avoid 304 responses
       const [personsResponse, vehiclesResponse] = await Promise.all([
-        fetch(MISSING_PERSONS_API, { headers: requestHeaders }),
-        fetch(MISSING_VEHICLES_API, { headers: requestHeaders })
+        fetch(MISSING_PERSONS_API, { headers: requestHeaders, cache: 'no-store' }),
+        fetch(MISSING_VEHICLES_API, { headers: requestHeaders, cache: 'no-store' })
       ]);
 
       if (!personsResponse.ok || !vehiclesResponse.ok) {
@@ -285,14 +294,21 @@ export default function ReportedCasesPage() {
 
       const personsResult = await personsResponse.json();
       const vehiclesResult = await vehiclesResponse.json();
-      const personsData = Array.isArray(personsResult?.data) ? personsResult.data : [];
-      const vehiclesData = Array.isArray(vehiclesResult?.data) ? vehiclesResult.data : [];
+      
+      // Robust parsing: handles both { data: [] } and plain array
+      const personsData = extractDataArray(personsResult);
+      const vehiclesData = extractDataArray(vehiclesResult);
+
+      console.log('Persons data:', personsData);
+      console.log('Vehicles data:', vehiclesData);
 
       const userId = String(user.id || '');
       const userEmail = (user.email || '').toLowerCase();
       const isOwnCase = (item) =>
         String(item?.reportedBy?.userId || '') === userId ||
         (item?.reportedBy?.email || '').toLowerCase() === userEmail;
+      
+      // Filter by current user (or remove filter to see all data for testing)
       const myPersons = personsData.filter(isOwnCase);
       const myVehicles = vehiclesData.filter(isOwnCase);
 
