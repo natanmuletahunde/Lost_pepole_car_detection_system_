@@ -50,6 +50,7 @@ import Link from "next/link";
 import Image from "next/image";
 import MainFooter from "../../../../../../components/MainFooter";
 import { notifications } from "@mantine/notifications";
+import { apiClient } from "../../../../../../lib/apiClient";
 
 // Leaflet imports
 import L from 'leaflet';
@@ -69,6 +70,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5
 const MISSING_PERSONS_API = `${API_BASE_URL}/missing-persons`;
 const MISSING_VEHICLES_API = `${API_BASE_URL}/missing-vehicles`;
 const SIGHTINGS_API = `${API_BASE_URL}/sightings`;
+
+const extractData = (payload: any) => payload?.data ?? payload;
 
 // Helper to get dynamic background/color values
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
@@ -155,34 +158,39 @@ export default function SingleDetectionDetailPage() {
         setLoading(true);
 
         // 1. Fetch the sighting by detection_id
-        const sightingRes = await fetch(`${SIGHTINGS_API}/${detectionId}`);
+        const sightingRes = await apiClient(`${SIGHTINGS_API}/${detectionId}`);
         if (!sightingRes.ok) {
           throw new Error('Sighting not found');
         }
-        const sighting = await sightingRes.json();
+        const sightingPayload = await sightingRes.json();
+        const sighting = extractData(sightingPayload)?.sighting || extractData(sightingPayload);
 
         // 2. Determine which type of case it belongs to (person or vehicle)
         let caseData = null;
         if (sighting.type === 'Person') {
-          const personRes = await fetch(`${MISSING_PERSONS_API}/${caseId}`);
+          const personRes = await apiClient(`${MISSING_PERSONS_API}/${caseId}`);
           if (personRes.ok) {
-            caseData = await personRes.json();
+            const payload = await personRes.json();
+            caseData = extractData(payload)?.person || extractData(payload);
           }
         } else if (sighting.type === 'Vehicle') {
-          const vehicleRes = await fetch(`${MISSING_VEHICLES_API}/${caseId}`);
+          const vehicleRes = await apiClient(`${MISSING_VEHICLES_API}/${caseId}`);
           if (vehicleRes.ok) {
-            caseData = await vehicleRes.json();
+            const payload = await vehicleRes.json();
+            caseData = extractData(payload)?.vehicle || extractData(payload);
           }
         } else {
           // If sighting doesn't have type, try both APIs
           const [personRes, vehicleRes] = await Promise.all([
-            fetch(`${MISSING_PERSONS_API}/${caseId}`),
-            fetch(`${MISSING_VEHICLES_API}/${caseId}`),
+            apiClient(`${MISSING_PERSONS_API}/${caseId}`),
+            apiClient(`${MISSING_VEHICLES_API}/${caseId}`),
           ]);
           if (personRes.ok) {
-            caseData = await personRes.json();
+            const payload = await personRes.json();
+            caseData = extractData(payload)?.person || extractData(payload);
           } else if (vehicleRes.ok) {
-            caseData = await vehicleRes.json();
+            const payload = await vehicleRes.json();
+            caseData = extractData(payload)?.vehicle || extractData(payload);
           }
         }
 
@@ -192,7 +200,7 @@ export default function SingleDetectionDetailPage() {
 
         // Transform sighting to match expected structure
         const transformedDetection = {
-          id: sighting.id,
+          id: sighting._id || sighting.id,
           name: sighting.type === 'Person' ? sighting.name : `${sighting.brand || ''} ${sighting.model || ''}`.trim() || sighting.plateNumber,
           location: sighting.location,
           date: sighting.date || new Date(sighting.reportDate).toLocaleDateString(),
@@ -207,8 +215,8 @@ export default function SingleDetectionDetailPage() {
 
         // Transform case data to match expected alert structure
         const transformedCase = {
-          id: caseData.id,
-          code: caseData.caseId || `CASE-${caseData.id}`,
+          id: caseData._id || caseData.id,
+          code: caseData.caseId || `CASE-${caseData._id || caseData.id}`,
           type: caseData.type || (caseData.firstName ? 'Person' : 'Vehicle'),
           category: {
             type: caseData.type || (caseData.firstName ? 'Person' : 'Vehicle'),

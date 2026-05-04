@@ -59,13 +59,17 @@ import MainFooter from "../../components/MainFooter";
 import Link from "next/link";
 import Image from "next/image";
 import { useRef, useState, useEffect } from "react";
+import { apiClient } from "../../lib/apiClient";
 
 // API Endpoints
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
+const MY_MISSING_VEHICLES_API = `${API_BASE_URL}/missing-vehicles/my-reports`;
+const MY_MISSING_PERSONS_API = `${API_BASE_URL}/missing-persons/my-reports`;
 const MISSING_VEHICLES_API = `${API_BASE_URL}/missing-vehicles`;
 const MISSING_PERSONS_API = `${API_BASE_URL}/missing-persons`;
 const SIGHTINGS_API = `${API_BASE_URL}/sightings`;
+const MY_SIGHTINGS_API = `${API_BASE_URL}/sightings/my-sightings`;
 
 // Helper to get dynamic background/color values
 const getBg = (colorScheme, light, dark) =>
@@ -94,6 +98,13 @@ export default function AlertPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteAlertInfo, setDeleteAlertInfo] = useState(null);
   const [deleteSightingsToo, setDeleteSightingsToo] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const extractArray = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.data)) return payload.data;
+    return [];
+  };
 
   // Fetch user data from localStorage on mount
   // Fetch user data from localStorage on mount
@@ -145,9 +156,12 @@ export default function AlertPage() {
 
       if (!isAuthenticated || !userData || isAuthenticated !== 'true') {
         notifications.show({ title: 'Login Required', message: 'Please login to view alerts', color: 'yellow', icon: <IconAlertCircle size={20} /> });
-        router.push('/login');
+        router.push('/authentication/login');
         return;
       }
+      try {
+        setCurrentUser(JSON.parse(userData));
+      } catch (e) {}
     };
     checkAuth();
   }, [router]);
@@ -161,14 +175,14 @@ export default function AlertPage() {
         // Fetch vehicles, persons, and sightings in parallel
         const [vehiclesResponse, personsResponse, sightingsResponse] =
           await Promise.all([
-            fetch(MISSING_VEHICLES_API),
-            fetch(MISSING_PERSONS_API),
-            fetch(SIGHTINGS_API),
+            apiClient(MY_MISSING_VEHICLES_API),
+            apiClient(MY_MISSING_PERSONS_API),
+            apiClient(MY_SIGHTINGS_API),
           ]);
 
-        const vehiclesData = await vehiclesResponse.json();
-        const personsData = await personsResponse.json();
-        const sightingsData = await sightingsResponse.json();
+        const vehiclesData = extractArray(await vehiclesResponse.json());
+        const personsData = extractArray(await personsResponse.json());
+        const sightingsData = extractArray(await sightingsResponse.json());
 
         setSightings(sightingsData);
 
@@ -187,8 +201,8 @@ export default function AlertPage() {
           const caseId = vehicle.caseId || `CASE-${vehicle.id}`;
           const vehicleSightings = sightingsByCase[caseId] || [];
           return {
-            id: vehicle.id,
-            code: caseId,
+            id: vehicle._id || vehicle.id,
+            code: vehicle.caseId || caseId,
             brand:
               `${vehicle.brand || ""} ${vehicle.model || ""} ${vehicle.submodel || ""}`.trim(),
             type: determineVehicleType(vehicle),
@@ -253,8 +267,8 @@ export default function AlertPage() {
           const caseId = person.caseId || `CASE-${person.id}`;
           const personSightings = sightingsByCase[caseId] || [];
           return {
-            id: person.id,
-            code: caseId,
+            id: person._id || person.id,
+            code: person.caseId || caseId,
             brand:
               `${person.firstName || ""} ${person.middleName || ""} ${person.lastName || ""}`.trim(),
             type: "person",
@@ -341,7 +355,7 @@ export default function AlertPage() {
     };
 
     fetchAlerts();
-  }, []);
+  }, [currentUser]);
 
   // Helper function to determine vehicle type
   const determineVehicleType = (vehicle) => {

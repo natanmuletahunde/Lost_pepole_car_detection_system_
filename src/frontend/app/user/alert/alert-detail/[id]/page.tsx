@@ -61,6 +61,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import MainFooter from "../../../../components/MainFooter";
+import { apiClient } from "../../../../lib/apiClient";
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -81,6 +82,13 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5
 const MISSING_VEHICLES_API = `${API_BASE_URL}/missing-vehicles`;
 const MISSING_PERSONS_API = `${API_BASE_URL}/missing-persons`;
 const SIGHTINGS_API = `${API_BASE_URL}/sightings`;
+
+const extractData = (payload: any) => payload?.data ?? payload;
+const extractArray = (payload: any) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
 
 // ---------- Helper Functions ----------
 const determineVehicleType = (vehicle) => {
@@ -110,8 +118,8 @@ const getVehicleIcon = (type, size = 24) => {
 // Transform a raw vehicle/person into the base alert object
 const transformAlert = (item, type) => {
   return {
-    id: item.id,
-    code: item.caseId || `CASE-${item.id}`,
+    id: item._id || item.id,
+    code: item.caseId || `CASE-${item._id || item.id}`,
     brand: type === 'person'
       ? `${item.firstName || ''} ${item.middleName || ''} ${item.lastName || ''}`.trim()
       : `${item.brand || ''} ${item.model || ''} ${item.submodel || ''}`.trim(),
@@ -142,7 +150,7 @@ export default function AlertDetailPage() {
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
   const [alertData, setAlertData] = useState(null);
-  const [detectionHistory, setDetectionHistory] = useState([]); // <-- separate state for sightings
+  const [detectionHistory, setDetectionHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activePage, setActivePage] = useState(1);
@@ -152,7 +160,7 @@ export default function AlertDetailPage() {
   const markersRef = useRef([]);
   const itemsPerPage = 10;
 
-  // ========== ADDED: Current user state for logging ==========
+  // Current user state for logging
   const [currentUser, setCurrentUser] = useState(null);
 
   // Dynamic colors
@@ -170,7 +178,7 @@ export default function AlertDetailPage() {
   const selectedRowBg = getBg(colorScheme, '#f0f9ff', theme.colors.blue[9] + '30');
   const selectedRowBorder = '#3b82f6';
 
-  // ========== ADDED: Load current user from localStorage ==========
+  // Load current user from localStorage
   useEffect(() => {
     const userData = localStorage.getItem('currentUser');
     if (userData) {
@@ -180,7 +188,7 @@ export default function AlertDetailPage() {
     }
   }, []);
 
-  // ========== ADDED: Logging function ==========
+  // Logging function
   const createActionLog = async (action, details = {}) => {
     try {
       if (!currentUser) return;
@@ -209,7 +217,7 @@ export default function AlertDetailPage() {
     }
   };
 
-  // ========== ADDED: Logout handler ==========
+  // Logout handler
   const handleLogout = () => {
     createActionLog('logout', { fromPage: 'alert_detail' });
     localStorage.removeItem('currentUser');
@@ -227,14 +235,16 @@ export default function AlertDetailPage() {
 
         // 1. Fetch the main alert (vehicle or person)
         let alert = null;
-        let response = await fetch(`${MISSING_VEHICLES_API}/${alertId}`);
+        let response = await apiClient(`${MISSING_VEHICLES_API}/${alertId}`);
         if (response.ok) {
-          const vehicle = await response.json();
+          const vehiclePayload = await response.json();
+          const vehicle = extractData(vehiclePayload)?.vehicle || extractData(vehiclePayload);
           alert = transformAlert(vehicle, determineVehicleType(vehicle));
         } else {
-          response = await fetch(`${MISSING_PERSONS_API}/${alertId}`);
+          response = await apiClient(`${MISSING_PERSONS_API}/${alertId}`);
           if (response.ok) {
-            const person = await response.json();
+            const personPayload = await response.json();
+            const person = extractData(personPayload)?.person || extractData(personPayload);
             alert = transformAlert(person, 'person');
           } else {
             throw new Error('Alert not found');
@@ -242,36 +252,33 @@ export default function AlertDetailPage() {
         }
 
         // 2. Fetch sightings linked to this alert
-        // We assume sightings have an `originalCaseId` field matching the alert's `caseId` or the raw ID.
-        // Try both: first with alert's caseId (if exists), then with raw id.
-        const caseId = alert.code; // e.g., CASE-123
+        const caseId = alert.code;
         let sightingsUrl = `${SIGHTINGS_API}?originalCaseId=${caseId}`;
-        let sightingsRes = await fetch(sightingsUrl);
+        let sightingsRes = await apiClient(sightingsUrl);
         let sightings = [];
         if (sightingsRes.ok) {
-          sightings = await sightingsRes.json();
+          sightings = extractArray(await sightingsRes.json());
         } else {
-          // Fallback: try with raw id
           sightingsUrl = `${SIGHTINGS_API}?originalCaseId=${alertId}`;
-          sightingsRes = await fetch(sightingsUrl);
+          sightingsRes = await apiClient(sightingsUrl);
           if (sightingsRes.ok) {
-            sightings = await sightingsRes.json();
+            sightings = extractArray(await sightingsRes.json());
           }
         }
 
         // 3. Transform sightings into detection objects
         const detections = sightings.map((s, idx) => ({
-          id: s.id,
+          id: s._id || s.id,
           name: s.type === 'Person' ? s.name : s.plateNumber || `Sighting ${idx + 1}`,
           location: s.location || 'Unknown',
           date: s.date ? new Date(s.date).toLocaleDateString() : (s.reportDate ? new Date(s.reportDate).toLocaleDateString() : 'Unknown'),
           time: s.time || (s.reportDate ? new Date(s.reportDate).toLocaleTimeString() : '00:00'),
-          accuracy: s.confidence || '85%', // placeholder; you could add confidence field to sightings
+          accuracy: s.confidence || '85%',
           type: s.type === 'Person' ? 'Suggestion' : 'CCTV',
           status: s.status || 'active',
           startDate: s.date || s.reportDate,
           startTime: s.time || (s.reportDate ? new Date(s.reportDate).toLocaleTimeString() : '00:00'),
-          lat: s.latitude || 9.03 + (Math.random() - 0.5) * 0.1, // fallback random if missing
+          lat: s.latitude || 9.03 + (Math.random() - 0.5) * 0.1,
           lng: s.longitude || 38.74 + (Math.random() - 0.5) * 0.1,
           description: s.description,
         }));
@@ -282,7 +289,6 @@ export default function AlertDetailPage() {
           setSelectedDetection(detections[0]);
         }
 
-        // ========== ADDED: Log page view after successful load ==========
         createActionLog('alert_detail_view', {
           alertId: alert.id,
           alertCode: alert.code,
@@ -305,26 +311,21 @@ export default function AlertDetailPage() {
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Clear previous map instance
     if (leafletMap.current) {
       leafletMap.current.remove();
       leafletMap.current = null;
     }
 
-    // Create map
-    const map = L.map(mapRef.current).setView([9.03, 38.74], 12); // Default center
+    const map = L.map(mapRef.current).setView([9.03, 38.74], 12);
     leafletMap.current = map;
 
-    // Add tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    // Clear markers array
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
-    // Add markers for each detection
     detectionHistory.forEach((detection) => {
       if (detection.lat && detection.lng) {
         const marker = L.marker([detection.lat, detection.lng])
@@ -342,13 +343,11 @@ export default function AlertDetailPage() {
       }
     });
 
-    // Fit map to markers if any
     if (markersRef.current.length > 0) {
       const group = L.featureGroup(markersRef.current);
       map.fitBounds(group.getBounds(), { padding: [50, 50] });
     }
 
-    // Cleanup on unmount
     return () => {
       if (leafletMap.current) {
         leafletMap.current.remove();
@@ -363,7 +362,6 @@ export default function AlertDetailPage() {
       leafletMap.current.flyTo([selectedDetection.lat, selectedDetection.lng], 15, {
         duration: 1.5
       });
-      // Open popup for selected marker
       markersRef.current.forEach(marker => {
         const latLng = marker.getLatLng();
         if (latLng.lat === selectedDetection.lat && latLng.lng === selectedDetection.lng) {
@@ -409,7 +407,6 @@ export default function AlertDetailPage() {
   );
   const totalPages = Math.ceil(detectionHistory.length / itemsPerPage);
 
-  // ========== ADDED: Log when a detection is selected ==========
   const handleDetectionClick = (detection) => {
     setSelectedDetection(detection);
     createActionLog('detection_selected', {
@@ -425,7 +422,6 @@ export default function AlertDetailPage() {
     }
   };
 
-  // ========== ADDED: Log when navigating to detection detail ==========
   const handleArrowClick = (detection, e) => {
     e.stopPropagation();
     createActionLog('detection_detail_navigate', {
@@ -435,7 +431,6 @@ export default function AlertDetailPage() {
     router.push(`/user/alert/alert-detail/${params.id}/detection/${detection.id}`);
   };
 
-  // ========== ADDED: Log export and filter clicks ==========
   const handleExportClick = () => {
     createActionLog('export_clicked', { alertId: alertData.id });
     // actual export logic here
@@ -562,10 +557,11 @@ export default function AlertDetailPage() {
                     </Menu.Item>
                   </Stack>
                   <Menu.Divider />
+                  {/* ========== CHANGED to custom handler ========== */}
                   <Menu.Item
                     color="red"
                     leftSection={<IconLogout size={20} />}
-                    onClick={handleLogout}   {/* ========== CHANGED to custom handler ========== */}
+                    onClick={handleLogout}
                   >
                     Logout
                   </Menu.Item>
@@ -628,21 +624,23 @@ export default function AlertDetailPage() {
               </Group>
             </Box>
             <Group>
+              {/* ========== CHANGED to custom handler ========== */}
               <Button 
                 leftSection={<IconDownload size={18} />} 
                 variant="light" 
                 size="sm" 
                 visibleFrom="xs"
-                onClick={handleExportClick}   {/* ========== CHANGED to custom handler ========== */}
+                onClick={handleExportClick}
               >
                 Export
               </Button>
+              {/* ========== CHANGED to custom handler ========== */}
               <Button 
                 leftSection={<IconFilter size={18} />} 
                 variant="light" 
                 size="sm" 
                 visibleFrom="xs"
-                onClick={handleFilterClick}   {/* ========== CHANGED to custom handler ========== */}
+                onClick={handleFilterClick}
               >
                 Filter
               </Button>
@@ -718,7 +716,6 @@ export default function AlertDetailPage() {
                   </Badge>
                 )}
               </Box>
-              {/* Leaflet map container */}
               <div
                 ref={mapRef}
                 style={{
@@ -930,11 +927,12 @@ export default function AlertDetailPage() {
           >
             Back to Alerts
           </Button>
+          {/* ========== CHANGED to custom handler ========== */}
           <Button 
             size="lg" 
             color="blue" 
             leftSection={<IconDownload size={18} />}
-            onClick={handleDownloadReport}   {/* ========== CHANGED to custom handler ========== */}
+            onClick={handleDownloadReport}
           >
             Download Full Report
           </Button>
