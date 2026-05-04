@@ -87,11 +87,7 @@ export default function SubscriptionPage() {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
 
-        const registrationCount = parseInt(
-          localStorage.getItem("registrationCount") || "0",
-        );
-
-        if (registrationCount === 0) {
+        if (parsedUser.hasPaidSubscription) {
           router.push("/user/register");
           return;
         }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Box,
@@ -108,35 +108,31 @@ export default function ReportSightingPage() {
         color: 'yellow',
         icon: <IconAlertCircle size={20} />,
       });
-      router.push('/login');
+      router.push('/authentication/login');
       return;
     }
     setCurrentUser(JSON.parse(userData));
   }, [router]);
 
-  // Prefill form from URL parameters (when coming from carousel buttons)
+  // Prefill form from URL parameters — run once only on mount
+  const prefillApplied = useRef(false);
   useEffect(() => {
-    if (searchParams) {
-      const type = searchParams.get('type');
-      const name = searchParams.get('name');
-      const plateNumber = searchParams.get('plateNumber');
-      const location = searchParams.get('location');
-      // Optional: you could also extract lat/lng if provided
-      // const lat = searchParams.get('lat');
-      // const lng = searchParams.get('lng');
-
-      setFormValues(prev => ({
-        ...prev,
-        type: type || prev.type,
-        name: name || prev.name,
-        plateNumber: plateNumber || prev.plateNumber,
-        location: location || prev.location,
-        // If coordinates are provided, you could set latitude/longitude as well
-        // latitude: lat || prev.latitude,
-        // longitude: lng || prev.longitude,
-      }));
-    }
-  }, [searchParams]);
+    if (prefillApplied.current) return;
+    prefillApplied.current = true;
+    if (!searchParams) return;
+    const typeParam = searchParams.get('type');
+    const nameParam = searchParams.get('name');
+    const plateNumberParam = searchParams.get('plateNumber');
+    const locationParam = searchParams.get('location');
+    setFormValues(prev => ({
+      ...prev,
+      type: typeParam || prev.type,
+      name: nameParam || prev.name,
+      plateNumber: plateNumberParam || prev.plateNumber,
+      location: locationParam || prev.location,
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLocationSelect = (lat, lng, address) => {
     setFormValues((prev) => ({
@@ -147,30 +143,63 @@ export default function ReportSightingPage() {
     }));
   };
 
-  const submitSightingToBackend = async (data, token) => {
+  const tryRefreshAccessToken = async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) return null;
     try {
-      const response = await fetch(SIGHTINGS_API, {
+      const res = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ refreshToken }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `Failed to submit sighting: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error submitting sighting:', error);
-      throw error;
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.data) return null;
+      const access = data.data.accessToken || data.data.token;
+      const nextRefresh = data.data.refreshToken;
+      if (!access) return null;
+      localStorage.setItem('accessToken', access);
+      localStorage.setItem('token', access);
+      if (nextRefresh) localStorage.setItem('refreshToken', nextRefresh);
+      return access;
+    } catch {
+      return null;
     }
   };
 
+  const submitSightingToBackend = async (data, token) => {
+    const post = (t) =>
+      fetch(SIGHTINGS_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${t}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+    let response = await post(token);
+    if (response.status === 401) {
+      const next = await tryRefreshAccessToken();
+      if (next) response = await post(next);
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      const msg =
+        errorData?.message ||
+        (Array.isArray(errorData?.errors) && errorData.errors[0]?.msg) ||
+        `Failed to submit sighting: ${response.statusText}`;
+      throw new Error(msg);
+    }
+
+    return response.json();
+  };
+
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+
     const required = ['type', 'location'];
     if (formValues.type === 'Person') required.push('name');
     else required.push('plateNumber');
@@ -186,7 +215,23 @@ export default function ReportSightingPage() {
       return;
     }
 
-    setIsSubmitting(true);
+    const latitude = Number(formValues.latitude);
+    const longitude = Number(formValues.longitude);
+    const hasValidCoords =
+      !Number.isNaN(latitude) &&
+      !Number.isNaN(longitude) &&
+      formValues.latitude !== '' &&
+      formValues.longitude !== '' &&
+      !(latitude === 0 && longitude === 0);
+    if (!hasValidCoords) {
+      notifications.show({
+        title: 'Location Required',
+        message: 'Please tap a point on the map to drop a pin and set the sighting location.',
+        color: 'red',
+        icon: <IconAlertCircle size={20} />,
+      });
+      return;
+    }
 
     const authToken =
       localStorage.getItem('accessToken') ||
@@ -201,47 +246,53 @@ export default function ReportSightingPage() {
         color: 'yellow',
         icon: <IconAlertCircle size={20} />,
       });
-      setIsSubmitting(false);
       router.push('/authentication/login');
       return;
     }
 
-    const combinedDateTime = formValues.date && formValues.time
-      ? new Date(`${formValues.date}T${formValues.time}`).toISOString()
-      : new Date().toISOString();
-    const latitude = Number(formValues.latitude);
-    const longitude = Number(formValues.longitude);
-
-    if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+    const sightingType = String(formValues.type || 'Person').toLowerCase();
+    if (sightingType !== 'person' && sightingType !== 'vehicle') {
       notifications.show({
-        title: 'Location Required',
-        message: 'Please pick a location from the map to capture coordinates.',
+        title: 'Invalid type',
+        message: 'Please choose Person or Vehicle.',
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
-      setIsSubmitting(false);
       return;
     }
 
-    const baseDescription = formValues.description?.trim()
-      ? formValues.description.trim()
-      : 'No additional details provided';
-    const subjectInfo = formValues.type === 'Person'
-      ? `Person name: ${formValues.name}`
-      : `Vehicle plate: ${formValues.plateNumber}`;
-
-    const payload = {
-      type: formValues.type.toLowerCase(),
-      description: `${subjectInfo}. ${baseDescription}. Seen at: ${combinedDateTime}`,
-      location: {
-        type: 'Point',
-        coordinates: [longitude, latitude],
-        address: formValues.location,
-      },
-      images: formValues.imagePreview ? [formValues.imagePreview] : [],
-    };
-
+    setIsSubmitting(true);
     try {
+      const combinedDateTime =
+        formValues.date && formValues.time
+          ? new Date(`${formValues.date}T${formValues.time}`).toISOString()
+          : new Date().toISOString();
+
+      const baseDescription = formValues.description?.trim()
+        ? formValues.description.trim()
+        : 'No additional details provided';
+      const subjectInfo =
+        formValues.type === 'Person'
+          ? `Person name: ${formValues.name}`
+          : `Vehicle plate: ${formValues.plateNumber}`;
+
+      let description = `${subjectInfo}. ${baseDescription}. Seen at: ${combinedDateTime}`;
+      const MAX_DESC = 1000;
+      if (description.length > MAX_DESC) {
+        description = description.slice(0, MAX_DESC);
+      }
+
+      const payload = {
+        type: sightingType,
+        description,
+        location: {
+          type: 'Point',
+          coordinates: [longitude, latitude],
+          address: (formValues.location || '').slice(0, 300),
+        },
+        images: formValues.imagePreview ? [formValues.imagePreview] : [],
+      };
+
       await submitSightingToBackend(payload, authToken);
 
       notifications.show({
@@ -250,16 +301,19 @@ export default function ReportSightingPage() {
         color: 'green',
         icon: <IconCheck size={20} />,
       });
-      router.push('/');
+      // Navigate directly to dashboard — avoid root redirect chain
+      router.push('/user/dashboard');
     } catch (err) {
+      console.error('Error submitting sighting:', err);
       notifications.show({
         title: 'Submission Failed',
-        message: err.message || 'Failed to submit sighting. Please try again.',
+        message: err?.message || 'Failed to submit sighting. Please try again.',
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   const handleImageChange = (file) => {
@@ -505,11 +559,13 @@ export default function ReportSightingPage() {
               />
 
               <Button
+                type="button"
                 fullWidth
                 mt="xl"
                 size="md"
                 onClick={handleSubmit}
                 loading={isSubmitting}
+                disabled={isSubmitting}
                 radius="xl"
                 style={{
                   background: PRIMARY_GRADIENT,

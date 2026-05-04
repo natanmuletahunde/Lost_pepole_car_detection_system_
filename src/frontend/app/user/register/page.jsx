@@ -1,4 +1,3 @@
-// page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -39,6 +38,8 @@ import {
 import { PersonDetailsStep } from './PersonDetailsStep';
 import { VehicleDetailsStep } from './VehicleDetailsStep';
 import { SpecialCaseDetailsStep } from './SpecialCaseDetailsStep';
+
+import { createReport } from '../../lib/missingPerson.api';
 
 const LocationPicker = dynamic(() => import('../../components/LocationPicker'), {
   ssr: false,
@@ -116,6 +117,30 @@ export default function UnifiedRegisterPage() {
           return;
         }
         const parsedUser = JSON.parse(userData);
+        
+        // Debug logs to help trace the issue
+        console.log("Subscription Check - current user:", parsedUser);
+        console.log("Registrations count:", parsedUser.registrations);
+        console.log("Has paid subscription:", parsedUser.hasPaidSubscription);
+        
+        // Check subscription status
+        const currentRegCount = Number(parsedUser.registrations) || 0;
+        const hasPaid = parsedUser.hasPaidSubscription || false;
+
+        if (currentRegCount >= 1 && !hasPaid) {
+          console.log("Limit exceeded! Redirecting to subscribe page...");
+          notifications.show({ 
+            title: 'Subscription Required', 
+            message: 'You have reached your free registration limit. Please upgrade your subscription to register more cases.', 
+            color: 'yellow', 
+            icon: <IconAlertCircle size={20} /> 
+          });
+          // Hard redirect to guarantee navigation
+          window.location.href = '/user/subscribe';
+          setLoading(false);
+          return;
+        }
+
         setCurrentUser(parsedUser);
         setLoading(false);
       } catch (error) {
@@ -269,48 +294,15 @@ export default function UnifiedRegisterPage() {
     return true;
   };
 
-  const saveToJsonServer = async (data) => {
-    try {
-      const endpoint = regType === 'Vehicle' ? MISSING_VEHICLES_API : MISSING_PERSONS_API;
-      let response;
-      if (regType === 'Person' && personImages.length > 0) {
-        const formData = new FormData();
-        Object.keys(data).forEach(key => { if (data[key] !== null && data[key] !== undefined) formData.append(key, data[key]); });
-        personImages.forEach(imgObj => formData.append('images', imgObj.file));
-        response = await fetch(endpoint, { method: 'POST', body: formData });
-      } else if (regType === 'Vehicle' && vehicleImages.length > 0) {
-        const formData = new FormData();
-        Object.keys(data).forEach(key => { if (data[key] !== null && data[key] !== undefined) formData.append(key, data[key]); });
-        vehicleImages.forEach(imgObj => formData.append('vehicleImages', imgObj.file));
-        response = await fetch(endpoint, { method: 'POST', body: formData });
-      } else {
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-      }
-      if (!response.ok) throw new Error(`Failed to save data: ${response.statusText}`);
-      return await response.json();
-    } catch (error) {
-      console.error('Error saving to server:', error);
-      throw error;
-    }
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-  const getTypeSpecificFields = () => {
-    const sharedFields = {
-      location: formValues.location,
-      lastSeenDate: formValues.lastSeenDate,
-      lastSeenTime: formValues.lastSeenTime,
-      telegramUsername: formValues.telegramUsername,
-      additionalContactInfo: formValues.additionalContactInfo,
-      latitude: formValues.latitude,
-      longitude: formValues.longitude,
-    };
-    if (regType === 'Person') {
-      return {
-        ...sharedFields,
+    if (!validateRequiredFieldsForSubmit()) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const reportData = {
         firstName: formValues.firstName,
         middleName: formValues.middleName,
         lastName: formValues.lastName,
@@ -319,12 +311,6 @@ export default function UnifiedRegisterPage() {
         height: formValues.height,
         weight: formValues.weight,
         description: formValues.description,
-        specialCase: formValues.specialCase,
-      };
-    }
-    if (regType === 'Vehicle') {
-      return {
-        ...sharedFields,
         brand: formValues.brand,
         model: formValues.model,
         submodel: formValues.submodel,
@@ -334,72 +320,63 @@ export default function UnifiedRegisterPage() {
         region: formValues.region,
         code: formValues.code,
         plateNumber: formValues.plateNumber,
+        specialCategory: formValues.specialCategory,
         specialCase: formValues.specialCase,
-        ownershipDocument: ownershipDoc?.name || null,
-      };
-    }
-    return {
-      ...sharedFields,
-      firstName: formValues.firstName,
-      middleName: formValues.middleName,
-      lastName: formValues.lastName,
-      gender: formValues.gender,
-      age: formValues.age,
-      height: formValues.height,
-      weight: formValues.weight,
-      description: formValues.description,
-      specialCategory: formValues.specialCategory,
-      doctorReport: doctorReport?.name || null,
-      criminalRecord: criminalRecord?.name || null,
-    };
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateRequiredFieldsForSubmit()) return;
-    setIsSubmitting(true);
-    try {
-      const caseId = `CASE-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-      const reportData = {
-        caseId,
-        type: regType,
+        location: formValues.location,
+        lastSeenDate: formValues.lastSeenDate,
+        lastSeenTime: formValues.lastSeenTime,
+        telegramUsername: formValues.telegramUsername,
+        additionalContactInfo: formValues.additionalContactInfo,
+        latitude: formValues.latitude,
+        longitude: formValues.longitude,
         reportedBy: {
-          userId: currentUser.id,
-          firstName: currentUser.firstName,
-          lastName: currentUser.lastName,
-          email: currentUser.email,
-          phone: currentUser.phone,
-          role: currentUser.role,
-          telegramUsername: formValues.telegramUsername || null,
-        },
+                userId: currentUser?._id || currentUser?.id || '',
+                firstName: currentUser?.firstName,
+                lastName: currentUser?.lastName,
+                email: currentUser?.email,
+                phone: currentUser?.phone,
+                role: currentUser?.role,
+              },
         reportDate: new Date().toISOString(),
         status: 'Active',
-        lastUpdated: new Date().toISOString(),
-        verified: false,
-        matches: [],
-        notes: [],
-        contactMethods: {
-          email: currentUser.email,
-          phone: currentUser.phone,
-          telegram: formValues.telegramUsername || null,
-        },
-        ...getTypeSpecificFields(),
       };
-      await saveToJsonServer(reportData);
+
+      console.log("REPORT DATA:", reportData);
+       
+
+      await createReport({
+        type: regType,
+        data: reportData,
+        images: regType === 'Person' ? personImages : 
+                regType === 'Vehicle' ? vehicleImages : specialImages,
+        ownershipDocument: regType === 'Vehicle' ? ownershipDoc : null,
+        doctorReport: regType === 'Special' && specialCategory === 'mentally-ill' ? doctorReport : null,
+        criminalRecord: regType === 'Special' && specialCategory === 'criminal' ? criminalRecord : null,
+      });
+
+      if (currentUser) {
+        const updatedUser = { ...currentUser, registrations: (currentUser.registrations || 0) + 1 };
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        setCurrentUser(updatedUser);
+      }
+
       notifications.show({
         title: '🎉 Report Submitted Successfully!',
-        message: (<div><p><strong>Case ID:</strong> {caseId}</p><p>{regType === 'Person' && `Person: ${formValues.firstName} ${formValues.lastName}`}{regType === 'Vehicle' && `Vehicle: ${formValues.brand} ${formValues.model} - ${formValues.plateNumber}`}{regType === 'Special' && `Special Case: ${formValues.firstName} ${formValues.lastName} (${formValues.specialCategory === 'mentally-ill' ? 'Mentally Ill' : 'Criminal Background'})`}</p><Text size="sm" c="dimmed" mt={5}>We will contact you if we find any matches. {formValues.telegramUsername && `You can also be contacted via Telegram: @${formValues.telegramUsername}`}</Text></div>),
-        color: 'blue',
+        message: 'Your report has been received. We will contact you if we find any matches.',
+        color: 'teal',
         icon: <IconCheck size={20} />,
         autoClose: 10000,
-        withCloseButton: true,
-        withBorder: true,
-        position: 'top-right',
       });
-      setTimeout(() => router.push('/'), 1500);
+
+      setTimeout(() => router.push('/user/dashboard'), 1500);
     } catch (error) {
       console.error('Error submitting report:', error);
-      notifications.show({ title: 'Submission Failed', message: 'Failed to submit report. Please try again.', color: 'red', icon: <IconAlertCircle size={20} /> });
+      notifications.show({ 
+        title: 'Submission Failed', 
+        message: error.message || 'Failed to submit report. Please try again.', 
+        color: 'red', 
+        icon: <IconAlertCircle size={20} /> 
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -408,6 +385,8 @@ export default function UnifiedRegisterPage() {
   const handleInputChange = (field, value) => {
     setFormValues(prev => ({ ...prev, [field]: value }));
   };
+
+  
 
   const resetForm = () => {
     setActiveStep(0);
@@ -455,7 +434,12 @@ export default function UnifiedRegisterPage() {
               <Text c="white">To register additional {regType === 'Person' ? 'people' : 'vehicles'}, you need to subscribe to a premium plan.</Text>
               <Box style={{ background: 'rgba(255, 255, 255, 0.1)', padding: 'md', borderRadius: 'md', border: '1px dashed rgba(255, 255, 255, 0.3)' }}>
                 <Text c="white" size="sm" fw={600} ta="center">Premium Benefits:</Text>
-                <SimpleGrid cols={2} spacing="xs" mt="xs"><Flex align="center" gap="xs"><IconCheck size={14} color="#4dff4d" /><Text c="white" size="xs">Unlimited Reports</Text></Flex><Flex align="center" gap="xs"><IconCheck size={14} color="#4dff4d" /><Text c="white" size="xs">Priority Support</Text></Flex><Flex align="center" gap="xs"><IconCheck size={14} color="#4dff4d" /><Text c="white" size="xs">Advanced Search</Text></Flex><Flex align="center" gap="xs"><IconCheck size={14} color="#4dff4d" /><Text c="white" size="xs">Real-time Updates</Text></Flex></SimpleGrid>
+                <SimpleGrid cols={2} spacing="xs" mt="xs">
+                  <Flex align="center" gap="xs"><IconCheck size={14} color="#4dff4d" /><Text c="white" size="xs">Unlimited Reports</Text></Flex>
+                  <Flex align="center" gap="xs"><IconCheck size={14} color="#4dff4d" /><Text c="white" size="xs">Priority Support</Text></Flex>
+                  <Flex align="center" gap="xs"><IconCheck size={14} color="#4dff4d" /><Text c="white" size="xs">Advanced Search</Text></Flex>
+                  <Flex align="center" gap="xs"><IconCheck size={14} color="#4dff4d" /><Text c="white" size="xs">Real-time Updates</Text></Flex>
+                </SimpleGrid>
               </Box>
               <Text c="white" size="sm" ta="center">Redirecting to subscription page in 3 seconds...</Text>
               <Button color="yellow" size="lg" radius="xl" onClick={() => router.push('/subscribe')} mt="md" rightSection={<IconArrowRight size={20} />} style={{ background: 'linear-gradient(135deg, #ffd700 0%, #ffaa00 100%)', fontWeight: 700, color: '#0034D1' }}>View Premium Plans</Button>

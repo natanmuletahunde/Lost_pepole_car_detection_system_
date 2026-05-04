@@ -90,6 +90,8 @@ import { useMediaQuery } from '@mantine/hooks';
 
 // API URLs
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+const MY_MISSING_PERSONS_API = `${API_BASE_URL}/missing-persons/my-reports`;
+const MY_MISSING_VEHICLES_API = `${API_BASE_URL}/missing-vehicles/my-reports`;
 const MISSING_PERSONS_API = `${API_BASE_URL}/missing-persons`;
 const MISSING_VEHICLES_API = `${API_BASE_URL}/missing-vehicles`;
 
@@ -282,38 +284,27 @@ export default function ReportedCasesPage() {
 
       const requestHeaders = getAuthHeaders();
       
-      // Use cache: 'no-store' to avoid 304 responses
       const [personsResponse, vehiclesResponse] = await Promise.all([
-        fetch(MISSING_PERSONS_API, { headers: requestHeaders, cache: 'no-store' }),
-        fetch(MISSING_VEHICLES_API, { headers: requestHeaders, cache: 'no-store' })
+        fetch(MY_MISSING_PERSONS_API, { headers: requestHeaders, cache: 'no-store' }),
+        fetch(MY_MISSING_VEHICLES_API, { headers: requestHeaders, cache: 'no-store' })
       ]);
 
       if (!personsResponse.ok || !vehiclesResponse.ok) {
-        throw new Error('Failed to fetch data');
+        if (personsResponse.status === 401 || vehiclesResponse.status === 401) {
+          router.push('/authentication/login');
+          return;
+        }
+        throw new Error('Failed to fetch your reported cases');
       }
 
       const personsResult = await personsResponse.json();
       const vehiclesResult = await vehiclesResponse.json();
       
-      // Robust parsing: handles both { data: [] } and plain array
       const personsData = extractDataArray(personsResult);
       const vehiclesData = extractDataArray(vehiclesResult);
 
-      console.log('Persons data:', personsData);
-      console.log('Vehicles data:', vehiclesData);
-
-      const userId = String(user.id || '');
-      const userEmail = (user.email || '').toLowerCase();
-      const isOwnCase = (item) =>
-        String(item?.reportedBy?.userId || '') === userId ||
-        (item?.reportedBy?.email || '').toLowerCase() === userEmail;
-      
-      // Filter by current user (or remove filter to see all data for testing)
-      const myPersons = personsData.filter(isOwnCase);
-      const myVehicles = vehiclesData.filter(isOwnCase);
-
       const allCases = [
-        ...myPersons.map(item => ({
+        ...personsData.map(item => ({
           id: item._id || item.id,
           caseId: item.caseId || `PERSON-${item._id || item.id}`,
           type: 'Person',
@@ -341,7 +332,7 @@ export default function ReportedCasesPage() {
           icon: <IconUser size={16} />,
           category: 'person'
         })),
-        ...myVehicles.map(item => ({
+        ...vehiclesData.map(item => ({
           id: item._id || item.id,
           caseId: item.caseId || `VEHICLE-${item._id || item.id}`,
           type: 'Vehicle',
