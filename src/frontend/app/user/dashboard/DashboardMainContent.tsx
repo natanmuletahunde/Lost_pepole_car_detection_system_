@@ -86,6 +86,19 @@ export default function DashboardMainContent({
   const isMobile = useMediaQuery("(max-width: 768px)");
   const getBg = (light: string, dark: string) =>
     colorScheme === "dark" ? dark : light;
+  const getSightingLocationText = (location: any) => {
+    if (!location) return "Unknown location";
+    if (typeof location === "string") return location;
+    if (typeof location === "object") {
+      return (
+        location.address ||
+        (Array.isArray(location.coordinates)
+          ? `${location.coordinates[1]}, ${location.coordinates[0]}`
+          : "Unknown location")
+      );
+    }
+    return String(location);
+  };
 
   return (
     <Container size="xl" py={{ base: 30, md: 40 }}>
@@ -652,7 +665,7 @@ export default function DashboardMainContent({
                     <Group gap="xs" mt={4}>
                       <IconMapPin size={12} />
                       <Text size="xs" c="dimmed" lineClamp={1}>
-                        {sighting.location}
+                        {getSightingLocationText(sighting.location)}
                       </Text>
                     </Group>
                     <Group gap="xs" mt={4}>
