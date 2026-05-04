@@ -100,7 +100,16 @@ export default function AdminLayout({ children }) {
               icon={<IconLogout size={22} />} 
               label="Logout" 
               collapsed={collapsed}
-              onClick={() => router.push('/login')} 
+              onClick={() => {
+                try {
+                  localStorage.removeItem('accessToken');
+                  localStorage.removeItem('token');
+                  localStorage.removeItem('refreshToken');
+                  localStorage.removeItem('isAuthenticated');
+                  localStorage.removeItem('currentUser');
+                } catch (_) {}
+                router.push('/authentication/login');
+              }} 
             />
           </Stack>
         </Stack>

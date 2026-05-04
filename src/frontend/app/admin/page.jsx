@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { adminFetch } from '@/app/lib/adminApi';
 import { 
   Grid, Paper, Text, Group, Box, Title, TextInput, ActionIcon, Avatar, SimpleGrid, Stack, UnstyledButton,
   useMantineTheme, useMantineColorScheme
@@ -18,32 +19,91 @@ import {
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 const getTextColor = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 
-// --- MOCK DATA ---
-const weeklyData = [
-  { name: 'Sat', Subscription: 500, Registration: 150 }, 
-  { name: 'Sun', Subscription: 380, Registration: 80 },
-  { name: 'Mon', Subscription: 350, Registration: 180 }, 
-  { name: 'Tue', Subscription: 550, Registration: 320 },
-  { name: 'Wed', Subscription: 200, Registration: 250 }, 
-  { name: 'Thu', Subscription: 480, Registration: 230 },
-  { name: 'Fri', Subscription: 400, Registration: 330 },
-];
-
-const pieData = [
-  { name: 'People', value: 30, color: '#4318FF' },
-  { name: 'Special case', value: 15, color: '#FFB800' },
-  { name: 'Cars', value: 35, color: '#0000FF' },
-  { name: 'Closed', value: 20, color: '#FF00FF' },
-];
-
-const subscriptionData = [
-  { id: 1, name: 'Ms. x', type: 'Private', avatar: 'https://i.pravatar.cc/150?u=1' },
-  { id: 2, name: 'MR. r', type: 'Private', avatar: 'https://i.pravatar.cc/150?u=2' },
-  { id: 3, name: 'Mr. W', type: 'Private', avatar: 'https://i.pravatar.cc/150?u=3' },
+const FALLBACK_WEEKLY = [
+  { name: 'Sat', Subscription: 0, Registration: 0 },
+  { name: 'Sun', Subscription: 0, Registration: 0 },
+  { name: 'Mon', Subscription: 0, Registration: 0 },
+  { name: 'Tue', Subscription: 0, Registration: 0 },
+  { name: 'Wed', Subscription: 0, Registration: 0 },
+  { name: 'Thu', Subscription: 0, Registration: 0 },
+  { name: 'Fri', Subscription: 0, Registration: 0 },
 ];
 
 export default function FullWidthDashboard() {
+  const [dash, setDash] = useState(null);
+  const [finance, setFinance] = useState(null);
+  const [recentUsers, setRecentUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [d, f, usersPayload] = await Promise.all([
+          adminFetch('/admin/dashboard'),
+          adminFetch('/admin/finance?period=30d'),
+          adminFetch('/admin/users?page=1&limit=5'),
+        ]);
+        if (cancelled) return;
+        setDash(d);
+        setFinance(f);
+        const list = usersPayload?.users || [];
+        setRecentUsers(
+          list.map((u) => ({
+            id: String(u._id || u.id),
+            name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+            type: u.role || 'user',
+            avatar: null,
+          }))
+        );
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const weeklyData = useMemo(() => {
+    const byMonth = finance?.revenue?.byMonth;
+    if (!byMonth || typeof byMonth !== 'object') return FALLBACK_WEEKLY;
+    const entries = Object.entries(byMonth);
+    if (entries.length === 0) return FALLBACK_WEEKLY;
+    const regBase = dash?.stats?.totalCases ? Math.round(dash.stats.totalCases / entries.length) : 0;
+    return entries.map(([name, revenue]) => ({
+      name,
+      Subscription: Number(revenue) || 0,
+      Registration: regBase,
+    }));
+  }, [finance, dash]);
+
+  const pieData = useMemo(() => {
+    const s = dash?.stats;
+    if (!s) {
+      return [
+        { name: 'Active', value: 0, color: '#4318FF' },
+        { name: 'Resolved', value: 0, color: '#FFB800' },
+        { name: 'Other', value: 0, color: '#6AD2FF' },
+      ];
+    }
+    const active = Number(s.activeCases) || 0;
+    const resolved = Number(s.resolvedCases) || 0;
+    const other = Math.max(0, (Number(s.totalCases) || 0) - active - resolved);
+    const sum = active + resolved + other || 1;
+    return [
+      { name: 'Active', value: Math.round((active / sum) * 100), color: '#4318FF' },
+      { name: 'Resolved', value: Math.round((resolved / sum) * 100), color: '#FFB800' },
+      { name: 'Other', value: Math.max(0, 100 - Math.round((active / sum) * 100) - Math.round((resolved / sum) * 100)), color: '#6AD2FF' },
+    ];
+  }, [dash]);
+
+  const subscriptionData =
+    recentUsers.length > 0
+      ? recentUsers
+      : [
+          { id: '1', name: '—', type: 'No users yet', avatar: null },
+        ];
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
 
@@ -86,16 +146,49 @@ export default function FullWidthDashboard() {
 
       {/* TOP STAT CARDS */}
       <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg" mb="lg">
-        <StatCard label="User Registrations" value="44" color="#FFB800" icon={<IconUsers />} />
-        <StatCard label="User Registrations" value="44" color="#FFB800" icon={<IconUsers />} />
-        <StatCard label="User Registrations" value="44" color="#FFB800" icon={<IconUsers />} />
+        <StatCard
+          label="Total users"
+          value={dash?.stats?.totalUsers != null ? String(dash.stats.totalUsers) : '—'}
+          color="#FFB800"
+          icon={<IconUsers />}
+        />
+        <StatCard
+          label="Total cases"
+          value={dash?.stats?.totalCases != null ? String(dash.stats.totalCases) : '—'}
+          color="#FFB800"
+          icon={<IconShoppingCart />}
+        />
+        <StatCard
+          label="Sightings"
+          value={dash?.stats?.totalSightings != null ? String(dash.stats.totalSightings) : '—'}
+          color="#FFB800"
+          icon={<IconCar />}
+        />
       </SimpleGrid>
 
       {/* LOWER STAT CARDS */}
       <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg" mb="xl">
-        <StatCard label="Total reports" value="1320" color="#BDEAF0" darkText icon={<IconShoppingCart />} />
-        <StatCard label="Lost people report" value="720" color="#BDEAF0" darkText icon={<IconShoppingCart />} />
-        <StatCard label="Lost car reports" value="599" color="#BDEAF0" darkText icon={<IconCar />} />
+        <StatCard
+          label="Active cases"
+          value={dash?.stats?.activeCases != null ? String(dash.stats.activeCases) : '—'}
+          color="#BDEAF0"
+          darkText
+          icon={<IconShoppingCart />}
+        />
+        <StatCard
+          label="Resolved cases"
+          value={dash?.stats?.resolvedCases != null ? String(dash.stats.resolvedCases) : '—'}
+          color="#BDEAF0"
+          darkText
+          icon={<IconShoppingCart />}
+        />
+        <StatCard
+          label="Resolution rate"
+          value={dash?.stats?.resolutionRate != null ? `${dash.stats.resolutionRate}%` : '—'}
+          color="#BDEAF0"
+          darkText
+          icon={<IconCar />}
+        />
       </SimpleGrid>
 
       {/* FIXED CHARTS SECTION */}

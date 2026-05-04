@@ -45,9 +45,7 @@ import {
   IconCircleCheck,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-
-// ✅ Changed base URL to port 3000
-const API_BASE_URL = "http://localhost:3001";
+import { adminFetch } from "@/app/lib/adminApi";
 
 // Helper functions
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
@@ -85,11 +83,11 @@ const mapApiToComponent = (apiUser) => {
   const joined = joinedDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 
   return {
-    id: apiUser.id,
+    id: String(apiUser._id || apiUser.id),
     name,
     email: apiUser.email,
     username,
-    status: apiUser.hasPaidSubscription ? "Paid" : "Free",
+    status: "Free",
     role: apiUser.role,
     joined,
     joinedDate,
@@ -98,7 +96,7 @@ const mapApiToComponent = (apiUser) => {
     phone: apiUser.phone,
     address: apiUser.address,
     isActive: apiUser.isActive,
-    registrations: apiUser.registrations || 0,
+    registrations: apiUser.registrations ?? 0,
   };
 };
 
@@ -123,89 +121,78 @@ export default function UserListPage() {
   const [activePage, setActivePage] = useState(1);
   const [pageSize, setPageSize] = useState("10");
   const [showFilters, setShowFilters] = useState(false);
-
-  // Fetch users from json-server
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/users`);
-      if (!response.ok) throw new Error("Failed to fetch users");
-      const apiUsers = await response.json();
-      const componentUsers = apiUsers.map(mapApiToComponent);
-      setUsers(componentUsers);
-    } catch (error) {
-      console.error(error);
-      notifications.show({ title: "Error", message: "Could not load users", color: "red" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [serverTotal, setServerTotal] = useState(0);
+  const [serverPages, setServerPages] = useState(1);
+  const [dashStats, setDashStats] = useState(null);
 
   useEffect(() => {
-    fetchUsers();
+    adminFetch("/admin/dashboard")
+      .then((d) => setDashStats(d?.stats || null))
+      .catch(() => setDashStats(null));
   }, []);
-
-  // Filtering
-  const filteredUsers = useMemo(() => {
-    let result = [...users];
-
-    if (search) {
-      const lower = search.toLowerCase();
-      result = result.filter(
-        (u) =>
-          u.name.toLowerCase().includes(lower) ||
-          u.email.toLowerCase().includes(lower) ||
-          u.username.toLowerCase().includes(lower) ||
-          u.phone?.toLowerCase().includes(lower)
-      );
-    }
-
-    if (roleFilter && roleFilter !== "All") {
-      result = result.filter((u) => u.role === roleFilter);
-    }
-
-    if (statusFilter && statusFilter !== "All") {
-      result = result.filter((u) => u.status === statusFilter);
-    }
-
-    if (activeFilter === "active") {
-      result = result.filter((u) => u.isActive);
-    } else if (activeFilter === "inactive") {
-      result = result.filter((u) => !u.isActive);
-    }
-
-    return result;
-  }, [users, search, roleFilter, statusFilter, activeFilter]);
-
-  // Pagination
-  const paginatedUsers = useMemo(() => {
-    const size = parseInt(pageSize, 10);
-    const start = (activePage - 1) * size;
-    return filteredUsers.slice(start, start + size);
-  }, [filteredUsers, activePage, pageSize]);
-
-  const totalPages = useMemo(
-    () => Math.ceil(filteredUsers.length / parseInt(pageSize, 10)),
-    [filteredUsers, pageSize]
-  );
 
   useEffect(() => {
     setActivePage(1);
   }, [search, roleFilter, statusFilter, activeFilter, pageSize]);
 
-  // Stats
+  useEffect(() => {
+    let cancelled = false;
+    const delay = search.trim() ? 320 : 0;
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams();
+        params.set("page", String(activePage));
+        params.set("limit", String(parseInt(pageSize, 10) || 10));
+        if (search.trim()) params.set("search", search.trim());
+        if (roleFilter && roleFilter !== "All") {
+          params.set("role", roleFilter.toLowerCase());
+        }
+        if (activeFilter === "active") params.set("status", "active");
+        if (activeFilter === "inactive") params.set("status", "inactive");
+
+        const payload = await adminFetch(`/admin/users?${params.toString()}`);
+        if (cancelled) return;
+        const apiUsers = payload?.users || [];
+        const componentUsers = apiUsers.map(mapApiToComponent);
+        setUsers(componentUsers);
+        setServerTotal(payload?.pagination?.total ?? componentUsers.length);
+        setServerPages(payload?.pagination?.pages ?? 1);
+      } catch (error) {
+        if (!cancelled) {
+          console.error(error);
+          notifications.show({ title: "Error", message: "Could not load users", color: "red" });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, delay);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [activePage, pageSize, roleFilter, activeFilter, search]);
+
+  const filteredUsers = useMemo(() => {
+    let result = [...users];
+    if (statusFilter && statusFilter !== "All") {
+      result = result.filter((u) => u.status === statusFilter);
+    }
+    return result;
+  }, [users, statusFilter]);
+
+  const paginatedUsers = filteredUsers;
+
+  const totalPages = Math.max(1, serverPages);
+
   const stats = useMemo(() => {
-    const total = users.length;
-    const activeUsers = users.filter((u) => u.isActive).length;
-    const paidUsers = users.filter((u) => u.status === "Paid").length;
-    const inactiveUsers = total - activeUsers;
-    const now = new Date();
-    const newThisMonth = users.filter(
-      (u) => u.joinedDate.getMonth() === now.getMonth() && u.joinedDate.getFullYear() === now.getFullYear()
-    ).length;
-    const activeLast7Days = users.filter((u) => getActiveThreshold(u.lastLogin) < 7).length;
-    return { total, activeUsers, inactiveUsers, paidUsers, newThisMonth, activeLast7Days };
-  }, [users]);
+    const total = dashStats?.totalUsers ?? serverTotal;
+    const activeCases = dashStats?.activeCases ?? 0;
+    const resolvedCases = dashStats?.resolvedCases ?? 0;
+    const sightings = dashStats?.totalSightings ?? 0;
+    const onPageActive = users.filter((u) => u.isActive).length;
+    return { total, activeCases, resolvedCases, sightings, onPageActive, serverTotal };
+  }, [dashStats, serverTotal, users]);
 
   // Export CSV
   const exportToCSV = () => {
@@ -263,7 +250,7 @@ export default function UserListPage() {
             User Management
           </Title>
           <Badge size="lg" variant="light" color="blue">
-            {stats.total} total
+            {stats.serverTotal} in this search
           </Badge>
         </Group>
         <Group bg={headerBg} p={8} style={{ borderRadius: "30px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
@@ -278,7 +265,7 @@ export default function UserListPage() {
             </ActionIcon>
           </Tooltip>
           <Tooltip label="Refresh">
-            <ActionIcon variant="subtle" color="gray" size="lg" onClick={fetchUsers}>
+            <ActionIcon variant="subtle" color="gray" size="lg" onClick={() => setLoadTick((t) => t + 1)}>
               <IconRefresh size={22} />
             </ActionIcon>
           </Tooltip>
@@ -299,54 +286,56 @@ export default function UserListPage() {
           </Text>
           <Group justify="space-between" mt="xs">
             <Text size="xs" c="dimmed">
-              Active: {stats.activeUsers}
-            </Text>
-            <Text size="xs" c="dimmed">
-              Inactive: {stats.inactiveUsers}
+              Active on page: {stats.onPageActive}
             </Text>
           </Group>
-          <Progress value={(stats.activeUsers / stats.total) * 100} size="sm" mt="xs" color="green" />
+          <Progress
+            value={paginatedUsers.length ? (stats.onPageActive / paginatedUsers.length) * 100 : 0}
+            size="sm"
+            mt="xs"
+            color="green"
+          />
         </Card>
 
         <Card withBorder radius="lg" p="md" bg={cardBg}>
           <Group justify="space-between">
             <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-              Paid Users
+              Active cases
             </Text>
             <IconCircleCheck size={20} color={theme.colors.green[6]} />
           </Group>
           <Text size="xl" fw={700} mt="xs">
-            {stats.paidUsers}
+            {stats.activeCases}
           </Text>
           <Text size="xs" c="dimmed" mt="xs">
-            {((stats.paidUsers / stats.total) * 100).toFixed(1)}% of total
+            All missing-person / vehicle cases
           </Text>
         </Card>
 
         <Card withBorder radius="lg" p="md" bg={cardBg}>
           <Group justify="space-between">
             <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-              Active (7d)
+              Resolved cases
             </Text>
             <IconUserCheck size={20} color={theme.colors.orange[6]} />
           </Group>
           <Text size="xl" fw={700} mt="xs">
-            {stats.activeLast7Days}
+            {stats.resolvedCases}
           </Text>
           <Text size="xs" c="dimmed" mt="xs">
-            Last 7 days activity
+            Closed or resolved records
           </Text>
         </Card>
 
         <Card withBorder radius="lg" p="md" bg={cardBg}>
           <Group justify="space-between">
             <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-              New This Month
+              Sightings
             </Text>
             <IconCalendar size={20} color={theme.colors.grape[6]} />
           </Group>
           <Text size="xl" fw={700} mt="xs">
-            {stats.newThisMonth}
+            {stats.sightings}
           </Text>
         </Card>
       </SimpleGrid>
@@ -411,7 +400,7 @@ export default function UserListPage() {
                   <Select
                     label="Role"
                     placeholder="All roles"
-                    data={["All", "Admin", "User", "Guest"]}
+                    data={["All", "Admin", "User", "Moderator"]}
                     value={roleFilter}
                     onChange={setRoleFilter}
                     clearable
@@ -491,7 +480,11 @@ export default function UserListPage() {
                       <Table.Td>
                         <Badge
                           color={
-                            user.role === "Admin" ? "red" : user.role === "User" ? "blue" : "cyan"
+                            user.role === "admin"
+                              ? "red"
+                              : user.role === "moderator"
+                                ? "cyan"
+                                : "blue"
                           }
                           variant="light"
                         >
@@ -549,7 +542,7 @@ export default function UserListPage() {
                 onChange={(val) => setPageSize(val || "10")}
               />
               <Text size="sm" c="dimmed">
-                {filteredUsers.length} {filteredUsers.length === 1 ? "user" : "users"}
+                {serverTotal} {serverTotal === 1 ? "user" : "users"} total
               </Text>
             </Group>
             <Pagination

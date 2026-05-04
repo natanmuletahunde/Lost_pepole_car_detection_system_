@@ -37,12 +37,13 @@ import {
   IconCheck,
 } from "@tabler/icons-react";
 
-// ✅ Changed base URL to port 3000
-const API_BASE_URL = "http://localhost:3001";
+import { adminFetch } from "@/app/lib/adminApi";
 
 // Helper functions
 const formatDate = (dateString) => {
+  if (!dateString) return "—";
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -54,14 +55,14 @@ const formatDate = (dateString) => {
 
 // Map API user to component shape (for the edit form)
 const mapApiToEditForm = (apiUser) => ({
-  id: apiUser.id,
+  id: String(apiUser._id || apiUser.id),
   name: `${apiUser.firstName} ${apiUser.lastName}`.trim(),
   email: apiUser.email,
   phone: apiUser.phone,
   role: apiUser.role,
-  status: apiUser.hasPaidSubscription ? "Paid" : "Free",
+  status: "Free",
   address: apiUser.address || "",
-  isActive: apiUser.isActive,
+  isActive: apiUser.isActive !== false,
 });
 
 export default function UserDetailPage() {
@@ -70,6 +71,7 @@ export default function UserDetailPage() {
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
   const [user, setUser] = useState(null);
+  const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState(null);
 
@@ -82,10 +84,9 @@ export default function UserDetailPage() {
   const fetchUser = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/users/${params.id}`);
-      if (!response.ok) throw new Error("User not found");
-      const data = await response.json();
-      setUser(data);
+      const data = await adminFetch(`/admin/users/${params.id}`);
+      setUser(data.user);
+      setUserStats(data.stats || null);
     } catch (error) {
       console.error(error);
       notifications.show({
@@ -134,40 +135,26 @@ export default function UserDetailPage() {
   // Update user
   const updateUser = async (values) => {
     try {
-      // Fetch the existing user to preserve password and other fields
-      const existingUserResponse = await fetch(`${API_BASE_URL}/users/${values.id}`);
-      if (!existingUserResponse.ok) throw new Error("User not found");
-      const existingApiUser = await existingUserResponse.json();
-
       const nameParts = values.name.split(" ");
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
-      const updatedApiUser = {
-        ...existingApiUser,
-        firstName,
-        lastName,
-        email: values.email,
-        phone: values.phone,
-        role: values.role,
-        hasPaidSubscription: values.status === "Paid",
-        address: values.address,
-        isActive: values.isActive,
-        updatedAt: new Date().toISOString(),
-      };
-
-      const response = await fetch(`${API_BASE_URL}/users/${values.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedApiUser),
+      const payload = await adminFetch(`/admin/users/${values.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: values.email,
+          phone: values.phone,
+          role: values.role,
+          address: values.address,
+          isActive: values.isActive,
+        }),
       });
-      if (!response.ok) throw new Error("Failed to update user");
-
-      const updatedUser = await response.json();
-      setUser(updatedUser); // update the displayed user
+      setUser(payload.user);
       notifications.show({
         title: "Updated",
-        message: `User ${updatedUser.firstName} ${updatedUser.lastName} updated`,
+        message: `User ${payload.user.firstName} ${payload.user.lastName} updated`,
         color: "blue",
         icon: <IconCheck size={18} />,
       });
@@ -185,15 +172,15 @@ export default function UserDetailPage() {
   // Delete user
   const deleteUser = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${user.id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Failed to delete user");
+      const uid = String(user._id || user.id);
+      await adminFetch(`/admin/users/${uid}`, { method: "DELETE" });
       notifications.show({
         title: "Deleted",
         message: "User removed",
         color: "red",
         icon: <IconTrash size={18} />,
       });
-      router.push("/admin/accounts"); // redirect to list after deletion
+      router.push("/admin/accounts");
     } catch (error) {
       console.error(error);
       notifications.show({
@@ -208,18 +195,15 @@ export default function UserDetailPage() {
   const toggleUserStatus = async () => {
     try {
       const newStatus = !user.isActive;
-      const updatedApiUser = { ...user, isActive: newStatus, updatedAt: new Date().toISOString() };
-      const response = await fetch(`${API_BASE_URL}/users/${user.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedApiUser),
+      const uid = String(user._id || user.id);
+      const payload = await adminFetch(`/admin/users/${uid}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive: newStatus }),
       });
-      if (!response.ok) throw new Error("Failed to update status");
-      const updatedUser = await response.json();
-      setUser(updatedUser);
+      setUser(payload.user);
       notifications.show({
         title: "Status updated",
-        message: `User ${updatedUser.firstName} ${updatedUser.lastName} ${updatedUser.isActive ? "activated" : "deactivated"}`,
+        message: `User ${payload.user.firstName} ${payload.user.lastName} ${payload.user.isActive ? "activated" : "deactivated"}`,
         color: "blue",
       });
     } catch (error) {
@@ -368,9 +352,9 @@ export default function UserDetailPage() {
           </Grid.Col>
           <Grid.Col span={{ base: 12, md: 6 }}>
             <Stack gap="xs">
-              <Text fw={600}>Status</Text>
-              <Badge color={user.hasPaidSubscription ? "green" : "gray"} size="lg">
-                {user.hasPaidSubscription ? "Paid" : "Free"}
+              <Text fw={600}>Reported cases</Text>
+              <Badge color="gray" size="lg">
+                {userStats?.totalCases ?? 0} total
               </Badge>
             </Stack>
           </Grid.Col>
@@ -388,8 +372,10 @@ export default function UserDetailPage() {
           </Grid.Col>
           <Grid.Col span={{ base: 12, md: 6 }}>
             <Stack gap="xs">
-              <Text fw={600}>Registrations</Text>
-              <Text>{user.registrations || 0}</Text>
+              <Text fw={600}>Cases (person / vehicle)</Text>
+              <Text>
+                {userStats ? `${userStats.reportedPersons} / ${userStats.reportedVehicles}` : "—"}
+              </Text>
             </Stack>
           </Grid.Col>
           <Grid.Col span={{ base: 12, md: 6 }}>
@@ -427,7 +413,7 @@ export default function UserDetailPage() {
             <TextInput label="Phone" {...editForm.getInputProps("phone")} required />
             <Select
               label="Role"
-              data={["admin", "user", "guest"]}
+              data={["admin", "moderator", "user"]}
               {...editForm.getInputProps("role")}
               required
             />
