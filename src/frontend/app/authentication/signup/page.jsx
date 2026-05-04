@@ -7,331 +7,122 @@ import {
   PasswordInput,
   Button,
   Title,
-  Text,
   Grid,
   Box,
-  Alert,
-  rem,
-  useMantineTheme,
-  useMantineColorScheme,
 } from '@mantine/core';
-import { IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react';
+import { IconCheck, IconX } from '@tabler/icons-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMediaQuery } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
+import { notifications } from '@mantine/notifications';
 
-// Helper to get dynamic background/color values
-const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
-const getTextColor = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
 
-/* ---------------- Zod schema ---------------- */
-const signupSchema = z.object({
-  firstName: z.string().min(2).max(50).regex(/^[A-Za-z\s]+$/, {
-    message: 'First name must contain only letters and spaces',
-  }),
-  lastName: z.string().min(2).max(50).regex(/^[A-Za-z\s]+$/, {
-    message: 'Last name must contain only letters and spaces',
-  }),
-  email: z.string().email('Please enter a valid email address'),
-  phone: z.string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(15, 'Phone number cannot exceed 15 digits')
-    .regex(/^[0-9+\-\s()]+$/, 'Please enter a valid phone number'),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/\d/, 'Password must contain at least one number')
-    .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/, 'Password must contain at least one special character'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+/* ---------------- Schema ---------------- */
+const signupSchema = z
+  .object({
+    firstName: z.string().min(2),
+    lastName: z.string().min(2),
+    email: z.string().email(),
+    phone: z.string().min(10),
+    password: z.string().min(8),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
 export default function SignupPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isMobile = useMediaQuery('(max-width: 576px)');
-  const theme = useMantineTheme();
-  const { colorScheme } = useMantineColorScheme();
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  // Dynamic colors
-  const mainBg = getBg(colorScheme, '#EAF2FF', theme.colors.dark[7]);
-  const paperBg = getBg(colorScheme, '#dbeafe', theme.colors.blue[9]);
-  const textColor = getBg(colorScheme, undefined, theme.colors.gray[3]);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isDirty, isValid },
+    formState: { errors },
     reset,
-    trigger,
-    watch,
   } = useForm({
     resolver: zodResolver(signupSchema),
-    mode: 'onBlur',
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      password: '',
-      confirmPassword: '',
-    },
   });
 
-  // Watch password field for real-time validation feedback
-  const password = watch('password');
-
-  const showNotification = (title, message, color, icon) => {
-    notifications.show({
-      title,
-      message,
-      color,
-      icon,
-      position: 'top-right',
-      autoClose: 5000,
-      withBorder: true,
-    });
-  };
-
-  const validatePassword = (password) => {
-    const requirements = {
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      number: /\d/.test(password),
-      special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
-    };
-    return requirements;
-  };
+  const notify = (t, m, c, i) =>
+    notifications.show({ title: t, message: m, color: c, icon: i });
 
   const onSubmit = async (data) => {
-    setIsSubmitting(true);
+    setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName: data.firstName.trim(),
-          lastName: data.lastName.trim(),
-          email: data.email.trim(),
-          phone: data.phone.trim(),
-          password: data.password,
-          confirmPassword: data.confirmPassword,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || 'Failed to create account');
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message);
+
+      const { user, token, accessToken, refreshToken } = result.data;
+      const resolvedAccessToken = accessToken || token;
+
+      if (!resolvedAccessToken) {
+        throw new Error('Signup succeeded but no access token was returned');
       }
 
-      const result = await response.json();
-      const user = result?.data?.user;
-      const token = result?.data?.token;
-      const refreshToken = result?.data?.refreshToken;
-
-      if (user && token) {
-        localStorage.setItem('currentUser', JSON.stringify({
-          id: user._id || user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          isActive: user.isActive,
-          address: user.address || '',
-          profileImage: user.profileImage || '',
-        }));
-        localStorage.setItem('accessToken', token);
-        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('accessToken', resolvedAccessToken);
+      localStorage.setItem('token', resolvedAccessToken);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
       }
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      localStorage.setItem('isAuthenticated', 'true');
 
-      showNotification(
-        'Success!',
-        'Account created successfully! Redirecting...',
-        'green',
-        <IconCheck size={18} />
-      );
+      notify('Success', 'Account created', 'green', <IconCheck />);
+
       reset();
 
-      setTimeout(() => {
-        router.push('/');
-      }, 800);
-
-    } catch (error) {
-      console.error('Signup error:', error);
-
-      showNotification(
-        'Error',
-        error.message || 'Failed to create account. Please try again.',
-        'red',
-        <IconX size={18} />
-      );
+      setTimeout(() => router.push('/authentication/login'), 800);
+    } catch (err) {
+      notify('Error', err.message, 'red', <IconX />);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const passwordRequirements = validatePassword(password);
-
   return (
-    <Box
-      style={{
-        minHeight: '100vh',
-        backgroundColor: mainBg,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: rem(16),
-      }}
-    >
-      <Container size={isMobile ? 'sm' : 500}>
-        <Paper radius="lg" p={isMobile ? 'md' : 'xl'} shadow="md" bg={paperBg}>
-          <Box ta="center" mb="md">
-            <Image
-              src="/logo.jpg"
-              alt="Logo"
-              width={100}
-              height={75}
-              style={{ objectFit: 'contain', borderRadius: 8 }}
-              priority
-            />
-          </Box>
+    <Container size={500}>
+      <Paper p="xl">
+        <Box ta="center">
+          <Image src="/logo.jpg" alt="logo" width={90} height={70} />
+        </Box>
 
-          <Title ta="center" mb="md" order={2} c={textColor}>
+        <Title ta="center">Sign Up</Title>
+
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Grid>
+            <Grid.Col span={6}>
+              <TextInput label="First Name" {...register('firstName')} error={errors.firstName?.message} />
+            </Grid.Col>
+            <Grid.Col span={6}>
+              <TextInput label="Last Name" {...register('lastName')} error={errors.lastName?.message} />
+            </Grid.Col>
+          </Grid>
+
+          <TextInput mt="md" label="Email" {...register('email')} error={errors.email?.message} />
+          <TextInput mt="md" label="Phone" {...register('phone')} error={errors.phone?.message} />
+
+          <PasswordInput mt="md" label="Password" {...register('password')} error={errors.password?.message} />
+          <PasswordInput mt="md" label="Confirm Password" {...register('confirmPassword')} error={errors.confirmPassword?.message} />
+
+          <Button fullWidth mt="xl" type="submit" loading={loading}>
             Create Account
-          </Title>
-
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <Grid>
-              <Grid.Col span={isMobile ? 12 : 6}>
-                <TextInput
-                  label="First Name"
-                  placeholder="Enter your first name"
-                  {...register('firstName')}
-                  error={errors.firstName?.message}
-                  onBlur={() => trigger('firstName')}
-                  disabled={isSubmitting}
-                />
-              </Grid.Col>
-              <Grid.Col span={isMobile ? 12 : 6}>
-                <TextInput
-                  label="Last Name"
-                  placeholder="Enter your last name"
-                  {...register('lastName')}
-                  error={errors.lastName?.message}
-                  onBlur={() => trigger('lastName')}
-                  disabled={isSubmitting}
-                />
-              </Grid.Col>
-            </Grid>
-
-            <TextInput
-              mt="md"
-              label="Email"
-              type="email"
-              placeholder="you@example.com"
-              {...register('email')}
-              error={errors.email?.message}
-              onBlur={() => trigger('email')}
-              disabled={isSubmitting}
-            />
-
-            <TextInput
-              mt="md"
-              label="Phone"
-              placeholder="+1 (555) 123-4567"
-              {...register('phone')}
-              error={errors.phone?.message}
-              onBlur={() => trigger('phone')}
-              disabled={isSubmitting}
-            />
-
-            <PasswordInput
-              mt="md"
-              label="Password"
-              placeholder="Create a strong password"
-              {...register('password')}
-              error={errors.password?.message}
-              onBlur={() => trigger('password')}
-              disabled={isSubmitting}
-            />
-
-            <PasswordInput
-              mt="md"
-              label="Confirm Password"
-              placeholder="Re-enter your password"
-              {...register('confirmPassword')}
-              error={errors.confirmPassword?.message}
-              onBlur={() => trigger('confirmPassword')}
-              disabled={isSubmitting}
-            />
-
-            {/* Password Requirements */}
-            <Alert
-              mt="md"
-              icon={<IconAlertCircle size={16} />}
-              color="blue"
-              title="Password Requirements"
-              variant="light"
-            >
-              <Box style={{ fontSize: rem(14) }}>
-                <Text>Password must contain:</Text>
-                <Box ml="md" mt={4}>
-                  <Text color={passwordRequirements.length ? 'green' : 'red'} size="sm">
-                    • At least 8 characters {passwordRequirements.length ? '✓' : '✗'}
-                  </Text>
-                  <Text color={passwordRequirements.uppercase ? 'green' : 'red'} size="sm">
-                    • One uppercase letter {passwordRequirements.uppercase ? '✓' : '✗'}
-                  </Text>
-                  <Text color={passwordRequirements.lowercase ? 'green' : 'red'} size="sm">
-                    • One lowercase letter {passwordRequirements.lowercase ? '✓' : '✗'}
-                  </Text>
-                  <Text color={passwordRequirements.number ? 'green' : 'red'} size="sm">
-                    • One number {passwordRequirements.number ? '✓' : '✗'}
-                  </Text>
-                  <Text color={passwordRequirements.special ? 'green' : 'red'} size="sm">
-                    • One special character {passwordRequirements.special ? '✓' : '✗'}
-                  </Text>
-                </Box>
-              </Box>
-            </Alert>
-
-            <Button
-              fullWidth
-              mt="xl"
-              type="submit"
-              loading={isSubmitting}
-              disabled={!isDirty || !isValid || isSubmitting}
-              size="md"
-            >
-              Create Account
-            </Button>
-          </form>
-
-          <Text ta="center" mt="md" size="sm" c="dimmed">
-            Already have an account?{' '}
-            <Link href="/authentication/login" style={{ color: '#228be6', textDecoration: 'none' }}>
-              Sign in
-            </Link>
-          </Text>
-        </Paper>
-      </Container>
-    </Box>
+          </Button>
+        </form>
+      </Paper>
+    </Container>
   );
 }

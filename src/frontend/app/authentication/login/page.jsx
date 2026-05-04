@@ -19,7 +19,7 @@ import {
 } from '@mantine/core';
 import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,10 +29,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import SocialLoginIcons from '../../components/SocialLoginIcons';
 
-const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+const getBg = (colorScheme, light, dark) =>
+  colorScheme === 'dark' ? dark : light;
 
-/* ---------------- Validation schemas ---------------- */
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+
+/* ---------------- Validation ---------------- */
 const passwordLoginSchema = z.object({
   loginValue: z.string().email('Please enter a valid email'),
   password: z.string().min(1, 'Password is required'),
@@ -51,9 +54,6 @@ export default function LoginPage() {
   const [type, setType] = useState('email');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState('');
-  const [authChecking, setAuthChecking] = useState(false); // always false, no redirect check
-  const [userExists, setUserExists] = useState(null);
-  const [isCheckingUser, setIsCheckingUser] = useState(false);
 
   const router = useRouter();
   const theme = useMantineTheme();
@@ -61,7 +61,7 @@ export default function LoginPage() {
   const isMobile = useMediaQuery('(max-width: 576px)');
   const isTablet = useMediaQuery('(max-width: 768px)');
 
-  const currentSchema = type === 'email' ? passwordLoginSchema : phoneLoginSchema;
+  const schema = type === 'email' ? passwordLoginSchema : phoneLoginSchema;
 
   const {
     register,
@@ -69,167 +69,33 @@ export default function LoginPage() {
     formState: { errors, isValid },
     reset,
     trigger,
-    setValue,
     watch,
-    clearErrors,
   } = useForm({
-    resolver: zodResolver(currentSchema),
+    resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: {
-      loginValue: '',
-      password: '',
-    },
+    defaultValues: { loginValue: '', password: '' },
   });
 
   const watchedValue = watch('loginValue');
 
-  // ❌ Automatic login check REMOVED – no redirection on page load
-  // Instead we just set authChecking to false immediately.
-
-  // Check if user exists when login value changes (with debounce) – optional
-  useEffect(() => {
-    const checkUserExists = async () => {
-      if (!watchedValue || watchedValue.length < 3) {
-        setUserExists(null);
-        return;
-      }
-
-      setIsCheckingUser(true);
-      setLoginError('');
-
-      try {
-        const queryField = type === 'email' ? 'email' : 'phone';
-        const response = await fetch(
-          `http://localhost:3001/users/check?${queryField}=${encodeURIComponent(watchedValue)}`,
-          {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-
-        if (response.ok) {
-          const users = await response.json();
-          setUserExists(users.length > 0);
-          if (users.length === 0) {
-            setLoginError(`No account found with this ${type === 'email' ? 'email' : 'phone number'}`);
-          } else {
-            clearErrors('loginValue');
-          }
-        }
-      } catch (error) {
-        console.error('Error checking user:', error);
-        setUserExists(null);
-      } finally {
-        setIsCheckingUser(false);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      checkUserExists();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [watchedValue, type, clearErrors]);
-
-  const showNotification = (title, message, color, icon) => {
+  const notify = (title, message, color, icon) =>
     notifications.show({
       title,
       message,
       color,
       icon,
       position: 'top-right',
-      autoClose: 3000,
-      withBorder: true,
     });
-  };
 
   const handleTypeSwitch = () => {
-    const newType = type === 'email' ? 'phone' : 'email';
-    setType(newType);
-    setValue('loginValue', '');
-    setValue('password', '');
-    setLoginError('');
+    setType(type === 'email' ? 'phone' : 'email');
     reset();
-  };
-
-  // Fixed onSubmit: send { loginValue, password } to backend
-  const onSubmit = async (data) => {
-    setIsSubmitting(true);
     setLoginError('');
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          loginValue: data.loginValue,
-          password: data.password,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Invalid credentials');
-      }
-
-      const { user, accessToken } = result.data;
-
-      showNotification(
-        'Login Successful!',
-        `Welcome back, ${user.firstName}!`,
-        'green',
-        <IconCheck size={18} />
-      );
-
-      localStorage.setItem('currentUser', JSON.stringify({
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        isActive: user.isActive,
-      }));
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('isAuthenticated', 'true');
-
-      // Optional: update lastLogin timestamp
-      await fetch(`${API_BASE_URL}/users/${user.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ lastLogin: new Date().toISOString() }),
-      }).catch(err => console.warn('Failed to update lastLogin', err));
-
-      setTimeout(() => {
-        if (user.role?.toLowerCase() === 'admin') {
-          router.push('/admin');
-        } else {
-          router.push('/user/dashboard');
-        }
-      }, 1000);
-
-    } catch (error) {
-      console.error('Login error:', error);
-      setLoginError(error.message || 'An error occurred. Please try again.');
-      showNotification(
-        'Login Failed',
-        error.message || 'Invalid email/phone or password',
-        'red',
-        <IconX size={18} />
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
-  const handleForgotPassword = async () => {
-    const currentValue = watch('loginValue');
-    if (!currentValue || errors.loginValue) {
-      showNotification(
+  const handleForgotPassword = () => {
+    if (!watchedValue || errors.loginValue) {
+      notify(
         'Error',
         'Please enter a valid email or phone number first.',
         'red',
@@ -238,7 +104,7 @@ export default function LoginPage() {
       return;
     }
 
-    showNotification(
+    notify(
       'Password Reset',
       `Password reset instructions have been sent to your ${type === 'email' ? 'email' : 'phone'}.`,
       'blue',
@@ -246,8 +112,48 @@ export default function LoginPage() {
     );
   };
 
-  // No loading state because authChecking is always false
-  // (If you still want a brief initial loader, you can keep it but remove redirect logic)
+  const onSubmit = async (data) => {
+    setIsSubmitting(true);
+    setLoginError('');
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || 'Login failed');
+
+      const { user, token, accessToken, refreshToken } = result.data;
+      const resolvedAccessToken = accessToken || token;
+
+      if (!resolvedAccessToken) {
+        throw new Error('Login succeeded but no access token was returned');
+      }
+
+      localStorage.setItem('accessToken', resolvedAccessToken);
+      localStorage.setItem('token', resolvedAccessToken);
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      localStorage.setItem('isAuthenticated', 'true');
+
+      notify('Success', `Welcome ${user.firstName}`, 'green', <IconCheck />);
+
+      setTimeout(() => {
+        router.push(user.role === 'admin' ? '/admin' : '/user/dashboard');
+      }, 800);
+    } catch (err) {
+      setLoginError(err.message);
+      notify('Error', err.message, 'red', <IconX />);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const mainBg = getBg(colorScheme, '#EAF2FF', theme.colors.dark[7]);
   const paperBg = getBg(colorScheme, '#dbeafe', theme.colors.blue[9]);
