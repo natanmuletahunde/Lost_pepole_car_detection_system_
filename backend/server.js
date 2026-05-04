@@ -38,9 +38,12 @@ connectDB();
 
 // ================= SECURITY =================
 app.use(helmet());
+
 app.use(cors({
-  origin: '*',
-  credentials: true
+  origin: 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(
@@ -93,27 +96,29 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/sightings", sightingRoutes);
 app.use("/api/v1/detections", detectionRoutes);
+// 🔥 USER feedback
+app.use("/api/v1/feedback", protect, feedbackUserRoutes);
+
+app.use("/api/v1/alerts", alertRoutes);
+app.use("/api/v1/uploads", uploadRoutes);
+app.use("/api/v1/search", searchRoutes);
+// Register core admin routes first so paths like /admin/notifications/settings and /admin/notifications/bulk
+// are not shadowed by the narrower /admin/notifications mount below.
+app.use("/api/v1/admin", adminRoutes);
 app.use(
   "/api/v1/admin/notifications",
   protect,
   authorize("admin"),
   notificationAdminRoutes
 );
-// 🔥 USER feedback
-app.use("/api/v1/feedback", protect, feedbackUserRoutes);
 
-// 🔥 ADMIN feedback
+// 🔥 ADMIN feedback (PATCH /:id with { text, status }; list overlaps GET with admin.routes /feedback)
 app.use(
   "/api/v1/admin/feedback",
   protect,
   authorize("admin"),
   feedbackAdminRoutes
 );
-
-app.use("/api/v1/alerts", alertRoutes);
-app.use("/api/v1/uploads", uploadRoutes);
-app.use("/api/v1/search", searchRoutes);
-app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/missing-persons", missingPersonRoutes);
 app.use("/api/v1/missing-vehicles", missingVehicleRoutes);
 

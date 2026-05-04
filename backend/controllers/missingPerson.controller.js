@@ -1,96 +1,176 @@
 const MissingPerson = require("../models/MissingPerson");
 const Sighting = require("../models/Sighting");
 const Detection = require("../models/Detection");
+const User = require("../models/User");
 
 // ==============================
-// CREATE Missing Person
+// CREATE
 // ==============================
+// ==============================
+// CREATE (Unified)
 exports.createMissingPerson = async (req, res) => {
   try {
-    console.log("BODY:", req.body);
-    console.log("FILES:", req.files);
+    const files = req.files || [];
 
-    const files = req.files;
-
-    if (!files || files.length < 2) {
+    if (files.length < 3 && req.body.type === 'Person') {
       return res.status(400).json({
         success: false,
-        message: "Minimum 2 images required",
+        message: "Minimum 3 images required for missing persons",
       });
     }
 
-    const images = files.map(file => `/uploads/${file.filename}`);
+    const images = files.map((f) => `/uploads/${f.filename}`);
 
-    const person = new MissingPerson({
-      ...req.body, // text fields still here
+    // Normalize reportedBy from auth user and/or request body.
+    const authReportedBy = req.user
+      ? {
+          userId: req.user._id?.toString?.() || "",
+          firstName: req.user.firstName || "",
+          lastName: req.user.lastName || "",
+          email: req.user.email || "",
+          phone: req.user.phone || "",
+          role: req.user.role || "user",
+        }
+      : null;
+
+    let bodyReportedBy = {};
+    if (req.body.reportedBy) {
+      if (typeof req.body.reportedBy === "string") {
+        try {
+          bodyReportedBy = JSON.parse(req.body.reportedBy);
+        } catch (err) {
+          console.log("Failed to parse reportedBy:", err);
+        }
+      } else if (typeof req.body.reportedBy === "object") {
+        bodyReportedBy = req.body.reportedBy;
+      }
+    }
+
+    const reportedBy = {
+      ...(bodyReportedBy || {}),
+      ...(authReportedBy || {}),
+      userId:
+        (authReportedBy && authReportedBy.userId) ||
+        bodyReportedBy.userId ||
+        "",
+    };
+
+    const reportData = {
+      ...req.body,
+      reportedBy, // ✅ override with parsed object
       images,
-      caseId: `CASE-MP-${Date.now()}`,
-      status: "Active",
       reportDate: new Date(),
-    });
+      lastUpdated: new Date(),
+      status: 'Active',
+      verified: false,
+    };
 
-    await person.save();
+    const person = await MissingPerson.create(reportData);
+
+    if (reportedBy.userId) {
+      await User.findByIdAndUpdate(reportedBy.userId, {
+        $inc: { registrations: 1 }
+      }).catch(err => console.log('Failed to update registrations count:', err));
+    }
 
     res.status(201).json({
       success: true,
       data: person,
     });
-
   } catch (err) {
-    console.error("CREATE ERROR:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
+
 // ==============================
 // GET ALL
 // ==============================
 exports.getMissingPersons = async (req, res) => {
-  const persons = await MissingPerson.find().sort({ createdAt: -1 });
-  res.json({ success: true, data: persons });
+  try {
+    const persons = await MissingPerson.find().sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: persons,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ==============================
+// GET MY REPORTS (logged-in user only)
+// ==============================
+exports.getMyMissingPersons = async (req, res) => {
+  try {
+    const uid = req.user._id.toString();
+    const rawEmail = (req.user.email || '').trim();
+    const emailRe = rawEmail
+      ? new RegExp(`^${rawEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      : null;
+    const persons = await MissingPerson.find({
+      $or: [
+        { 'reportedBy.userId': uid },
+        ...(emailRe ? [{ 'reportedBy.email': emailRe }] : []),
+      ],
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: persons,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 // ==============================
 // GET ONE
 // ==============================
 exports.getMissingPersonById = async (req, res) => {
-  const person = await MissingPerson.findById(req.params.id);
+  try {
+    const person = await MissingPerson.findById(req.params.id);
 
-  if (!person) {
-    return res.status(404).json({ success: false });
+    if (!person) {
+      return res.status(404).json({ success: false, message: "Not found" });
+    }
+
+    const sightings = await Sighting.find({
+      description: { $regex: person.firstName, $options: "i" },
+    });
+
+    const detections = await Detection.find({
+      name: { $regex: person.firstName, $options: "i" },
+    });
+
+    res.json({
+      success: true,
+      data: { person, sightings, detections },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  const sightings = await Sighting.find({
-    type: "person",
-    description: { $regex: person.firstName, $options: "i" }
-  });
-
-  const detections = await Detection.find({
-    name: { $regex: person.firstName, $options: "i" }
-  });
-
-  res.json({
-    success: true,
-    data: { person, sightings, detections }
-  });
 };
 
 // ==============================
 // UPDATE
 // ==============================
 exports.updateMissingPerson = async (req, res) => {
-  const person = await MissingPerson.findById(req.params.id);
+  try {
+    const person = await MissingPerson.findById(req.params.id);
 
-  if (!person) {
-    return res.status(404).json({ success: false });
+    if (!person) {
+      return res.status(404).json({ success: false });
+    }
+
+    Object.assign(person, req.body);
+    person.lastUpdated = new Date();
+
+    await person.save();
+
+    res.json({ success: true, data: person });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  Object.assign(person, req.body);
-  person.lastUpdated = new Date();
-
-  await person.save();
-
-  res.json({ success: true, data: person });
 };

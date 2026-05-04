@@ -1,39 +1,80 @@
 const MissingVehicle = require('../models/MissingVehicle');
 const Sighting = require('../models/Sighting');
 const Detection = require('../models/Detection');
+const User = require('../models/User');
 
 // ==============================
-// CREATE VEHICLE CASE (OPTIONAL IMAGE SUPPORT)
+// CREATE VEHICLE CASE (multipart FormData + auth)
 // ==============================
 exports.createMissingVehicle = async (req, res) => {
   try {
-    const data = req.body;
+    const fileGroups = req.files || {};
+    const imageFiles = Array.isArray(fileGroups)
+      ? fileGroups
+      : fileGroups.images || [];
+    const imageUrls = imageFiles.map((f) => `/uploads/${f.filename}`);
+    const imagePreview = imageUrls[0] || req.body.imagePreview || undefined;
 
-    // 🚗 vehicle images optional (but support multiple if provided)
-    let images = [];
+    const authReportedBy = req.user
+      ? {
+          userId: req.user._id?.toString?.() || '',
+          firstName: req.user.firstName || '',
+          lastName: req.user.lastName || '',
+          email: req.user.email || '',
+          phone: req.user.phone || '',
+          role: req.user.role || 'user',
+        }
+      : null;
 
-    if (req.files && req.files.length > 0) {
-      images = req.files.map(file => file.path);
+    let bodyReportedBy = {};
+    if (req.body.reportedBy) {
+      if (typeof req.body.reportedBy === 'string') {
+        try {
+          bodyReportedBy = JSON.parse(req.body.reportedBy);
+        } catch (e) {
+          console.log('Failed to parse reportedBy:', e);
+        }
+      } else if (typeof req.body.reportedBy === 'object') {
+        bodyReportedBy = req.body.reportedBy;
+      }
+    }
+
+    const reportedBy = {
+      ...(bodyReportedBy || {}),
+      ...(authReportedBy || {}),
+      userId:
+        (authReportedBy && authReportedBy.userId) ||
+        bodyReportedBy.userId ||
+        '',
+    };
+    if (req.body.telegramUsername) {
+      reportedBy.telegramUsername = req.body.telegramUsername;
     }
 
     const caseId = `CASE-MV-${Date.now()}`;
 
     const vehicle = new MissingVehicle({
-      ...data,
-      images,
+      ...req.body,
+      reportedBy,
+      imagePreview,
       caseId,
       status: 'Active',
-      reportDate: new Date()
+      reportDate: new Date(),
     });
 
     await vehicle.save();
+
+    if (reportedBy.userId) {
+      await User.findByIdAndUpdate(reportedBy.userId, {
+        $inc: { registrations: 1 }
+      }).catch(err => console.log('Failed to update registrations count:', err));
+    }
 
     res.status(201).json({
       success: true,
       message: 'Missing vehicle case created successfully',
       data: vehicle
     });
-
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -46,6 +87,26 @@ exports.createMissingVehicle = async (req, res) => {
 exports.getMissingVehicles = async (req, res) => {
   try {
     const vehicles = await MissingVehicle.find().sort({ createdAt: -1 });
+    res.json({ success: true, data: vehicles });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ==============================
+exports.getMyMissingVehicles = async (req, res) => {
+  try {
+    const uid = req.user._id.toString();
+    const rawEmail = (req.user.email || '').trim();
+    const emailRe = rawEmail
+      ? new RegExp(`^${rawEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
+      : null;
+    const vehicles = await MissingVehicle.find({
+      $or: [
+        { 'reportedBy.userId': uid },
+        ...(emailRe ? [{ 'reportedBy.email': emailRe }] : []),
+      ],
+    }).sort({ createdAt: -1 });
     res.json({ success: true, data: vehicles });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

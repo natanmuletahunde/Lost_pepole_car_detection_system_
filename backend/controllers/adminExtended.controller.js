@@ -14,7 +14,11 @@ const getAllUsers = async (req, res, next) => {
 
     const query = {};
     if (role) query.role = role;
-    if (status) query.status = status;
+    if (status) {
+      const s = String(status).toLowerCase();
+      if (s === 'active') query.isActive = true;
+      else if (s === 'inactive') query.isActive = false;
+    }
     if (search) {
       query.$or = [
         { firstName: { $regex: search, $options: 'i' } },
@@ -74,31 +78,25 @@ const getUserById = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { role, status, firstName, lastName, phone } = req.body;
+    const { role, isActive, firstName, lastName, phone, address, email } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
       return ApiResponse.error(res, 'User not found', 404);
     }
 
-    if (role) user.role = role;
-    if (status) user.status = status;
-    if (firstName) user.firstName = firstName;
-    if (lastName) user.lastName = lastName;
-    if (phone) user.phone = phone;
+    if (role !== undefined && role !== null) user.role = role;
+    if (typeof isActive === 'boolean') user.isActive = isActive;
+    if (firstName !== undefined) user.firstName = firstName;
+    if (lastName !== undefined) user.lastName = lastName;
+    if (phone !== undefined) user.phone = phone;
+    if (address !== undefined) user.address = address;
+    if (email !== undefined) user.email = email;
 
     await user.save();
 
-    return ApiResponse.success(res, 'User updated successfully', {
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        status: user.status
-      }
-    });
+    const safe = await User.findById(id).select('-password');
+    return ApiResponse.success(res, 'User updated successfully', { user: safe });
   } catch (error) {
     next(error);
   }
@@ -316,7 +314,7 @@ const getAllFeedback = async (req, res, next) => {
         .skip(skip)
         .limit(parseInt(limit))
         .sort({ createdAt: -1 })
-        .populate('userId', 'firstName lastName email'),
+        .populate('user', 'firstName lastName email'),
       Feedback.countDocuments(query)
     ]);
 
@@ -337,16 +335,20 @@ const getAllFeedback = async (req, res, next) => {
 const respondToFeedback = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { response } = req.body;
+    const { response: responseText, text, status } = req.body;
+    const message = responseText ?? text;
 
     const feedback = await Feedback.findById(id);
     if (!feedback) {
       return ApiResponse.error(res, 'Feedback not found', 404);
     }
 
-    feedback.response = response;
-    feedback.respondedBy = req.user._id;
-    feedback.respondedAt = new Date();
+    feedback.response = {
+      text: message,
+      respondedBy: req.user._id,
+      respondedAt: new Date(),
+    };
+    if (status) feedback.status = status;
     await feedback.save();
 
     return ApiResponse.success(res, 'Feedback responded to', { feedback });

@@ -3,16 +3,24 @@ const controller = require('../controllers/missingPerson.controller');
 const upload = require('../config/multer');
 const { protect } = require('../middlewares/auth');
 
-// 📸 MUST BE AT LEAST 2 IMAGES
+// CREATE
 router.post(
   '/',
-  protect, // 🔥 THIS IS WHAT YOU WERE MISSING
+  protect,
   upload.array('images'),
   controller.createMissingPerson
 );
 
+// GET MY REPORTS (must be before /:id)
+router.get('/my-reports', protect, controller.getMyMissingPersons);
+
+// GET ALL
 router.get('/', controller.getMissingPersons);
+
+// GET ONE
 router.get('/:id', controller.getMissingPersonById);
+
+// UPDATE
 router.patch('/:id', protect, controller.updateMissingPerson);
 
 module.exports = router;

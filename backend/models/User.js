@@ -49,10 +49,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
-  address: {
-    type: String,
-    trim: true,
-    default: '',
+  registrations: {
+    type: Number,
+    default: 0,
+  },
+  hasPaidSubscription: {
+    type: Boolean,
+    default: false,
   },
   profileImage: {
     type: String,
@@ -85,6 +88,7 @@ const userSchema = new mongoose.Schema({
   },
 }, {
   timestamps: true,
+  versionKey: false, // This prevents Mongoose from adding the "__v": 0 field
 });
 
 userSchema.pre('save', async function(next) {
@@ -125,6 +129,8 @@ userSchema.methods.createPasswordResetToken = function() {
 
 userSchema.methods.toJSON = function() {
   const user = this.toObject();
+  user.id = user._id.toString();
+  delete user._id;
   delete user.password;
   delete user.twoFactorPin;
   delete user.refreshToken;
