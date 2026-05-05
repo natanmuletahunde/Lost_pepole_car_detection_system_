@@ -65,11 +65,10 @@ export default function PaymentPage() {
 
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pin, setPin] = useState("");
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
+  const [paymentStatus, setPaymentStatus] = useState(null);
 
   // Plan from URL
   const planType = searchParams.get("plan") || "annual";
@@ -150,6 +149,25 @@ export default function PaymentPage() {
         setCurrentUser(JSON.parse(userData));
       } catch (e) { /* ignore */ }
     }
+
+    // Check for payment status from Chapa callback
+    const status = searchParams.get("status");
+    const tx_ref = searchParams.get("tx_ref");
+    if (status === "success") {
+      setPaymentStatus("success");
+      localStorage.setItem("hasPaidSubscription", "true");
+      createActionLog("payment_successful_chapa", {
+        plan: selectedPlan,
+        tx_ref,
+      });
+    } else if (status === "failed") {
+      setPaymentStatus("failed");
+      createActionLog("payment_failed_chapa", {
+        plan: selectedPlan,
+        tx_ref,
+      });
+    }
+
     setTimeout(() => setLoading(false), 300);
   }, []);
 
@@ -229,41 +247,51 @@ export default function PaymentPage() {
     });
   };
 
-  const handleConfirmPayment = () => {
-    setShowPinModal(true);
-  };
-
-  const handlePinSubmit = async () => {
-    if (pin.length !== 4) {
-      alert("Please enter a 4-digit PIN");
-      return;
-    }
-
-    setShowPinModal(false);
+  const handleConfirmPayment = async () => {
     setPaymentLoading(true);
 
-    setTimeout(() => {
-      setPaymentLoading(false);
-      setPin("");
+    try {
+      const userData = localStorage.getItem("currentUser");
+      const user = userData ? JSON.parse(userData) : null;
 
-      if (pin === "1234") {
-        localStorage.setItem("hasPaidSubscription", "true");
-        createActionLog("payment_successful", {
+      if (!user || !user.token) {
+        alert("Please log in to continue");
+        setPaymentLoading(false);
+        return;
+      }
+
+      const response = await fetch("http://localhost:3001/api/v1/chapa/initialize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          plan: selectedPlan,
+          userId: user.id,
+          email: user.email,
+          firstName: billedTo.split(" ")[0] || "User",
+          lastName: billedTo.split(" ").slice(1).join(" ") || "User",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data?.checkout_url) {
+        createActionLog("payment_redirecting_to_chapa", {
           plan: selectedPlan,
           amount: currentPlan.billing,
-          paymentMethod,
         });
-        alert("Payment successful! You can now register additional people.");
-        router.push("/register-person");
+        window.location.href = data.data.checkout_url;
       } else {
-        createActionLog("payment_failed", {
-          plan: selectedPlan,
-          reason: "incorrect PIN",
-        });
-        alert("Incorrect PIN. Please try again.");
-        setShowPinModal(true);
+        alert("Failed to initialize payment. Please try again.");
+        setPaymentLoading(false);
       }
-    }, 1500);
+    } catch (error) {
+      console.error("Chapa init error:", error);
+      alert("Payment initialization failed. Please try again.");
+      setPaymentLoading(false);
+    }
   };
 
   const handleEditForm = () => {
@@ -1086,171 +1114,141 @@ export default function PaymentPage() {
     }
   };
 
-  // PIN Modal
-  const renderPinModal = () => (
-    <Modal
-      opened={showPinModal}
-      onClose={() => {
-        setShowPinModal(false);
-        setPin("");
-      }}
-      size="sm"
-      centered
-      radius="lg"
-      padding="xl"
-      styles={{
-        content: {
-          background: getBg(
-            colorScheme,
-            "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-            `linear-gradient(135deg, ${theme.colors.dark[7]} 0%, ${theme.colors.dark[6]} 100%)`,
-          ),
-          borderRadius: "24px",
-        },
-        header: {
-          backgroundColor: getBg(colorScheme, "white", theme.colors.dark[7]),
-        },
-        title: {
-          color: getBg(colorScheme, "black", theme.colors.gray[3]),
-        },
-      }}
-    >
-      <Stack gap="lg" align="center">
-        <Box
-          style={{
-            padding: "20px",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-            color: "white",
-          }}
+  // Payment Status Display
+  const renderPaymentStatus = () => {
+    if (paymentStatus === "success") {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
         >
-          <IconLock size={32} />
-        </Box>
-
-        <Box ta="center">
-          <Title
-            order={3}
+          <Card
             style={{
-              background: "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
+              background: getBg(
+                colorScheme,
+                "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)",
+                `linear-gradient(135deg, ${theme.colors.green[9]} 0%, ${theme.colors.green[8]} 100%)`,
+              ),
+              border: "none",
+              borderRadius: "20px",
+              padding: "48px",
             }}
           >
-            Secure Payment
-          </Title>
-          <Text c="dimmed" mt={4}>
-            Enter your 4-digit PIN to confirm
-          </Text>
-        </Box>
+            <Stack align="center" gap="lg">
+              <Box
+                style={{
+                  padding: "24px",
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  color: "white",
+                }}
+              >
+                <IconCheck size={48} />
+              </Box>
+              <Title
+                order={2}
+                style={{
+                  color: getBg(colorScheme, "#065f46", "#d1fae5"),
+                }}
+              >
+                Payment Successful!
+              </Title>
+              <Text
+                ta="center"
+                size="lg"
+                style={{
+                  color: getBg(colorScheme, "#047857", "#a7f3d0"),
+                }}
+              >
+                Your subscription has been activated. You can now register additional people.
+              </Text>
+              <Button
+                size="lg"
+                radius="md"
+                onClick={() => router.push("/register")}
+                style={{
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                  marginTop: "16px",
+                }}
+              >
+                Go to Registration
+              </Button>
+            </Stack>
+          </Card>
+        </motion.div>
+      );
+    }
 
-        <Group justify="center">
-          <PinInput
-            length={4}
-            type="number"
-            value={pin}
-            onChange={setPin}
-            size="lg"
-            oneTimeCode
-            style={{ gap: "12px" }}
-            styles={{
-              input: {
-                width: "60px",
-                height: "60px",
-                fontSize: "24px",
-                fontWeight: "bold",
-                border: `2px solid ${getBg(colorScheme, "#e5e7eb", theme.colors.dark[5])}`,
-                borderRadius: "12px",
-                backgroundColor: getBg(
-                  colorScheme,
-                  "white",
-                  theme.colors.dark[6],
-                ),
-                color: getBg(colorScheme, "black", theme.colors.gray[3]),
-                transition: "all 0.3s ease",
-                "&:focus": {
-                  borderColor: "#3b82f6",
-                  boxShadow: "0 0 0 3px rgba(59, 130, 246, 0.1)",
-                },
-              },
-            }}
-          />
-        </Group>
-
-        <Box
-          ta="center"
-          p="md"
-          style={{
-            background: getBg(colorScheme, "#f8fafc", theme.colors.dark[6]),
-            borderRadius: "12px",
-            width: "100%",
-          }}
+    if (paymentStatus === "failed") {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
         >
-          <Text size="sm" c="dimmed">
-            Amount to Pay
-          </Text>
-          <Text
-            fw={900}
-            size="xl"
+          <Card
             style={{
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
+              background: getBg(
+                colorScheme,
+                "linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)",
+                `linear-gradient(135deg, ${theme.colors.red[9]} 0%, ${theme.colors.red[8]} 100%)`,
+              ),
+              border: "none",
+              borderRadius: "20px",
+              padding: "48px",
             }}
           >
-            {currentPlan.billing} birr
-          </Text>
-        </Box>
-
-        <Group grow w="100%">
-          <Button
-            variant="outline"
-            color="gray"
-            onClick={() => {
-              setShowPinModal(false);
-              setPin("");
-            }}
-            size="md"
-            style={{
-              borderColor: getBg(colorScheme, "#e5e7eb", theme.colors.dark[5]),
-              color: getBg(colorScheme, "black", theme.colors.gray[3]),
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handlePinSubmit}
-            loading={paymentLoading}
-            disabled={pin.length !== 4}
-            size="md"
-            style={{
-              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-              "&:hover": {
-                transform: "translateY(-2px)",
-                boxShadow: "0 8px 20px rgba(16, 185, 129, 0.3)",
-              },
-            }}
-          >
-            Confirm Payment
-          </Button>
-        </Group>
-
-        <Alert
-          color="red"
-          variant="light"
-          size="sm"
-          w="100%"
-          style={{
-            background: getBg(colorScheme, "#fee2e2", theme.colors.red[9]),
-          }}
-        >
-          <Text size="xs">
-            This action cannot be undone. Your account will be charged
-            immediately.
-          </Text>
-        </Alert>
-      </Stack>
-    </Modal>
-  );
+            <Stack align="center" gap="lg">
+              <Box
+                style={{
+                  padding: "24px",
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                  color: "white",
+                }}
+              >
+                <IconAlertCircle size={48} />
+              </Box>
+              <Title
+                order={2}
+                style={{
+                  color: getBg(colorScheme, "#991b1b", "#fecaca"),
+                }}
+              >
+                Payment Failed
+              </Title>
+              <Text
+                ta="center"
+                size="lg"
+                style={{
+                  color: getBg(colorScheme, "#b91c1c", "#fca5a5"),
+                }}
+              >
+                Your payment was not completed. Please try again.
+              </Text>
+              <Button
+                size="lg"
+                radius="md"
+                onClick={() => {
+                  setPaymentStatus(null);
+                  setShowConfirmation(false);
+                  setActiveStep(1);
+                }}
+                style={{
+                  background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                  marginTop: "16px",
+                }}
+              >
+                Try Again
+              </Button>
+            </Stack>
+          </Card>
+        </motion.div>
+      );
+    }
+    return null;
+  };
 
   if (loading) {
     return (
@@ -1314,7 +1312,7 @@ export default function PaymentPage() {
               />
             </Link>
 
-            {/* Back Button – now uses handleBack for logging */}
+            {/* Back Button */}
             <ActionIcon
               variant="subtle"
               color="gray"
@@ -1329,358 +1327,361 @@ export default function PaymentPage() {
 
       {/* Main Content */}
       <Container size="xl" py={40}>
-        <Box mb={40}>
-          <Title
-            order={1}
-            fw={900}
-            ta="center"
-            mb="md"
-            style={{
-              background: getBg(
-                colorScheme,
-                "linear-gradient(135deg, #1e293b 0%, #475569 100%)",
-                `linear-gradient(135deg, ${theme.colors.gray[3]} 0%, ${theme.colors.gray[1]} 100%)`,
-              ),
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            {showConfirmation ? "Review Your Order" : "Complete Payment"}
-          </Title>
-          <Text ta="center" c="dimmed" size="lg">
-            {showConfirmation
-              ? "Review your details before confirming"
-              : "Upgrade your plan with confidence"}
-          </Text>
-        </Box>
-
-        <Stepper />
-
-        <Grid gutter="xl">
-          {/* LEFT CONTENT */}
-          <Grid.Col span={{ base: 12, lg: 7 }}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <Card
-                radius="xl"
-                p={{ base: "md", lg: "xl" }}
+        {paymentStatus ? (
+          renderPaymentStatus()
+        ) : (
+          <>
+            <Box mb={40}>
+              <Title
+                order={1}
+                fw={900}
+                ta="center"
+                mb="md"
                 style={{
-                  height: "100%",
-                  background: getBg(colorScheme, "white", theme.colors.dark[7]),
-                  border: "none",
-                  boxShadow: showConfirmation
-                    ? "0 20px 40px rgba(72, 187, 120, 0.15)"
-                    : "0 20px 40px rgba(59, 130, 246, 0.15)",
-                }}
-              >
-                {renderLeftContent()}
-              </Card>
-            </motion.div>
-          </Grid.Col>
-
-          {/* RIGHT PANEL – PLAN SELECTION & SUMMARY */}
-          <Grid.Col span={{ base: 12, lg: 5 }}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-            >
-              <Card
-                radius="xl"
-                p={{ base: "md", lg: "xl" }}
-                style={{
-                  height: "100%",
                   background: getBg(
                     colorScheme,
-                    "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
-                    `linear-gradient(135deg, ${theme.colors.dark[6]} 0%, ${theme.colors.dark[7]} 100%)`,
+                    "linear-gradient(135deg, #1e293b 0%, #475569 100%)",
+                    `linear-gradient(135deg, ${theme.colors.gray[3]} 0%, ${theme.colors.gray[1]} 100%)`,
                   ),
-                  border: "none",
-                  boxShadow: "0 20px 40px rgba(139, 92, 246, 0.15)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
                 }}
               >
-                <Stack gap="xl">
-                  <Box>
-                    <Group justify="center" mb="lg">
-                      <IconSparkles size={36} color="#8b5cf6" />
-                      <Title
-                        order={2}
-                        fw={800}
-                        ta="center"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
-                          WebkitBackgroundClip: "text",
-                          WebkitTextFillColor: "transparent",
-                        }}
-                      >
-                        {showConfirmation ? "Selected Plan" : "Choose Plan"}
-                      </Title>
-                    </Group>
+                {showConfirmation ? "Review Your Order" : "Complete Payment"}
+              </Title>
+              <Text ta="center" c="dimmed" size="lg">
+                {showConfirmation
+                  ? "Review your details before confirming"
+                  : "Upgrade your plan with confidence"}
+              </Text>
+            </Box>
 
-                    <Stack gap="md">
-                      {Object.entries(plans).map(([key, plan]) => (
-                        <motion.div
-                          key={key}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Card
-                            withBorder
-                            p="lg"
-                            radius="lg"
-                            bg={getBg(
-                              colorScheme,
-                              "white",
-                              theme.colors.dark[7],
-                            )}
-                            style={{
-                              cursor: showConfirmation ? "default" : "pointer",
-                              border:
-                                selectedPlan === key
-                                  ? `3px solid ${plan.borderColor}`
-                                  : `1px solid ${getBg(colorScheme, "#e5e7eb", theme.colors.dark[5])}`,
-                              background:
-                                selectedPlan === key
-                                  ? getBg(
-                                      colorScheme,
-                                      `${plan.borderColor}08`,
-                                      theme.colors.dark[6],
-                                    )
-                                  : getBg(
-                                      colorScheme,
-                                      "white",
-                                      theme.colors.dark[7],
-                                    ),
-                              transition: "all 0.3s ease",
-                              position: "relative",
-                              overflow: "hidden",
-                            }}
-                            onClick={
-                              showConfirmation
-                                ? undefined
-                                : () => setSelectedPlan(key)
-                            }
-                          >
-                            {selectedPlan === key && (
-                              <Box
-                                style={{
-                                  position: "absolute",
-                                  top: 0,
-                                  right: 0,
-                                  width: "60px",
-                                  height: "60px",
-                                  background: plan.gradient,
-                                  clipPath: "polygon(100% 0, 0 0, 100% 100%)",
-                                }}
-                              />
-                            )}
+            <Stepper />
 
-                            <Stack gap={12}>
-                              <Group justify="space-between" align="center">
-                                <Badge
-                                  size="lg"
-                                  radius="sm"
-                                  style={{
-                                    background: plan.gradient,
-                                    color: "white",
-                                  }}
-                                >
-                                  {plan.badge}
-                                </Badge>
-                                {plan.savings && (
-                                  <Badge
-                                    color="green"
-                                    variant="filled"
-                                    size="sm"
-                                    style={{
-                                      background:
-                                        "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                                    }}
-                                  >
-                                    {plan.savings}
-                                  </Badge>
-                                )}
-                                {selectedPlan === key && (
-                                  <IconStar
-                                    size={20}
-                                    color="#fbbf24"
-                                    fill="#fbbf24"
-                                  />
-                                )}
-                              </Group>
-
-                              <Box>
-                                <Text size="sm" c="dimmed">
-                                  Total Amount
-                                </Text>
-                                <Group align="flex-end" gap={4}>
-                                  <Title
-                                    order={1}
-                                    fw={900}
-                                    style={{
-                                      background: plan.gradient,
-                                      WebkitBackgroundClip: "text",
-                                      WebkitTextFillColor: "transparent",
-                                    }}
-                                  >
-                                    {plan.total}
-                                  </Title>
-                                  <Text size="lg" fw={600} c="dimmed">
-                                    birr
-                                  </Text>
-                                </Group>
-                              </Box>
-
-                              <Group gap={4}>
-                                <Text size="sm" c="dimmed">
-                                  {plan.description}
-                                </Text>
-                              </Group>
-                            </Stack>
-                          </Card>
-                        </motion.div>
-                      ))}
-                    </Stack>
-                  </Box>
-
-                  {/* Order Summary */}
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
+            <Grid gutter="xl">
+              {/* LEFT CONTENT */}
+              <Grid.Col span={{ base: 12, lg: 7 }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <Card
+                    radius="xl"
+                    p={{ base: "md", lg: "xl" }}
+                    style={{
+                      height: "100%",
+                      background: getBg(colorScheme, "white", theme.colors.dark[7]),
+                      border: "none",
+                      boxShadow: showConfirmation
+                        ? "0 20px 40px rgba(72, 187, 120, 0.15)"
+                        : "0 20px 40px rgba(59, 130, 246, 0.15)",
+                    }}
                   >
-                    <Card
-                      p="lg"
-                      radius="lg"
-                      style={{
-                        background: getBg(
-                          colorScheme,
-                          "linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)",
-                          `linear-gradient(135deg, ${theme.colors.blue[9]} 0%, ${theme.colors.blue[8]} 100%)`,
-                        ),
-                        border: "none",
-                        position: "relative",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <Box
-                        style={{
-                          position: "absolute",
-                          top: "-50px",
-                          right: "-50px",
-                          width: "100px",
-                          height: "100px",
-                          borderRadius: "50%",
-                          background: "rgba(59, 130, 246, 0.1)",
-                        }}
-                      />
-                      <Stack gap={12}>
-                        <Text fw={700} size="lg" style={{ color: "#1d4ed8" }}>
-                          <IconBadge
-                            size={20}
-                            style={{
-                              verticalAlign: "middle",
-                              marginRight: "8px",
-                            }}
-                          />
-                          Order Summary
-                        </Text>
+                    {renderLeftContent()}
+                  </Card>
+                </motion.div>
+              </Grid.Col>
 
-                        <Group justify="space-between">
-                          <Text c="dimmed">Plan</Text>
-                          <Text fw={600}>{currentPlan.name}</Text>
-                        </Group>
-
-                        <Group justify="space-between">
-                          <Text c="dimmed">Billing Cycle</Text>
-                          <Text fw={600}>
-                            {selectedPlan === "annual" ? "Annual" : "Monthly"}
-                          </Text>
-                        </Group>
-
-                        <Group justify="space-between">
-                          <Text c="dimmed">Amount</Text>
-                          <Text fw={600}>
-                            {currentPlan.price} birr/{currentPlan.period}
-                          </Text>
-                        </Group>
-
-                        <Divider
-                          color={getBg(
-                            colorScheme,
-                            "#e5e7eb",
-                            theme.colors.dark[5],
-                          )}
-                        />
-
-                        <Group justify="space-between">
-                          <Text fw={700} size="lg">
-                            Total
-                          </Text>
+              {/* RIGHT PANEL */}
+              <Grid.Col span={{ base: 12, lg: 5 }}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                >
+                  <Card
+                    radius="xl"
+                    p={{ base: "md", lg: "xl" }}
+                    style={{
+                      height: "100%",
+                      background: getBg(
+                        colorScheme,
+                        "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+                        `linear-gradient(135deg, ${theme.colors.dark[6]} 0%, ${theme.colors.dark[7]} 100%)`,
+                      ),
+                      border: "none",
+                      boxShadow: "0 20px 40px rgba(139, 92, 246, 0.15)",
+                    }}
+                  >
+                    <Stack gap="xl">
+                      <Box>
+                        <Group justify="center" mb="lg">
+                          <IconSparkles size={36} color="#8b5cf6" />
                           <Title
                             order={2}
-                            fw={900}
+                            fw={800}
+                            ta="center"
                             style={{
                               background:
-                                "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                                "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
                               WebkitBackgroundClip: "text",
                               WebkitTextFillColor: "transparent",
                             }}
                           >
-                            {currentPlan.billing} birr
+                            {showConfirmation ? "Selected Plan" : "Choose Plan"}
                           </Title>
                         </Group>
-                      </Stack>
-                    </Card>
-                  </motion.div>
 
-                  {/* Security */}
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <Card
-                      p="lg"
-                      radius="lg"
-                      style={{
-                        background: getBg(
-                          colorScheme,
-                          "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
-                          `linear-gradient(135deg, ${theme.colors.yellow[9]} 0%, ${theme.colors.yellow[8]} 100%)`,
-                        ),
-                        border: "none",
-                      }}
-                    >
-                      <Group gap="md">
-                        <IconShieldCheck size={36} color="#d97706" />
-                        <Box>
-                          <Text fw={700} size="md" style={{ color: "#92400e" }}>
-                            Secure Payment
-                          </Text>
-                          <Text
-                            size="sm"
-                            style={{ color: "#92400e", opacity: 0.8 }}
-                          >
-                            Your payment is protected with bank-level security
-                          </Text>
-                        </Box>
-                      </Group>
-                    </Card>
-                  </motion.div>
-                </Stack>
-              </Card>
-            </motion.div>
-          </Grid.Col>
-        </Grid>
+                        <Stack gap="md">
+                          {Object.entries(plans).map(([key, plan]) => (
+                            <motion.div
+                              key={key}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Card
+                                withBorder
+                                p="lg"
+                                radius="lg"
+                                bg={getBg(
+                                  colorScheme,
+                                  "white",
+                                  theme.colors.dark[7],
+                                )}
+                                style={{
+                                  cursor: showConfirmation ? "default" : "pointer",
+                                  border:
+                                    selectedPlan === key
+                                      ? `3px solid ${plan.borderColor}`
+                                      : `1px solid ${getBg(colorScheme, "#e5e7eb", theme.colors.dark[5])}`,
+                                  background:
+                                    selectedPlan === key
+                                      ? getBg(
+                                          colorScheme,
+                                          `${plan.borderColor}08`,
+                                          theme.colors.dark[6],
+                                        )
+                                      : getBg(
+                                          colorScheme,
+                                          "white",
+                                          theme.colors.dark[7],
+                                        ),
+                                  transition: "all 0.3s ease",
+                                  position: "relative",
+                                  overflow: "hidden",
+                                }}
+                                onClick={
+                                  showConfirmation
+                                    ? undefined
+                                    : () => setSelectedPlan(key)
+                                }
+                              >
+                                {selectedPlan === key && (
+                                  <Box
+                                    style={{
+                                      position: "absolute",
+                                      top: 0,
+                                      right: 0,
+                                      width: "60px",
+                                      height: "60px",
+                                      background: plan.gradient,
+                                      clipPath: "polygon(100% 0, 0 0, 100% 100%)",
+                                    }}
+                                  />
+                                )}
+
+                                <Stack gap={12}>
+                                  <Group justify="space-between" align="center">
+                                    <Badge
+                                      size="lg"
+                                      radius="sm"
+                                      style={{
+                                        background: plan.gradient,
+                                        color: "white",
+                                      }}
+                                    >
+                                      {plan.badge}
+                                    </Badge>
+                                    {plan.savings && (
+                                      <Badge
+                                        color="green"
+                                        variant="filled"
+                                        size="sm"
+                                        style={{
+                                          background:
+                                            "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                                        }}
+                                      >
+                                        {plan.savings}
+                                      </Badge>
+                                    )}
+                                    {selectedPlan === key && (
+                                      <IconStar
+                                        size={20}
+                                        color="#fbbf24"
+                                        fill="#fbbf24"
+                                      />
+                                    )}
+                                  </Group>
+
+                                  <Box>
+                                    <Text size="sm" c="dimmed">
+                                      Total Amount
+                                    </Text>
+                                    <Group align="flex-end" gap={4}>
+                                      <Title
+                                        order={1}
+                                        fw={900}
+                                        style={{
+                                          background: plan.gradient,
+                                          WebkitBackgroundClip: "text",
+                                          WebkitTextFillColor: "transparent",
+                                        }}
+                                      >
+                                        {plan.total}
+                                      </Title>
+                                      <Text size="lg" fw={600} c="dimmed">
+                                        birr
+                                      </Text>
+                                    </Group>
+                                  </Box>
+
+                                  <Group gap={4}>
+                                    <Text size="sm" c="dimmed">
+                                      {plan.description}
+                                    </Text>
+                                  </Group>
+                                </Stack>
+                              </Card>
+                            </motion.div>
+                          ))}
+                        </Stack>
+                      </Box>
+
+                      {/* Order Summary */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                      >
+                        <Card
+                          p="lg"
+                          radius="lg"
+                          style={{
+                            background: getBg(
+                              colorScheme,
+                              "linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%)",
+                              `linear-gradient(135deg, ${theme.colors.blue[9]} 0%, ${theme.colors.blue[8]} 100%)`,
+                            ),
+                            border: "none",
+                            position: "relative",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <Box
+                            style={{
+                              position: "absolute",
+                              top: "-50px",
+                              right: "-50px",
+                              width: "100px",
+                              height: "100px",
+                              borderRadius: "50%",
+                              background: "rgba(59, 130, 246, 0.1)",
+                            }}
+                          />
+                          <Stack gap={12}>
+                            <Text fw={700} size="lg" style={{ color: "#1d4ed8" }}>
+                              <IconBadge
+                                size={20}
+                                style={{
+                                  verticalAlign: "middle",
+                                  marginRight: "8px",
+                                }}
+                              />
+                              Order Summary
+                            </Text>
+
+                            <Group justify="space-between">
+                              <Text c="dimmed">Plan</Text>
+                              <Text fw={600}>{currentPlan.name}</Text>
+                            </Group>
+
+                            <Group justify="space-between">
+                              <Text c="dimmed">Billing Cycle</Text>
+                              <Text fw={600}>
+                                {selectedPlan === "annual" ? "Annual" : "Monthly"}
+                              </Text>
+                            </Group>
+
+                            <Group justify="space-between">
+                              <Text c="dimmed">Amount</Text>
+                              <Text fw={600}>
+                                {currentPlan.price} birr/{currentPlan.period}
+                              </Text>
+                            </Group>
+
+                            <Divider
+                              color={getBg(
+                                colorScheme,
+                                "#e5e7eb",
+                                theme.colors.dark[5],
+                              )}
+                            />
+
+                            <Group justify="space-between">
+                              <Text fw={700} size="lg">
+                                Total
+                              </Text>
+                              <Title
+                                order={2}
+                                fw={900}
+                                style={{
+                                  background:
+                                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                                  WebkitBackgroundClip: "text",
+                                  WebkitTextFillColor: "transparent",
+                                }}
+                              >
+                                {currentPlan.billing} birr
+                              </Title>
+                            </Group>
+                          </Stack>
+                        </Card>
+                      </motion.div>
+
+                      {/* Security */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                      >
+                        <Card
+                          p="lg"
+                          radius="lg"
+                          style={{
+                            background: getBg(
+                              colorScheme,
+                              "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+                              `linear-gradient(135deg, ${theme.colors.yellow[9]} 0%, ${theme.colors.yellow[8]} 100%)`,
+                            ),
+                            border: "none",
+                          }}
+                        >
+                          <Group gap="md">
+                            <IconShieldCheck size={36} color="#d97706" />
+                            <Box>
+                              <Text fw={700} size="md" style={{ color: "#92400e" }}>
+                                Secure Payment via Chapa
+                              </Text>
+                              <Text
+                                size="sm"
+                                style={{ color: "#92400e", opacity: 0.8 }}
+                              >
+                                Your payment is protected with bank-level security
+                              </Text>
+                            </Box>
+                          </Group>
+                        </Card>
+                      </motion.div>
+                    </Stack>
+                  </Card>
+                </motion.div>
+              </Grid.Col>
+            </Grid>
+          </>
+        )}
       </Container>
-
-      {/* PIN Modal */}
-      {renderPinModal()}
     </Box>
   );
 }

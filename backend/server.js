@@ -30,6 +30,7 @@ const notificationAdminRoutes = require("./routes/notification.admin.route");
 // 🔥 NEW: split feedback routes
 const feedbackUserRoutes = require("./routes/feedback.user.routes");
 const feedbackAdminRoutes = require("./routes/feedback.admin.route");
+const chapaRoutes = require("./routes/chapa.routes");
 
 const app = express();
 
@@ -121,6 +122,7 @@ app.use(
 );
 app.use("/api/v1/missing-persons", missingPersonRoutes);
 app.use("/api/v1/missing-vehicles", missingVehicleRoutes);
+app.use("/api/v1/chapa", chapaRoutes);
 
 // ================= ERROR =================
 app.use(notFound);
