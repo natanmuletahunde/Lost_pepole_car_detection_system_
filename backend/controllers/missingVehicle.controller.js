@@ -98,13 +98,11 @@ exports.getMyMissingVehicles = async (req, res) => {
   try {
     const uid = req.user._id.toString();
     const rawEmail = (req.user.email || '').trim();
-    const emailRe = rawEmail
-      ? new RegExp(`^${rawEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
-      : null;
+    const emailExact = rawEmail.toLowerCase();
     const vehicles = await MissingVehicle.find({
       $or: [
         { 'reportedBy.userId': uid },
-        ...(emailRe ? [{ 'reportedBy.email': emailRe }] : []),
+        ...(emailExact ? [{ 'reportedBy.email': emailExact }] : []),
       ],
     }).sort({ createdAt: -1 });
     res.json({ success: true, data: vehicles });

@@ -106,13 +106,11 @@ exports.getMyMissingPersons = async (req, res) => {
   try {
     const uid = req.user._id.toString();
     const rawEmail = (req.user.email || '').trim();
-    const emailRe = rawEmail
-      ? new RegExp(`^${rawEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')
-      : null;
+    const emailExact = rawEmail.toLowerCase();
     const persons = await MissingPerson.find({
       $or: [
         { 'reportedBy.userId': uid },
-        ...(emailRe ? [{ 'reportedBy.email': emailRe }] : []),
+        ...(emailExact ? [{ 'reportedBy.email': emailExact }] : []),
       ],
     }).sort({ createdAt: -1 });
 

@@ -60,4 +60,7 @@ const missingPersonSchema = new mongoose.Schema({
   notes: []
 });
 
+missingPersonSchema.index({ 'reportedBy.userId': 1 });
+missingPersonSchema.index({ 'reportedBy.email': 1 });
+
 module.exports = mongoose.model('MissingPerson', missingPersonSchema);

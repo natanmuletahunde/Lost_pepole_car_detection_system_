@@ -56,4 +56,7 @@ const missingVehicleSchema = new mongoose.Schema({
   notes: []
 });
 
+missingVehicleSchema.index({ 'reportedBy.userId': 1 });
+missingVehicleSchema.index({ 'reportedBy.email': 1 });
+
 module.exports = mongoose.model('MissingVehicle', missingVehicleSchema);

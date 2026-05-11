@@ -11,6 +11,15 @@ const sightingSchema = new mongoose.Schema({
     enum: ['person', 'vehicle'],
     required: [true, 'Sighting type is required'],
   },
+  name: {
+    type: String,
+    trim: true,
+  },
+  plateNumber: {
+    type: String,
+    trim: true,
+    uppercase: true,
+  },
   description: {
     type: String,
     required: [true, 'Description is required'],
@@ -70,5 +79,6 @@ const sightingSchema = new mongoose.Schema({
 sightingSchema.index({ location: '2dsphere' });
 sightingSchema.index({ reportedAt: -1 });
 sightingSchema.index({ status: 1 });
+sightingSchema.index({ user: 1 });
 
 module.exports = mongoose.model('Sighting', sightingSchema);

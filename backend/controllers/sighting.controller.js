@@ -1,20 +1,69 @@
 const Sighting = require('../models/Sighting');
+const MissingPerson = require('../models/MissingPerson');
+const MissingVehicle = require('../models/MissingVehicle');
+const Notification = require('../models/Notification');
+const bot = require('../telegramBot');
 const ApiResponse = require('../utils/ApiResponse');
 const { paginate } = require('../utils/helpers');
 
 const reportSighting = async (req, res, next) => {
   try {
-    const { type, description, location, images } = req.body;
+    const { type, name, plateNumber, description, location, images } = req.body;
 
     const sighting = await Sighting.create({
       user: req.user._id,
       type,
+      name,
+      plateNumber,
       description,
       location,
       images: images || [],
     });
 
     await sighting.populate('user', 'firstName lastName email phone');
+
+    // Matching Logic
+    let matchedCase = null;
+    let reporter = null;
+
+    if (type === 'person' && name) {
+      matchedCase = await MissingPerson.findOne({
+        status: 'Active',
+        $or: [
+          { firstName: { $regex: name, $options: 'i' } },
+          { lastName: { $regex: name, $options: 'i' } }
+        ]
+      });
+      if (matchedCase) reporter = matchedCase.reportedBy;
+    } else if (type === 'vehicle' && plateNumber) {
+      matchedCase = await MissingVehicle.findOne({
+        plateNumber: plateNumber.toUpperCase(),
+        status: 'Active'
+      });
+      if (matchedCase) reporter = matchedCase.reportedBy;
+    }
+
+    if (matchedCase && reporter && reporter.userId) {
+      const message = `A new sighting has been reported for your case: ${type === 'person' ? name : plateNumber}. Location: ${location.address || 'Unknown'}`;
+      
+      // Create in-app notification
+      await Notification.create({
+        recipient: reporter.userId,
+        title: 'New Sighting Reported',
+        message: message,
+        type: 'alert',
+        priority: 'high'
+      });
+
+      // Telegram notification
+      if (reporter.telegramUsername) {
+        try {
+          await bot.sendMessage(`@${reporter.telegramUsername}`, `🚨 SIGHTING ALERT!\n\n${message}`);
+        } catch (err) {
+          console.log('Telegram notification failed:', err.message);
+        }
+      }
+    }
 
     return ApiResponse.success(res, 'Sighting reported successfully', { sighting }, 201);
   } catch (error) {
