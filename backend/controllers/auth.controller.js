@@ -11,7 +11,7 @@ const {
 // ================= REGISTER =================
 const register = async (req, res, next) => {
   try {
-    const { firstName, lastName, email, phone, password } = req.body;
+    const { firstName, lastName, email, phone, password, telegramUsername } = req.body;
 
     const existingUser = await User.findOne({
       $or: [{ email }, { phone }]
@@ -27,7 +27,8 @@ const register = async (req, res, next) => {
       lastName,
       email,
       phone,
-      password
+      password,
+      telegramUsername
     });
 
     const token = signToken(user._id);

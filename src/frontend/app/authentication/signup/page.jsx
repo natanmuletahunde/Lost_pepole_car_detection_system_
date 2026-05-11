@@ -29,6 +29,7 @@ const signupSchema = z
     lastName: z.string().min(2),
     email: z.string().email(),
     phone: z.string().min(10),
+    telegramUsername: z.string().optional(),
     password: z.string().min(8),
     confirmPassword: z.string(),
   })
@@ -114,6 +115,7 @@ export default function SignupPage() {
 
           <TextInput mt="md" label="Email" {...register('email')} error={errors.email?.message} />
           <TextInput mt="md" label="Phone" {...register('phone')} error={errors.phone?.message} />
+          <TextInput mt="md" label="Telegram Username (Optional)" description="To receive direct alerts via Telegram" {...register('telegramUsername')} error={errors.telegramUsername?.message} />
 
           <PasswordInput mt="md" label="Password" {...register('password')} error={errors.password?.message} />
           <PasswordInput mt="md" label="Confirm Password" {...register('confirmPassword')} error={errors.confirmPassword?.message} />
