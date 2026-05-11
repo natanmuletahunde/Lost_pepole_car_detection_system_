@@ -103,7 +103,7 @@ export default function DashboardMainContent({
   return (
     <Container size="xl" py={{ base: 30, md: 40 }}>
       {/* Quick Actions */}
-      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg" mb="xl">
+      <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg" mb="xl">
         <Button
           component={Link}
           href={getUserRoute("/user/register")}
@@ -131,6 +131,24 @@ export default function DashboardMainContent({
           style={{ height: 80, fontSize: 18, borderWidth: 2 }}
         >
           Report Sighting
+        </Button>
+        <Button
+          component={Link}
+          href={getUserRoute("/user/gps/register")}
+          size="lg"
+          radius="md"
+          leftSection={<IconGps size={20} />}
+          fullWidth
+          style={{
+            background: "linear-gradient(135deg, #10b981 0%, #047857 100%)",
+            color: "white",
+            height: 80,
+            fontSize: 18,
+            boxShadow: "0 4px 14px 0 rgba(16, 185, 129, 0.39)",
+            border: "none",
+          }}
+        >
+          Register GPS Device
         </Button>
       </SimpleGrid>
 

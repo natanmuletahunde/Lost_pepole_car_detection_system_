@@ -61,6 +61,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  telegramUsername: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   twoFactorEnabled: {
     type: Boolean,
     default: false,

@@ -284,6 +284,8 @@ export default function ReportSightingPage() {
 
       const payload = {
         type: sightingType,
+        name: formValues.type === 'Person' ? formValues.name : undefined,
+        plateNumber: formValues.type === 'Vehicle' ? formValues.plateNumber : undefined,
         description,
         location: {
           type: 'Point',

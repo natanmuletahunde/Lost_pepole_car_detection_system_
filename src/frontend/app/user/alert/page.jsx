@@ -186,20 +186,17 @@ export default function AlertPage() {
 
         setSightings(sightingsData);
 
-        // Create a map of sightings by originalCaseId for quick lookup
-        const sightingsByCase = {};
-        sightingsData.forEach((sighting) => {
-          const caseId = sighting.originalCaseId;
-          if (caseId) {
-            if (!sightingsByCase[caseId]) sightingsByCase[caseId] = [];
-            sightingsByCase[caseId].push(sighting);
-          }
-        });
-
         // Transform vehicle data
         const transformedVehicles = vehiclesData.map((vehicle) => {
           const caseId = vehicle.caseId || `CASE-${vehicle.id}`;
-          const vehicleSightings = sightingsByCase[caseId] || [];
+          
+          // Match sightings by plate number
+          const vehicleSightings = sightingsData.filter(s => 
+            s.type === 'vehicle' && 
+            s.plateNumber && 
+            vehicle.plateNumber && 
+            s.plateNumber.toUpperCase() === vehicle.plateNumber.toUpperCase()
+          );
           return {
             id: vehicle._id || vehicle.id,
             code: vehicle.caseId || caseId,
@@ -265,7 +262,16 @@ export default function AlertPage() {
         // Transform person data
         const transformedPersons = personsData.map((person) => {
           const caseId = person.caseId || `CASE-${person.id}`;
-          const personSightings = sightingsByCase[caseId] || [];
+          
+          // Match sightings by name
+          const firstName = (person.firstName || "").toLowerCase();
+          const lastName = (person.lastName || "").toLowerCase();
+          
+          const personSightings = sightingsData.filter(s => {
+             if (s.type !== 'person' || !s.name) return false;
+             const sName = s.name.toLowerCase();
+             return (firstName && sName.includes(firstName)) || (lastName && sName.includes(lastName));
+          });
           return {
             id: person._id || person.id,
             code: person.caseId || caseId,
