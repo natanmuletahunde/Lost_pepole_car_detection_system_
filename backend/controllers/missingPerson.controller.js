@@ -6,21 +6,13 @@ const User = require("../models/User");
 // ==============================
 // CREATE
 // ==============================
-<<<<<<< HEAD
-// ==============================
+
 // CREATE (Unified)
 exports.createMissingPerson = async (req, res) => {
   try {
     const files = req.files || [];
 
     if (files.length < 3 && req.body.type === 'Person') {
-=======
-// In your createMissingPerson controller
-exports.createMissingPerson = async (req, res) => {
-  try {
-    const files = req.files;
-    if (!files || files.length < 2) {
->>>>>>> a6c758a (full project updated)
       return res.status(400).json({
         success: false,
         message: "Minimum 3 images required for missing persons",
@@ -29,7 +21,6 @@ exports.createMissingPerson = async (req, res) => {
 
     const images = files.map((f) => `/uploads/${f.filename}`);
 
-<<<<<<< HEAD
     // Normalize reportedBy from auth user and/or request body.
     const authReportedBy = req.user
       ? {
@@ -67,33 +58,12 @@ exports.createMissingPerson = async (req, res) => {
     const reportData = {
       ...req.body,
       reportedBy, // ✅ override with parsed object
-=======
-    // Get reporter info from authenticated user
-    const reporter = req.user;   // Assuming you have user in req.user after auth
-
-    const person = new MissingPerson({
-      ...req.body,
->>>>>>> a6c758a (full project updated)
       images,
       reportDate: new Date(),
-<<<<<<< HEAD
       lastUpdated: new Date(),
       status: 'Active',
       verified: false,
     };
-=======
-      reportedBy: {
-        userId: reporter._id,
-        firstName: reporter.firstName,
-        lastName: reporter.lastName,
-        email: reporter.email,
-        phone: reporter.phone,
-        role: reporter.role,
-        telegramChatId: reporter.telegramChatId,     // ← Important
-        telegramUsername: reporter.telegramUsername || null
-      }
-    });
->>>>>>> a6c758a (full project updated)
 
     const person = await MissingPerson.create(reportData);
 
