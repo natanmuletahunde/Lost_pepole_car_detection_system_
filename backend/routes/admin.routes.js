@@ -10,6 +10,7 @@ const {
   getAllCases,
   updateCaseStatus,
   getCaseDetail,
+  deleteCase,
   getFinanceStats,
   getAllFeedback,
   respondToFeedback,
@@ -88,6 +89,7 @@ router.delete('/users/:id', protect, authorize('admin', 'moderator'), deleteUser
 router.get('/cases', protect, authorize('admin', 'moderator'), getAllCases);
 router.get('/cases/:type/:id', protect, authorize('admin', 'moderator'), getCaseDetail);
 router.patch('/cases/:id/status', protect, authorize('admin', 'moderator'), updateCaseStatus);
+router.delete('/cases/:type/:id', protect, authorize('admin', 'moderator'), deleteCase);
 
 router.get('/finance', protect, authorize('admin', 'moderator'), getFinanceStats);
 

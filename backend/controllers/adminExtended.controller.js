@@ -5,6 +5,7 @@ const Sighting = require('../models/Sighting');
 const Subscription = require('../models/Subscription');
 const Feedback = require('../models/Feedback');
 const Alert = require('../models/Alert');
+const Detection = require('../models/Detection');
 const ApiResponse = require('../utils/ApiResponse');
 
 const getAllUsers = async (req, res, next) => {
@@ -245,6 +246,42 @@ const getCaseDetail = async (req, res, next) => {
   }
 };
 
+const deleteCase = async (req, res, next) => {
+  try {
+    const { id, type } = req.params;
+
+    if (!type) {
+      return ApiResponse.error(res, 'Missing type parameter', 400);
+    }
+
+    let model;
+    if (type === 'person') {
+      model = MissingPerson;
+    } else if (type === 'vehicle') {
+      model = MissingVehicle;
+    } else {
+      return ApiResponse.error(res, 'Invalid type', 400);
+    }
+
+    const caseItem = await model.findById(id);
+    if (!caseItem) {
+      return ApiResponse.error(res, 'Case not found', 404);
+    }
+
+    await model.findByIdAndDelete(id);
+
+    // Also delete associated sightings and detections
+    await Sighting.deleteMany({ caseId: id });
+    if (type === 'person') {
+      await Detection.deleteMany({ registrationId: id });
+    }
+
+    return ApiResponse.success(res, 'Case deleted successfully', {});
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getFinanceStats = async (req, res, next) => {
   try {
     const { period = '30d' } = req.query;
@@ -459,6 +496,7 @@ module.exports = {
   getAllCases,
   updateCaseStatus,
   getCaseDetail,
+  deleteCase,
   getFinanceStats,
   getAllFeedback,
   respondToFeedback,
