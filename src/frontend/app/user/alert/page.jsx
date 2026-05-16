@@ -1258,7 +1258,7 @@ export default function AlertPage() {
                                 <Group gap="xs" mt={4}>
                                   <IconMapPin size={12} />
                                   <Text size="xs" c="dimmed">
-                                    {sighting.location}
+                                    {sighting.location?.address || 'Unknown location'}
                                   </Text>
                                 </Group>
                                 <Group gap="xs" mt={4}>

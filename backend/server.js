@@ -27,11 +27,12 @@ const adminRoutes = require("./routes/admin.routes");
 const missingPersonRoutes = require("./routes/missingPerson.routes");
 const missingVehicleRoutes = require("./routes/missingVehicle.routes");
 const notificationAdminRoutes = require("./routes/notification.admin.route");
+const notificationUserRoutes = require("./routes/notification.user.route");
 // 🔥 NEW: split feedback routes
 const feedbackUserRoutes = require("./routes/feedback.user.routes");
 const feedbackAdminRoutes = require("./routes/feedback.admin.route");
 const chapaRoutes = require("./routes/chapa.routes");
-
+const pcLocationRoutes = require("./routes/pcLocation.routes");
 const app = express();
 
 // ================= DB =================
@@ -97,6 +98,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/sightings", sightingRoutes);
 app.use("/api/v1/detections", detectionRoutes);
+app.use("/api/v1/pc-location", pcLocationRoutes);
 // 🔥 USER feedback
 app.use("/api/v1/feedback", protect, feedbackUserRoutes);
 
@@ -111,6 +113,11 @@ app.use(
   protect,
   authorize("admin"),
   notificationAdminRoutes
+);
+app.use(
+  "/api/v1/notifications",
+  protect,
+  notificationUserRoutes
 );
 
 // 🔥 ADMIN feedback (PATCH /:id with { text, status }; list overlaps GET with admin.routes /feedback)
