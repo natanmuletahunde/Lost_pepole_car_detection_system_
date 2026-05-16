@@ -53,17 +53,10 @@ import { notifications } from "@mantine/notifications";
 import { apiClient } from "../../../../../../lib/apiClient";
 
 // Leaflet imports
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-const DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 
 // API Endpoints
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
@@ -202,15 +195,15 @@ export default function SingleDetectionDetailPage() {
         const transformedDetection = {
           id: sighting._id || sighting.id,
           name: sighting.type === 'Person' ? sighting.name : `${sighting.brand || ''} ${sighting.model || ''}`.trim() || sighting.plateNumber,
-          location: sighting.location,
-          date: sighting.date || new Date(sighting.reportDate).toLocaleDateString(),
-          time: sighting.time || new Date(sighting.reportDate).toLocaleTimeString(),
-          type: sighting.type === 'Person' ? 'Sighting' : 'Detection',
-          accuracy: '98%', // placeholder
+          location: sighting.location?.address || sighting.location || 'Unknown',
+          date: sighting.date || (sighting.reportedAt ? new Date(sighting.reportedAt).toLocaleDateString() : 'Unknown'),
+          time: sighting.time || (sighting.reportedAt ? new Date(sighting.reportedAt).toLocaleTimeString() : 'Unknown'),
+          type: sighting.type === 'person' || sighting.type === 'Person' ? 'Person' : 'Detection',
+          accuracy: (sighting.type === 'person' || sighting.type === 'Person') ? null : '98%', // placeholder
           description: sighting.description,
           image: sighting.imagePreview,
-          latitude: sighting.latitude,
-          longitude: sighting.longitude,
+          latitude: sighting.latitude || (sighting.location?.coordinates ? sighting.location.coordinates[1] : null),
+          longitude: sighting.longitude || (sighting.location?.coordinates ? sighting.location.coordinates[0] : null),
         };
 
         // Transform case data to match expected alert structure
@@ -267,33 +260,84 @@ export default function SingleDetectionDetailPage() {
   useEffect(() => {
     if (!detectionData || !mapRef.current) return;
 
-    if (leafletMap.current) {
-      leafletMap.current.remove();
-      leafletMap.current = null;
-    }
+    let isMounted = true;
 
-    const lat = detectionData.latitude ? parseFloat(detectionData.latitude) : 9.03;
-    const lng = detectionData.longitude ? parseFloat(detectionData.longitude) : 38.74;
+    const initMap = async () => {
+      // Dynamically import Leaflet to prevent SSR "window is not defined" errors
+      const L = (await import('leaflet')).default;
+      
+      // Fix Leaflet default icon paths dynamically using CDN to bypass Next.js Turbopack image loader issues
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      });
 
-    const map = L.map(mapRef.current).setView([lat, lng], 15);
-    leafletMap.current = map;
+      if (!isMounted) return;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
+      if (leafletMap.current) {
+        leafletMap.current.remove();
+        leafletMap.current = null;
+      }
 
-    const marker = L.marker([lat, lng])
-      .bindPopup(`
-        <b>${detectionData.name}</b><br>
-        ${detectionData.location}<br>
-        ${detectionData.date} ${detectionData.time}<br>
-        Accuracy: ${detectionData.accuracy}
-      `)
-      .addTo(map);
-    marker.openPopup();
-    markerRef.current = marker;
+      const lat = detectionData.latitude ? parseFloat(detectionData.latitude) : 9.03;
+      const lng = detectionData.longitude ? parseFloat(detectionData.longitude) : 38.74;
+
+      const map = L.map(mapRef.current).setView([lat, lng], 17);
+      leafletMap.current = map;
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      const marker = L.marker([lat, lng])
+        .bindPopup(`
+          <b>${detectionData.name}</b><br>
+          ${detectionData.location}<br>
+          ${detectionData.date} ${detectionData.time}<br>
+          ${detectionData.type !== 'Person' ? `Accuracy: ${detectionData.accuracy}` : `Type: Person`}
+        `)
+        .addTo(map);
+      marker.openPopup();
+      markerRef.current = marker;
+
+      // Add user's current location if available
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+            
+            // Add a distinct circle marker for the user
+            L.circleMarker([userLat, userLng], {
+              color: '#ffffff', // White border
+              fillColor: '#2563eb', // Blue fill
+              fillOpacity: 1,
+              radius: 10,
+              weight: 3
+            }).addTo(map).bindPopup('<b>📍 Your Current Location</b>');
+            
+            // Adjust map view to include both the user and the detection
+            const bounds = L.latLngBounds([lat, lng], [userLat, userLng]);
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+          },
+          (err) => {
+            console.warn('Geolocation error:', err);
+            notifications.show({
+              title: 'Location Unavailable',
+              message: 'Could not access your location. Please check your browser permissions.',
+              color: 'orange',
+            });
+          }
+        );
+      }
+    };
+
+    initMap();
 
     return () => {
+      isMounted = false;
       if (leafletMap.current) {
         leafletMap.current.remove();
         leafletMap.current = null;
@@ -545,7 +589,7 @@ export default function SingleDetectionDetailPage() {
         <Grid gutter="xl">
           {/* LEFT COLUMN: Map - unchanged */}
           <Grid.Col span={{ base: 12, md: 7 }}>
-            <Paper withBorder radius="md" style={{ height: "500px", overflow: "hidden" }}> 
+            <Paper withBorder radius="md" style={{ height: "100%", minHeight: "500px", display: "flex", flexDirection: "column", overflow: "hidden" }}> 
               <Box
                 p="md"
                 style={{
@@ -566,7 +610,7 @@ export default function SingleDetectionDetailPage() {
               <div
                 ref={mapRef}
                 style={{
-                  height: "calc(100% - 65px)",
+                  flex: 1,
                   width: "100%",
                   borderRadius: "0 0 8px 8px",
                 }}
@@ -577,12 +621,56 @@ export default function SingleDetectionDetailPage() {
           {/* RIGHT COLUMN: Info Cards */}
           <Grid.Col span={{ base: 12, md: 5 }}>
             <Stack gap="lg">
-              {/* Accuracy Card – unchanged */}
+              {/* Accuracy Card */}
+              {detectionData.type !== 'Person' && (
+                <Paper 
+                  withBorder 
+                  radius="md"
+                  style={{
+                    boxShadow: "0 2px 8px rgba(37, 99, 235, 0.05)",
+                    overflow: "hidden",
+                    borderLeft: "4px solid #2563eb",
+                  }}
+                >
+                  <Box
+                    p="md"
+                    style={{
+                      background: getBg(colorScheme, "white", theme.colors.dark[6]),
+                    }}
+                  >
+                    <Group justify="space-between" align="center">
+                      <Box>
+                        <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#1e40af", theme.colors.blue[2]) }}>
+                          🎯 Accuracy
+                        </Text>
+                        <Text size="sm" c="dimmed">
+                          Detection confidence
+                        </Text>
+                      </Box>
+                      <Badge
+                        size="xl"
+                        variant="filled"
+                        color="blue"
+                        style={{ 
+                          fontWeight: 800,
+                          fontSize: "16px",
+                          padding: "8px 12px",
+                          borderRadius: "8px",
+                        }}
+                      >
+                        {detectionData.accuracy}
+                      </Badge>
+                    </Group>
+                  </Box>
+                </Paper>
+              )}
+
+              {/* Category Card */}
               <Paper 
                 withBorder 
                 radius="md"
                 style={{
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.05)",
                   overflow: "hidden",
                   borderLeft: "4px solid #3b82f6",
                 }}
@@ -590,77 +678,36 @@ export default function SingleDetectionDetailPage() {
                 <Box
                   p="md"
                   style={{
-                    background: getBg(colorScheme, "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)", "linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)"),
+                    background: getBg(colorScheme, "white", theme.colors.dark[6]),
                   }}
                 >
-                  <Group justify="space-between" align="center">
-                    <Box>
-                      <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#0369a1", theme.colors.blue[2]) }}>
-                        🎯 Accuracy
-                      </Text>
-                      <Text size="sm" c="dimmed">
-                        Detection confidence
-                      </Text>
-                    </Box>
-                    <Badge
-                      size="xl"
-                      variant="filled"
-                      color="blue"
-                      style={{ 
-                        fontWeight: 800,
-                        fontSize: "16px",
-                        padding: "8px 12px",
-                        borderRadius: "8px",
-                      }}
-                    >
-                      {detectionData.accuracy}
-                    </Badge>
-                  </Group>
-                </Box>
-              </Paper>
-
-              {/* Category Card – unchanged */}
-              <Paper 
-                withBorder 
-                radius="md"
-                style={{
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
-                  overflow: "hidden",
-                  borderLeft: "4px solid #10b981",
-                }}
-              >
-                <Box
-                  p="md"
-                  style={{
-                    background: getBg(colorScheme, "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", "linear-gradient(135deg, #14532d 0%, #166534 100%)"),
-                  }}
-                >
-                  <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#047857", theme.colors.green[2]) }} mb="12px">
+                  <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#1e40af", theme.colors.blue[2]) }} mb="12px">
                     🚗 Category
                   </Text>
                   <Stack gap="md">
                     <Box pl="md">
-                      <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#065f46", theme.colors.green[2]) }}>
+                      <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#1e3a8a", theme.colors.blue[2]) }}>
                         Type: <span style={{ color: getBg(colorScheme, "#374151", theme.colors.gray[3]) }}>{alertData.category?.type}</span>
                       </Text>
                       <Box pl="md" mt="xs">
-                        <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#065f46", theme.colors.green[2]) }}>
+                        <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#1e3a8a", theme.colors.blue[2]) }}>
                           Brand/Name: <span style={{ color: getBg(colorScheme, "#374151", theme.colors.gray[3]) }}>{alertData.category?.brandName}</span>
                         </Text>
                         <Box pl="md" mt="xs">
-                          <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#065f46", theme.colors.green[2]) }}>
+                          <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#1e3a8a", theme.colors.blue[2]) }}>
                             Plate:
                           </Text>
                           <Box 
                             p="xs" 
                             mt="xs" 
                             style={{ 
-                              backgroundColor: "#10b981", 
+                              backgroundColor: "#eff6ff", 
+                              border: "1px solid #bfdbfe",
                               borderRadius: "6px",
                               display: "inline-block",
                             }}
                           >
-                            <Text size="sm" fw={800} style={{ color: "white", letterSpacing: "1px" }}>
+                            <Text size="sm" fw={800} style={{ color: "#1d4ed8", letterSpacing: "1px" }}>
                               {alertData.category?.plateNumber}
                             </Text>
                           </Box>
@@ -668,7 +715,7 @@ export default function SingleDetectionDetailPage() {
                       </Box>
                     </Box>
                     <Box pl="md">
-                      <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#065f46", theme.colors.green[2]) }}>
+                      <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#1e3a8a", theme.colors.blue[2]) }}>
                         Color:
                       </Text>
                       <Group gap="xs" mt="xs">
@@ -693,35 +740,36 @@ export default function SingleDetectionDetailPage() {
                 </Box>
               </Paper>
 
-              {/* Registered Location Card – unchanged */}
+              {/* Registered Location Card */}
               <Paper 
                 withBorder 
                 radius="md"
                 style={{
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.05)",
                   overflow: "hidden",
-                  borderLeft: "4px solid #8b5cf6",
+                  borderLeft: "4px solid #60a5fa",
                 }}
               >
                 <Box
                   p="md"
                   style={{
-                    background: getBg(colorScheme, "linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%)", "linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%)"),
+                    background: getBg(colorScheme, "white", theme.colors.dark[6]),
                   }}
                 >
                   <Group align="flex-start">
                     <Box
                       style={{
-                        backgroundColor: "#8b5cf6",
+                        backgroundColor: "#eff6ff",
                         padding: "8px",
                         borderRadius: "8px",
-                        color: "white",
+                        color: "#2563eb",
+                        border: "1px solid #bfdbfe"
                       }}
                     >
                       <IconMapPin size={20} />
                     </Box>
                     <Box style={{ flex: 1 }}>
-                      <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#7c3aed", theme.colors.violet[2]) }}>
+                      <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#1e40af", theme.colors.blue[2]) }}>
                         Registered Location
                       </Text>
                       <Text size="sm" style={{ color: getBg(colorScheme, "#6b7280", theme.colors.gray[3]) }} mt="4px">
@@ -732,40 +780,41 @@ export default function SingleDetectionDetailPage() {
                 </Box>
               </Paper>
 
-              {/* Registered Date Card – unchanged */}
+              {/* Registered Date Card */}
               <Paper 
                 withBorder 
                 radius="md"
                 style={{
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.05)",
                   overflow: "hidden",
-                  borderLeft: "4px solid #f59e0b",
+                  borderLeft: "4px solid #93c5fd",
                 }}
               >
                 <Box
                   p="md"
                   style={{
-                    background: getBg(colorScheme, "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)", "linear-gradient(135deg, #92400e 0%, #b45309 100%)"),
+                    background: getBg(colorScheme, "white", theme.colors.dark[6]),
                   }}
                 >
                   <Group align="flex-start">
                     <Box
                       style={{
-                        backgroundColor: "#f59e0b",
+                        backgroundColor: "#eff6ff",
                         padding: "8px",
                         borderRadius: "8px",
-                        color: "white",
+                        color: "#3b82f6",
+                        border: "1px solid #bfdbfe"
                       }}
                     >
                       <IconCalendar size={20} />
                     </Box>
                     <Box style={{ flex: 1 }}>
-                      <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#d97706", theme.colors.orange[2]) }}>
+                      <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#1e40af", theme.colors.blue[2]) }}>
                         Registered Date
                       </Text>
                       <Stack gap="xs" mt="xs">
                         <Group gap="xs">
-                          <Badge color="orange" variant="light" size="sm">
+                          <Badge color="blue" variant="light" size="sm">
                             Date
                           </Badge>
                           <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#374151", theme.colors.gray[3]) }}>
@@ -773,7 +822,7 @@ export default function SingleDetectionDetailPage() {
                           </Text>
                         </Group>
                         <Group gap="xs">
-                          <Badge color="orange" variant="light" size="sm">
+                          <Badge color="blue" variant="light" size="sm">
                             Time
                           </Badge>
                           <Text size="sm" fw={600} style={{ color: getBg(colorScheme, "#374151", theme.colors.gray[3]) }}>
@@ -786,36 +835,37 @@ export default function SingleDetectionDetailPage() {
                 </Box>
               </Paper>
 
-              {/* Captured Media Card – unchanged */}
+              {/* Captured Media Card */}
               <Paper 
                 withBorder 
                 radius="md"
                 style={{
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.05)",
                   overflow: "hidden",
-                  borderLeft: "4px solid #ec4899",
+                  borderLeft: "4px solid #bfdbfe",
                 }}
               >
                 <Box
                   p="md"
                   style={{
-                    background: getBg(colorScheme, "linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%)", "linear-gradient(135deg, #831843 0%, #9d174d 100%)"),
+                    background: getBg(colorScheme, "white", theme.colors.dark[6]),
                   }}
                 >
                   <Group justify="space-between" align="center" mb="md">
                     <Group>
                       <Box
                         style={{
-                          backgroundColor: "#ec4899",
+                          backgroundColor: "#eff6ff",
                           padding: "8px",
                           borderRadius: "8px",
-                          color: "white",
+                          color: "#60a5fa",
+                          border: "1px solid #dbeafe"
                         }}
                       >
                         <IconCamera size={20} />
                       </Box>
                       <Box>
-                        <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#db2777", theme.colors.pink[2]) }}>
+                        <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#1e40af", theme.colors.blue[2]) }}>
                           Captured Media
                         </Text>
                         <Text size="sm" c="dimmed">
@@ -823,7 +873,7 @@ export default function SingleDetectionDetailPage() {
                         </Text>
                       </Box>
                     </Group>
-                    <Badge color="pink" variant="light">
+                    <Badge color="blue" variant="light">
                       {alertData.capturedMedia?.photos?.length || 0} items
                     </Badge>
                   </Group>
@@ -837,7 +887,7 @@ export default function SingleDetectionDetailPage() {
                             aspectRatio: "1/1",
                             overflow: "hidden",
                             borderRadius: "8px",
-                            border: `2px solid ${getBg(colorScheme, '#fbcfe8', theme.colors.pink[7])}`,
+                            border: `2px solid ${getBg(colorScheme, '#dbeafe', theme.colors.blue[7])}`,
                             position: "relative",
                           }}
                         >
@@ -852,7 +902,7 @@ export default function SingleDetectionDetailPage() {
                               bottom: "0",
                               left: "0",
                               right: "0",
-                              background: "rgba(236, 72, 153, 0.8)",
+                              background: "rgba(37, 99, 235, 0.8)",
                               padding: "4px",
                               textAlign: "center",
                             }}
@@ -869,35 +919,35 @@ export default function SingleDetectionDetailPage() {
                       style={{ 
                         textAlign: "center", 
                         padding: "20px",
-                        border: `2px dashed ${getBg(colorScheme, '#fbcfe8', theme.colors.pink[7])}`,
+                        border: `2px dashed ${getBg(colorScheme, '#bfdbfe', theme.colors.blue[7])}`,
                         borderRadius: "8px",
-                        backgroundColor: getBg(colorScheme, 'rgba(252, 231, 243, 0.5)', 'rgba(157, 23, 77, 0.2)'),
+                        backgroundColor: getBg(colorScheme, 'rgba(239, 246, 255, 0.5)', 'rgba(30, 58, 138, 0.2)'),
                       }}
                     >
-                      <IconPhoto size={48} color={getBg(colorScheme, '#f472b6', theme.colors.pink[5])} />
+                      <IconPhoto size={48} color={getBg(colorScheme, '#93c5fd', theme.colors.blue[5])} />
                       <Text mt="md" c="dimmed">No photos or videos available</Text>
                     </Box>
                   )}
                 </Box>
               </Paper>
 
-              {/* Confirmation Card – modified for logging */}
+              {/* Confirmation Card */}
               <Paper 
                 withBorder 
                 radius="md"
                 style={{
-                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+                  boxShadow: "0 2px 8px rgba(37, 99, 235, 0.05)",
                   overflow: "hidden",
-                  borderLeft: "4px solid #ef4444",
+                  borderLeft: "4px solid #1e40af",
                 }}
               >
                 <Box
                   p="md"
                   style={{
-                    background: getBg(colorScheme, "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)", "linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)"),
+                    background: getBg(colorScheme, "white", theme.colors.dark[6]),
                   }}
                 >
-                  <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#dc2626", theme.colors.red[2]) }} mb="16px">
+                  <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#1e3a8a", theme.colors.blue[3]) }} mb="16px">
                     ❓ Is this your car?
                   </Text>
                   
@@ -907,13 +957,13 @@ export default function SingleDetectionDetailPage() {
                       style={{
                         cursor: "pointer",
                         backgroundColor: isOwner 
-                          ? getBg(colorScheme, "#dcfce7", theme.colors.green[9]) 
+                          ? getBg(colorScheme, "#eff6ff", theme.colors.blue[9]) 
                           : getBg(colorScheme, "white", theme.colors.dark[6]),
                         borderColor: isOwner 
-                          ? "#22c55e" 
+                          ? "#3b82f6" 
                           : getBg(colorScheme, "#e5e7eb", theme.colors.dark[4]),
                         borderLeft: isOwner 
-                          ? "4px solid #22c55e" 
+                          ? "4px solid #3b82f6" 
                           : `4px solid ${getBg(colorScheme, "#e5e7eb", theme.colors.dark[4])}`,
                         transition: "all 0.2s",
                       }}
@@ -924,11 +974,11 @@ export default function SingleDetectionDetailPage() {
                           <Checkbox 
                             checked={isOwner}
                             onChange={() => handleConfirmation('owner')}
-                            color="green"
+                            color="blue"
                             size="lg"
                           />
                           <Box>
-                            <Text fw={700} style={{ color: isOwner ? getBg(colorScheme, "#166534", theme.colors.green[3]) : getBg(colorScheme, "#374151", theme.colors.gray[3]) }}>
+                            <Text fw={700} style={{ color: isOwner ? getBg(colorScheme, "#1d4ed8", theme.colors.blue[3]) : getBg(colorScheme, "#374151", theme.colors.gray[3]) }}>
                               ✅ Yes, it is my car
                             </Text>
                             <Text size="sm" c="dimmed">
@@ -937,7 +987,7 @@ export default function SingleDetectionDetailPage() {
                           </Box>
                         </Group>
                         {isOwner && (
-                          <Badge color="green" variant="filled" size="lg">
+                          <Badge color="blue" variant="filled" size="lg">
                             Selected
                           </Badge>
                         )}
@@ -949,13 +999,13 @@ export default function SingleDetectionDetailPage() {
                       style={{
                         cursor: "pointer",
                         backgroundColor: isFalseAlert 
-                          ? getBg(colorScheme, "#fee2e2", theme.colors.red[9]) 
+                          ? getBg(colorScheme, "#eff6ff", theme.colors.blue[9]) 
                           : getBg(colorScheme, "white", theme.colors.dark[6]),
                         borderColor: isFalseAlert 
-                          ? "#ef4444" 
+                          ? "#3b82f6" 
                           : getBg(colorScheme, "#e5e7eb", theme.colors.dark[4]),
                         borderLeft: isFalseAlert 
-                          ? "4px solid #ef4444" 
+                          ? "4px solid #3b82f6" 
                           : `4px solid ${getBg(colorScheme, "#e5e7eb", theme.colors.dark[4])}`,
                         transition: "all 0.2s",
                       }}
@@ -966,11 +1016,11 @@ export default function SingleDetectionDetailPage() {
                           <Checkbox 
                             checked={isFalseAlert}
                             onChange={() => handleConfirmation('false')}
-                            color="red"
+                            color="blue"
                             size="lg"
                           />
                           <Box>
-                            <Text fw={700} style={{ color: isFalseAlert ? getBg(colorScheme, "#dc2626", theme.colors.red[3]) : getBg(colorScheme, "#374151", theme.colors.gray[3]) }}>
+                            <Text fw={700} style={{ color: isFalseAlert ? getBg(colorScheme, "#1d4ed8", theme.colors.blue[3]) : getBg(colorScheme, "#374151", theme.colors.gray[3]) }}>
                               ❌ No, false alert
                             </Text>
                             <Text size="sm" c="dimmed">
@@ -979,7 +1029,7 @@ export default function SingleDetectionDetailPage() {
                           </Box>
                         </Group>
                         {isFalseAlert && (
-                          <Badge color="red" variant="filled" size="lg">
+                          <Badge color="blue" variant="filled" size="lg">
                             Selected
                           </Badge>
                         )}
@@ -989,7 +1039,7 @@ export default function SingleDetectionDetailPage() {
                     <Button
                       fullWidth
                       size="lg"
-                      color={isOwner ? "green" : isFalseAlert ? "red" : "blue"}
+                      color="blue"
                       leftSection={<IconCheck size={20} />}
                       mt="md"
                       disabled={!isOwner && !isFalseAlert}
