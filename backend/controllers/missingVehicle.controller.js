@@ -23,6 +23,8 @@ exports.createMissingVehicle = async (req, res) => {
           email: req.user.email || '',
           phone: req.user.phone || '',
           role: req.user.role || 'user',
+          telegramChatId: req.user.telegramChatId || "",
+          telegramUsername: req.user.telegramUsername || "",
         }
       : null;
 
@@ -49,6 +51,16 @@ exports.createMissingVehicle = async (req, res) => {
     };
     if (req.body.telegramUsername) {
       reportedBy.telegramUsername = req.body.telegramUsername;
+    }
+
+    if (reportedBy.userId) {
+      const userDoc = await User.findById(reportedBy.userId);
+      if (userDoc && userDoc.registrations >= 1 && !userDoc.hasPaidSubscription) {
+        return res.status(403).json({
+          success: false,
+          message: 'You have used your 1 free registration. Please purchase a subscription to report more cases.',
+        });
+      }
     }
 
     const caseId = `CASE-MV-${Date.now()}`;
@@ -124,8 +136,10 @@ exports.getMissingVehicleById = async (req, res) => {
     }
 
     const sightings = await Sighting.find({
-      type: 'vehicle',
-      description: { $regex: vehicle.plateNumber, $options: 'i' }
+      $or: [
+        { caseId: vehicle._id },
+        { type: 'vehicle', description: { $regex: vehicle.plateNumber, $options: 'i' } }
+      ]
     });
 
     const detections = await Detection.find({
