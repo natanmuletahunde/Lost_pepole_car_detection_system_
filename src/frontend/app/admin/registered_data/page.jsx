@@ -19,7 +19,7 @@ import {
   IconEye, IconPlus, IconFileSpreadsheet, IconAlertCircle,
   IconChevronRight
 } from '@tabler/icons-react';
-import { adminFetch } from '@/app/lib/adminApi';
+import { adminFetch, adminDelete } from '@/app/lib/adminApi';
 
 // Helpers
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
@@ -219,14 +219,26 @@ export default function DataManagementPage() {
     editModalHandlers.close();
   };
 
-  const deleteRecord = (id) => {
-    setData(prev => prev.filter(item => item.id !== id));
-    notifications.show({
-      title: 'Deleted',
-      message: 'Record removed',
-      color: 'red',
-      icon: <IconTrash size={18} />
-    });
+  const deleteRecord = async (id) => {
+    const m = String(id).match(/^(person|vehicle)-(.+)$/);
+    if (!m) {
+      setData(prev => prev.filter(item => item.id !== id));
+      return;
+    }
+    const [, caseType, mongoId] = m;
+    try {
+      await adminDelete(`/admin/cases/${caseType}/${mongoId}`);
+      setData(prev => prev.filter(item => item.id !== id));
+      notifications.show({
+        title: 'Deleted',
+        message: 'Record removed from database',
+        color: 'red',
+        icon: <IconTrash size={18} />
+      });
+    } catch (e) {
+      console.error(e);
+      notifications.show({ title: 'Error', message: 'Could not delete case', color: 'red' });
+    }
   };
 
   const toggleStatus = async (compositeId) => {
