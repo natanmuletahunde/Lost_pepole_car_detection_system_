@@ -12,9 +12,7 @@ import {
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import DashboardHeader from "./DashboardHeader";
-import DashboardHero from "./DashboardHero";
 import DashboardMainContent from "./DashboardMainContent";
-import DashboardBottomSections from "./DashboardBottomSections";
 import { apiClient } from "../../lib/apiClient";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -257,12 +255,6 @@ export default function Dashboard() {
         getUserRoute={getUserRoute}
       />
 
-      <DashboardHero
-        user={user}
-        isMobile={isMobile}
-        getUserRoute={getUserRoute}
-      />
-
       <DashboardMainContent
         user={user}
         missingPersons={missingPersons}
@@ -274,15 +266,6 @@ export default function Dashboard() {
         getUserRoute={getUserRoute}
         getStatusColor={getStatusColor}
         getPriorityColor={getPriorityColor}
-      />
-
-      <DashboardBottomSections
-        user={user}
-        missingPersons={missingPersons}
-        missingVehicles={missingVehicles}
-        userReports={userReports}
-        colorScheme={colorScheme}
-        getUserRoute={getUserRoute}
       />
     </Box>
   );

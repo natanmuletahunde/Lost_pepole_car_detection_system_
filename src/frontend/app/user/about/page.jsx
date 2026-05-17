@@ -1,20 +1,23 @@
 'use client';
 
-import { Container, Grid, Title, Text, TextInput, Textarea, Button, Box, SimpleGrid, Group, Anchor } from '@mantine/core';
+import { Container, Grid, Title, Text, TextInput, Textarea, Button, Box, SimpleGrid, Group, Anchor, useMantineColorScheme } from '@mantine/core';
 import Image from 'next/image';
 import Link from 'next/link';
 import MainFooter from '../../../app/components/MainFooter'; 
 
 export default function AboutPage() {
+  const { colorScheme } = useMantineColorScheme();
+  const isDark = colorScheme === 'dark';
+
   return (
-    <Box bg="white" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box bg={isDark ? "dark.8" : "white"} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
       {/* --- WRAPPER FOR CONTENT AND SHAPES --- */}
       <Box style={{ flex: 1, position: 'relative', overflowX: 'hidden' }}>
         
         {/* Background Shapes */}
-        <Box style={{ position: 'absolute', top: 0, right: 0, width: '55%', height: '700px', backgroundColor: '#EAF2FF', clipPath: 'polygon(45% 0, 100% 0, 100% 100%, 0% 80%)', zIndex: 0 }} />
-        <Box style={{ position: 'absolute', bottom: 0, left: 0, width: '45%', height: '600px', backgroundColor: '#EAF2FF', clipPath: 'polygon(0 15%, 85% 100%, 0 100%)', zIndex: 0 }} />
+        <Box style={{ position: 'absolute', top: 0, right: 0, width: '55%', height: '700px', backgroundColor: isDark ? '#2C2E33' : '#EAF2FF', clipPath: 'polygon(45% 0, 100% 0, 100% 100%, 0% 80%)', zIndex: 0 }} />
+        <Box style={{ position: 'absolute', bottom: 0, left: 0, width: '45%', height: '600px', backgroundColor: isDark ? '#2C2E33' : '#EAF2FF', clipPath: 'polygon(0 15%, 85% 100%, 0 100%)', zIndex: 0 }} />
 
         {/* Header */}
         <header style={{ height: 90, display: 'flex', alignItems: 'center', position: 'relative', zIndex: 10 }}>
@@ -31,9 +34,9 @@ export default function AboutPage() {
               />
             </Link>
             <Group gap="xl">
-              <Anchor component={Link} href="/" c="dark" size="sm" fw={600}>Home</Anchor>
-              <Anchor href="#" c="dark" size="sm" fw={600}>alerts</Anchor>
-              <Anchor href="#" c="dark" size="sm" fw={600}>notification</Anchor>
+              <Anchor component={Link} href="/" c={isDark ? "white" : "dark"} size="sm" fw={600}>Home</Anchor>
+              <Anchor href="#" c={isDark ? "white" : "dark"} size="sm" fw={600}>alerts</Anchor>
+              <Anchor href="#" c={isDark ? "white" : "dark"} size="sm" fw={600}>notification</Anchor>
               <Button component={Link} href="/login" radius="md" color="blue" px="xl">Logout</Button>
             </Group>
           </Container>
@@ -50,7 +53,7 @@ export default function AboutPage() {
                 Body text for your whole article or post.
               </Text>
               
-              <Text size="sm" mb={40} style={{ lineHeight: 1.8, color: '#1A1B1E' }}>
+              <Text size="sm" mb={40} style={{ lineHeight: 1.8, color: isDark ? '#C1C2C5' : '#1A1B1E' }}>
                 Excepteur efficient emerging, minim veniam anim aute carefully curated Ginza conversation exquisite perfect nostrud nisi 
                 intricate Content. Qui international first-class nulla ut.
               </Text>

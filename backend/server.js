@@ -31,6 +31,7 @@ const notificationAdminRoutes = require("./routes/notification.admin.route");
 const feedbackUserRoutes = require("./routes/feedback.user.routes");
 const feedbackAdminRoutes = require("./routes/feedback.admin.route");
 const chapaRoutes = require("./routes/chapa.routes");
+const publicRoutes = require("./routes/public.routes");
 
 const app = express();
 
@@ -123,6 +124,7 @@ app.use(
 app.use("/api/v1/missing-persons", missingPersonRoutes);
 app.use("/api/v1/missing-vehicles", missingVehicleRoutes);
 app.use("/api/v1/chapa", chapaRoutes);
+app.use("/api/v1/public", publicRoutes);
 
 // ================= ERROR =================
 app.use(notFound);

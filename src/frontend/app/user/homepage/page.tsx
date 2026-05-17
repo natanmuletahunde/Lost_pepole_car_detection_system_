@@ -1,18 +1,24 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Box, useMantineColorScheme } from "@mantine/core";
-import HomeHero from "./components/home/HomeHero";
-import HomeAbout from "./components/home/HomeAbout";
-import HomeFeatures from "./components/home/HomeFeatures";
-import HomeStats from "./components/home/HomeStats";
-import HomeHowItWorks from "./components/home/HomeHowItWorks";
-import HomeShowcase from "./components/home/HomeShowcase";
-import HomeTestimonials from "./components/home/HomeTestimonials";
-import HomeEmergencyCTA from "./components/home/HomeEmergencyCTA";
-import MainFooter from "./components/MainFooter";
-import DashboardHeader from "./user/dashboard/DashboardHeader";
+import { Box, Container, Title, SimpleGrid, Button, Paper, Group, Text, useMantineColorScheme } from "@mantine/core";
+import { IconBellRinging, IconUserCircle, IconDashboard, IconSettings, IconShieldCheck } from "@tabler/icons-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-export default function RootPage() {
+// Import all the composed Home components
+import HomeHeader from "../../components/home/HomeHeader";
+import HomeHero from "../../components/home/HomeHero";
+import HomeAbout from "../../components/home/HomeAbout";
+import HomeFeatures from "../../components/home/HomeFeatures";
+import HomeStats from "../../components/home/HomeStats";
+import HomeHowItWorks from "../../components/home/HomeHowItWorks";
+import HomeShowcase from "../../components/home/HomeShowcase";
+import HomeTestimonials from "../../components/home/HomeTestimonials";
+import HomeEmergencyCTA from "../../components/home/HomeEmergencyCTA";
+import MainFooter from "../../components/MainFooter";
+import DashboardHeader from "../dashboard/DashboardHeader";
+
+export default function UserHomepage() {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -45,7 +51,7 @@ export default function RootPage() {
   const getBg = (light: string, dark: string) => (colorScheme === "dark" ? dark : light);
 
   return (
-    <Box style={{ overflowX: "hidden", background: getBg("#f5f7fb", "#090d16") }}>
+    <Box style={{ overflowX: "hidden", background: getBg("#f8fafc", "#0f172a") }}>
       <DashboardHeader
         user={user}
         notifications={[]}
@@ -57,17 +63,18 @@ export default function RootPage() {
         showGoToDashboard={isAuthenticated}
       />
 
+      {/* Public / Landing Content */}
       <HomeHero isAuthenticated={isAuthenticated} />
       
-      <HomeFeatures />
-      <HomeShowcase />
-      <HomeAbout />
+      <Box py={100}><HomeFeatures /></Box>
+      <Box py={100}><HomeShowcase /></Box>
+      <Box py={100}><HomeAbout /></Box>
       
       <HomeStats />
       
-      <HomeTestimonials />
+      <Box py={100}><HomeTestimonials /></Box>
       
-      {!isAuthenticated && <HomeEmergencyCTA />}
+      {!isAuthenticated && <Box py={60}><HomeEmergencyCTA /></Box>}
       
       <MainFooter />
     </Box>
