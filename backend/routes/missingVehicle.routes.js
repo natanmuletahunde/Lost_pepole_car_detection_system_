@@ -8,7 +8,7 @@ router.post(
   protect,
   upload.fields([
     { name: 'images', maxCount: 20 },
-    { name: 'ownershipDocument', maxCount: 1 },
+    { name: 'ownershipDocument', maxCount: 10 },
   ]),
   controller.createMissingVehicle
 );
@@ -16,6 +16,7 @@ router.post(
 router.get('/my-reports', protect, controller.getMyMissingVehicles);
 router.get('/', controller.getMissingVehicles);
 router.get('/:id', controller.getMissingVehicleById);
+router.patch('/:id/resolve', protect, controller.resolveMissingVehicle);
 router.patch('/:id', controller.updateMissingVehicle);
 
 module.exports = router;

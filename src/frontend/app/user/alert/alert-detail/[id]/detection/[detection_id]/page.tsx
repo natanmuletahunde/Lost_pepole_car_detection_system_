@@ -25,6 +25,8 @@ import {
   Grid,
   useMantineTheme,
   useMantineColorScheme,
+  Modal,
+  Textarea,
 } from "@mantine/core";
 import {
   IconAlertCircle,
@@ -70,6 +72,13 @@ const extractData = (payload: any) => payload?.data ?? payload;
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 const getTextColor = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 
+const getImageUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith("http") || path.startsWith("data:")) return path;
+  const baseUrl = API_BASE_URL.replace("/api/v1", "");
+  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
 export default function SingleDetectionDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -82,6 +91,11 @@ export default function SingleDetectionDetailPage() {
   const [isOwner, setIsOwner] = useState(false);
   const [isFalseAlert, setIsFalseAlert] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+
+  // Confirmation modal
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmNotes, setConfirmNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
@@ -192,16 +206,24 @@ export default function SingleDetectionDetailPage() {
         }
 
         // Transform sighting to match expected structure
+        // For CCTV sightings, the ML-captured image is stored in sighting.images[]
+        const isCCTV = sighting.type === 'cctv' || sighting.type === 'CCTV';
+        const cctvCapturedImages = (sighting.images || []).map(img => getImageUrl(img) || img);
+
         const transformedDetection = {
           id: sighting._id || sighting.id,
-          name: sighting.type === 'Person' ? sighting.name : `${sighting.brand || ''} ${sighting.model || ''}`.trim() || sighting.plateNumber,
+          name: sighting.type === 'Person' ? sighting.name : `${sighting.brand || ''} ${sighting.model || ''}`.trim() || sighting.plateNumber || sighting.name,
           location: sighting.location?.address || sighting.location || 'Unknown',
           date: sighting.date || (sighting.reportedAt ? new Date(sighting.reportedAt).toLocaleDateString() : 'Unknown'),
           time: sighting.time || (sighting.reportedAt ? new Date(sighting.reportedAt).toLocaleTimeString() : 'Unknown'),
-          type: sighting.type === 'person' || sighting.type === 'Person' ? 'Person' : 'Detection',
-          accuracy: (sighting.type === 'person' || sighting.type === 'Person') ? null : '98%', // placeholder
+          type: isCCTV ? 'CCTV' : (sighting.type === 'person' || sighting.type === 'Person' ? 'Person' : 'Detection'),
+          accuracy: isCCTV ? (sighting.description?.match(/(\d+\.?\d*)%/)?.[1] ? `${sighting.description.match(/(\d+\.?\d*)%/)[1]}%` : 'N/A') : null,
           description: sighting.description,
-          image: sighting.imagePreview,
+          // Primary image: for CCTV use the ML-captured image, otherwise fallback
+          image: isCCTV ? (cctvCapturedImages[0] || null) : getImageUrl(sighting.images?.[0]),
+          // All ML-captured images
+          cctvImages: isCCTV ? cctvCapturedImages : [],
+          isCCTV,
           latitude: sighting.latitude || (sighting.location?.coordinates ? sighting.location.coordinates[1] : null),
           longitude: sighting.longitude || (sighting.location?.coordinates ? sighting.location.coordinates[0] : null),
         };
@@ -221,7 +243,7 @@ export default function SingleDetectionDetailPage() {
           registeredDate: caseData.reportDate ? new Date(caseData.reportDate).toLocaleDateString() : 'Unknown',
           registeredTime: caseData.reportDate ? new Date(caseData.reportDate).toLocaleTimeString() : 'Unknown',
           capturedMedia: {
-            photos: caseData.additionalImages || (caseData.imagePreview ? [caseData.imagePreview] : []),
+            photos: (caseData.additionalImages || (caseData.imagePreview ? [caseData.imagePreview] : [])).map(img => getImageUrl(img)),
           },
           additionalImages: caseData.additionalImages || [],
           detectionHistory: [],
@@ -354,36 +376,67 @@ export default function SingleDetectionDetailPage() {
       setIsOwner(false);
       setIsFalseAlert(true);
     }
-    // No logging here – logging will happen on Submit
   };
 
-  // Handle submit of response
+  // Handle submit — if owner, show modal; if false alert, submit directly
   const handleSubmitResponse = () => {
     if (!isOwner && !isFalseAlert) return;
-
     if (isOwner) {
-      createActionLog('detection_owner_confirmed', {
-        caseId: params.id,
-        detectionId: params.detection_id,
+      setConfirmModalOpen(true);
+    } else {
+      notifications.show({
+        title: 'Thanks for reporting',
+        message: 'This sighting has been flagged as a false alert.',
+        color: 'orange',
+        icon: <IconCheck size={16} />,
       });
-      console.log('Owner confirmed');
-      // Future: send to backend
-    } else if (isFalseAlert) {
-      createActionLog('detection_false_alert', {
-        caseId: params.id,
-        detectionId: params.detection_id,
-      });
-      console.log('False alert reported');
-      // Future: send to backend
     }
+  };
 
-    // Optional notification
-    notifications.show({
-      title: 'Response Submitted',
-      message: isOwner ? 'You confirmed ownership.' : 'You reported a false alert.',
-      color: isOwner ? 'green' : 'red',
-      icon: <IconCheck size={16} />,
-    });
+  // Handle final owner confirmation from modal
+  const handleConfirmOwnership = async () => {
+    if (!alertData?.id) return;
+    setSubmitting(true);
+    try {
+      const caseType = (alertData.category?.type === 'Person' || alertData.category?.type === 'person') ? 'person' : 'vehicle';
+
+      // 1. Mark case as Resolved via user-accessible endpoint
+      const resolveUrl = caseType === 'person'
+        ? `${API_BASE_URL}/missing-persons/${alertData.id}/resolve`
+        : `${API_BASE_URL}/missing-vehicles/${alertData.id}/resolve`;
+
+      await apiClient(resolveUrl, { method: 'PATCH' });
+
+      // 2. Notify all admins
+      await apiClient(`${API_BASE_URL}/notifications/send-admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `✅ ${caseType === 'person' ? 'Missing Person' : 'Missing Vehicle'} Found!`,
+          message: `The reporter confirmed that "${alertData.category?.brandName}" (Case: ${alertData.code}) has been found.${confirmNotes ? ` Notes: ${confirmNotes}` : ''}`,
+          type: 'success',
+        }),
+      });
+
+      setConfirmModalOpen(false);
+      notifications.show({
+        title: '🎉 Great news!',
+        message: 'Case marked as resolved. Thank you! Redirecting to feedback...',
+        color: 'green',
+      });
+
+      // 3. Redirect to feedback
+      setTimeout(() => router.push('/user/feedback'), 1500);
+    } catch (err: any) {
+      console.error(err);
+      notifications.show({
+        title: 'Error',
+        message: 'Could not mark as resolved. Please try again.',
+        color: 'red',
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Handle export details
@@ -835,7 +888,134 @@ export default function SingleDetectionDetailPage() {
                 </Box>
               </Paper>
 
-              {/* Captured Media Card */}
+              {/* CCTV ML Captured Image Card — shown only for CCTV detections */}
+              {detectionData.isCCTV && (
+                <Paper
+                  withBorder
+                  radius="md"
+                  style={{
+                    boxShadow: "0 4px 16px rgba(37, 99, 235, 0.15)",
+                    overflow: "hidden",
+                    borderLeft: "4px solid #ef4444",
+                  }}
+                >
+                  <Box
+                    p="md"
+                    style={{
+                      background: getBg(colorScheme, "white", theme.colors.dark[6]),
+                    }}
+                  >
+                    <Group justify="space-between" align="center" mb="md">
+                      <Group>
+                        <Box
+                          style={{
+                            backgroundColor: "#fef2f2",
+                            padding: "8px",
+                            borderRadius: "8px",
+                            color: "#ef4444",
+                            border: "1px solid #fecaca",
+                          }}
+                        >
+                          <IconCamera size={20} />
+                        </Box>
+                        <Box>
+                          <Text fw={700} size="lg" style={{ color: "#dc2626" }}>
+                            📷 CCTV Capture
+                          </Text>
+                          <Text size="sm" c="dimmed">
+                            Image captured by ML detection system
+                          </Text>
+                        </Box>
+                      </Group>
+                      <Group gap="xs">
+                        {detectionData.accuracy && detectionData.accuracy !== 'N/A' && (
+                          <Badge color="red" variant="filled" size="lg">
+                            {detectionData.accuracy} match
+                          </Badge>
+                        )}
+                        <Badge color="gray" variant="light">
+                          {detectionData.cctvImages?.length || 0} frame(s)
+                        </Badge>
+                      </Group>
+                    </Group>
+
+                    {detectionData.cctvImages?.length > 0 ? (
+                      <Stack gap="sm">
+                        {/* Primary large capture */}
+                        <Box
+                          style={{
+                            borderRadius: "10px",
+                            overflow: "hidden",
+                            border: "2px solid #fecaca",
+                            position: "relative",
+                            backgroundColor: "#000",
+                          }}
+                        >
+                          <MantineImage
+                            src={detectionData.cctvImages[0]}
+                            alt="ML CCTV Capture"
+                            style={{ width: "100%", maxHeight: "280px", objectFit: "contain" }}
+                          />
+                          <Box
+                            style={{
+                              position: "absolute",
+                              top: 8,
+                              left: 8,
+                              background: "rgba(220, 38, 38, 0.85)",
+                              borderRadius: "6px",
+                              padding: "2px 8px",
+                            }}
+                          >
+                            <Text size="xs" fw={700} c="white">🔴 CCTV FRAME</Text>
+                          </Box>
+                        </Box>
+
+                        {/* Additional frames if any */}
+                        {detectionData.cctvImages.length > 1 && (
+                          <SimpleGrid cols={3} spacing="xs">
+                            {detectionData.cctvImages.slice(1).map((img, i) => (
+                              <Box
+                                key={i}
+                                style={{
+                                  borderRadius: "6px",
+                                  overflow: "hidden",
+                                  border: "1px solid #fecaca",
+                                  backgroundColor: "#000",
+                                }}
+                              >
+                                <MantineImage
+                                  src={img}
+                                  alt={`Frame ${i + 2}`}
+                                  style={{ width: "100%", aspectRatio: "1/1", objectFit: "contain" }}
+                                />
+                              </Box>
+                            ))}
+                          </SimpleGrid>
+                        )}
+
+                        <Text size="xs" c="dimmed" ta="center">
+                          Captured at: {detectionData.date} {detectionData.time} • {detectionData.location}
+                        </Text>
+                      </Stack>
+                    ) : (
+                      <Box
+                        style={{
+                          textAlign: "center",
+                          padding: "20px",
+                          border: "2px dashed #fecaca",
+                          borderRadius: "8px",
+                          backgroundColor: "rgba(254, 242, 242, 0.5)",
+                        }}
+                      >
+                        <IconCamera size={48} color="#fca5a5" />
+                        <Text mt="md" c="dimmed">No CCTV capture image available</Text>
+                      </Box>
+                    )}
+                  </Box>
+                </Paper>
+              )}
+
+              {/* Captured Media Card — registered case photos */}
               <Paper 
                 withBorder 
                 radius="md"
@@ -862,14 +1042,14 @@ export default function SingleDetectionDetailPage() {
                           border: "1px solid #dbeafe"
                         }}
                       >
-                        <IconCamera size={20} />
+                        <IconPhoto size={20} />
                       </Box>
                       <Box>
                         <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#1e40af", theme.colors.blue[2]) }}>
-                          Captured Media
+                          Registered Photos
                         </Text>
                         <Text size="sm" c="dimmed">
-                          Photos & Videos
+                          Original case registration images
                         </Text>
                       </Box>
                     </Group>
@@ -907,7 +1087,7 @@ export default function SingleDetectionDetailPage() {
                               textAlign: "center",
                             }}
                           >
-                            <Text size="10px" fw={700} color="white">
+                            <Text size="10px" fw={700} c="white">
                               Photo {index + 1}
                             </Text>
                           </Box>
@@ -925,7 +1105,7 @@ export default function SingleDetectionDetailPage() {
                       }}
                     >
                       <IconPhoto size={48} color={getBg(colorScheme, '#93c5fd', theme.colors.blue[5])} />
-                      <Text mt="md" c="dimmed">No photos or videos available</Text>
+                      <Text mt="md" c="dimmed">No registered photos available</Text>
                     </Box>
                   )}
                 </Box>
@@ -1137,6 +1317,54 @@ export default function SingleDetectionDetailPage() {
           </Group>
         </Group>
       </Container>
+
+      {/* Ownership Confirmation Modal */}
+      <Modal
+        opened={confirmModalOpen}
+        onClose={() => setConfirmModalOpen(false)}
+        title={<Text fw={800} size="xl">🎉 Confirm Ownership</Text>}
+        centered
+        size="md"
+        radius="lg"
+      >
+        <Stack gap="md">
+          <Paper p="md" bg="#f0fdf4" radius="md" withBorder style={{ borderColor: '#86efac' }}>
+            <Text fw={600} c="green.8" size="sm" mb={4}>You are about to mark this case as RESOLVED</Text>
+            <Text size="sm" c="dimmed">
+              Confirming that <strong>{alertData?.category?.brandName}</strong> (Case: {alertData?.code}) has been found.
+              All admins will be notified and you will be redirected to leave feedback.
+            </Text>
+          </Paper>
+
+          <Textarea
+            label="Additional Notes (Optional)"
+            placeholder="Any details about how/where you found them..."
+            value={confirmNotes}
+            onChange={(e) => setConfirmNotes(e.currentTarget.value)}
+            minRows={3}
+            radius="md"
+          />
+
+          <Group grow mt="xs">
+            <Button
+              variant="light"
+              color="gray"
+              onClick={() => setConfirmModalOpen(false)}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="green"
+              leftSection={<IconCheck size={16} />}
+              onClick={handleConfirmOwnership}
+              loading={submitting}
+            >
+              Yes, confirm found!
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <MainFooter />
     </Box>

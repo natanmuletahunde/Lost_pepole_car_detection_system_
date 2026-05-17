@@ -15,6 +15,7 @@ import {
   useMantineTheme,
   ActionIcon,
   Paper,
+  useMantineColorScheme,
 } from "@mantine/core";
 import {
   IconCheck,
@@ -40,6 +41,8 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function SubscriptionPage() {
   const router = useRouter();
   const theme = useMantineTheme();
+  const { colorScheme } = useMantineColorScheme();
+  const isDark = colorScheme === 'dark';
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
   const [user, setUser] = useState(null);
@@ -320,7 +323,7 @@ export default function SubscriptionPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: `linear-gradient(135deg, ${primaryColor}15 0%, white 100%)`,
+          background: isDark ? `linear-gradient(135deg, ${primaryColor}15 0%, ${theme.colors.dark[8]} 100%)` : `linear-gradient(135deg, ${primaryColor}15 0%, white 100%)`,
         }}
       >
         <motion.div
@@ -345,7 +348,7 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <Box bg="white" style={{ minHeight: "100vh", overflowX: "hidden" }}>
+    <Box bg={isDark ? "dark.8" : "white"} style={{ minHeight: "100vh", overflowX: "hidden" }}>
       {/* Animated Background Elements */}
       <Box
         style={{
@@ -418,7 +421,7 @@ export default function SubscriptionPage() {
                   fw={1600}
                   ta="center"
                   style={{
-                    background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryLight} 100%)`,
+                    background: isDark ? `linear-gradient(135deg, #60A5FA 0%, #93C5FD 100%)` : `linear-gradient(135deg, ${primaryColor} 0%, ${primaryLight} 100%)`,
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
@@ -892,7 +895,7 @@ export default function SubscriptionPage() {
                   }}
                 >
                   <Group gap={spacing.xs} justify="center">
-                    <Text size="sm" c={primaryColor} fw={600}>
+                    <Text size="sm" c={isDark ? "#60A5FA" : primaryColor} fw={600}>
                       ← Swipe to view plans →
                     </Text>
                   </Group>
@@ -915,7 +918,7 @@ export default function SubscriptionPage() {
                 p="lg"
                 radius="lg"
                 style={{
-                  background: `linear-gradient(135deg, ${primaryColor}15 0%, ${accentLight} 100%)`,
+                  background: isDark ? `linear-gradient(135deg, ${primaryColor}15 0%, ${theme.colors.dark[6]} 100%)` : `linear-gradient(135deg, ${primaryColor}15 0%, ${accentLight} 100%)`,
                   border: `2px solid ${primaryColor}30`,
                   position: "relative",
                   overflow: "hidden",
@@ -944,7 +947,7 @@ export default function SubscriptionPage() {
                   <Stack gap={spacing.xs}>
                     <Text fw={700} size="lg">
                       Selected Plan:{" "}
-                      <Text span c={primaryColor}>
+                      <Text span c={isDark ? "#60A5FA" : primaryColor}>
                         {plans.find((p) => p.id === selectedPlan)?.name}
                       </Text>
                     </Text>

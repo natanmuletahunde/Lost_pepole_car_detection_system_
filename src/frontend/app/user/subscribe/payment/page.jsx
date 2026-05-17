@@ -422,8 +422,10 @@ export default function PaymentPage() {
                   order={2}
                   fw={900}
                   style={{
-                    background:
+                    background: getBg(colorScheme,
                       "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)",
+                      "linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%)"
+                    ),
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                   }}
@@ -462,8 +464,10 @@ export default function PaymentPage() {
                   fw={700}
                   size="xl"
                   style={{
-                    background:
+                    background: getBg(colorScheme,
                       "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                      "linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%)"
+                    ),
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                   }}
@@ -583,8 +587,10 @@ export default function PaymentPage() {
                     order={1}
                     fw={900}
                     style={{
-                      background:
+                      background: getBg(colorScheme,
                         "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
+                        "linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%)"
+                      ),
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
                     }}
@@ -638,7 +644,7 @@ export default function PaymentPage() {
               }}
               icon={<IconShieldCheck size={20} color="#3b82f6" />}
             >
-              <Text size="sm">
+              <Text size="sm" c={getBg(colorScheme, "dark", "white")}>
                 Your payment is secured with 256-bit SSL encryption. All data is
                 protected.
               </Text>
@@ -661,7 +667,10 @@ export default function PaymentPage() {
               order={2}
               fw={800}
               style={{
-                background: "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)",
+                background: getBg(colorScheme,
+                  "linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)",
+                  "linear-gradient(135deg, #60a5fa 0%, #93c5fd 100%)"
+                ),
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
               }}
@@ -859,7 +868,7 @@ export default function PaymentPage() {
           >
             <Checkbox
               label={
-                <Text size="sm">
+                <Text size="sm" c={getBg(colorScheme, "dark", "#fef3c7")}>
                   By providing your payment information, you allow us to charge
                   for future payments in accordance with our terms.
                 </Text>
@@ -887,7 +896,7 @@ export default function PaymentPage() {
                   border: "none",
                 }}
               >
-                <Text size="sm">
+                <Text size="sm" c={getBg(colorScheme, "#92400e", "#fef3c7")}>
                   Please fill in all required fields before continuing.
                 </Text>
               </Alert>
@@ -1413,8 +1422,10 @@ export default function PaymentPage() {
                             fw={800}
                             ta="center"
                             style={{
-                              background:
+                              background: getBg(colorScheme,
                                 "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+                                "linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%)"
+                              ),
                               WebkitBackgroundClip: "text",
                               WebkitTextFillColor: "transparent",
                             }}
@@ -1581,7 +1592,7 @@ export default function PaymentPage() {
                             }}
                           />
                           <Stack gap={12}>
-                            <Text fw={700} size="lg" style={{ color: "#1d4ed8" }}>
+                            <Text fw={700} size="lg" style={{ color: getBg(colorScheme, "#1d4ed8", "#93c5fd") }}>
                               <IconBadge
                                 size={20}
                                 style={{
@@ -1661,12 +1672,12 @@ export default function PaymentPage() {
                           <Group gap="md">
                             <IconShieldCheck size={36} color="#d97706" />
                             <Box>
-                              <Text fw={700} size="md" style={{ color: "#92400e" }}>
+                              <Text fw={700} size="md" style={{ color: getBg(colorScheme, "#92400e", "#fde68a") }}>
                                 Secure Payment via Chapa
                               </Text>
                               <Text
                                 size="sm"
-                                style={{ color: "#92400e", opacity: 0.8 }}
+                                style={{ color: getBg(colorScheme, "#92400e", "#fde68a"), opacity: 0.8 }}
                               >
                                 Your payment is protected with bank-level security
                               </Text>

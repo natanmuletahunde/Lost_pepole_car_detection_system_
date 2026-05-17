@@ -29,6 +29,8 @@ import {
   IconHistory,
   IconSettings,
   IconMail,
+  IconAlertCircle,
+  IconMessage,
 } from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -43,8 +45,8 @@ interface DashboardHeaderProps {
   toggleColorScheme: () => void;
   getUserInitials: (firstName: string, lastName: string) => string;
   getUserRoute: (path: string) => string;
-  // onLogout is now optional – we handle logout internally
   onLogout?: () => void;
+  showGoToDashboard?: boolean;
 }
 
 export default function DashboardHeader({
@@ -55,6 +57,7 @@ export default function DashboardHeader({
   toggleColorScheme,
   getUserInitials,
   getUserRoute,
+  showGoToDashboard,
 }: DashboardHeaderProps) {
   const router = useRouter();
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -92,20 +95,20 @@ export default function DashboardHeader({
 
   return (
     <Box
-      bg={getBg("white", "#1A1B1E")}
       py={{ base: "xs", md: "sm" }}
       style={{
-        borderBottom: `1px solid ${getBg("#e9ecef", "#2C2E33")}`,
+        borderBottom: `1px solid ${getBg("rgba(0,0,0,0.05)", "rgba(255,255,255,0.05)")}`,
         position: "sticky",
         top: 0,
-        zIndex: 100,
-        backdropFilter: "blur(10px)",
-        background: getBg("rgba(255,255,255,0.95)", "rgba(26,27,30,0.95)"),
+        zIndex: 1000,
+        backdropFilter: "blur(20px)",
+        background: getBg("rgba(255,255,255,0.8)", "rgba(15, 23, 42, 0.8)"),
+        transition: "all 0.3s ease",
       }}
     >
       <Container size="xl">
         <Group justify="space-between" wrap="nowrap">
-          <Link href="/user/dashboard" style={{ flexShrink: 0 }}>
+          <Link href="/user/homepage" style={{ flexShrink: 0 }}>
             <Image
               src="/logo.jpg"
               alt="Logo"
@@ -117,89 +120,141 @@ export default function DashboardHeader({
 
           <TextInput
             placeholder="Search lost items, cars, or people..."
-            leftSection={<IconSearch size={16} />}
-            style={{ flex: 1, maxWidth: isMobile ? "200px" : "400px" }}
+            leftSection={<IconSearch size={18} stroke={1.5} />}
+            style={{ flex: 1, maxWidth: isMobile ? "200px" : "500px" }}
             radius="xl"
-            variant="filled"
+            size="md"
+            styles={{
+              input: {
+                backgroundColor: getBg("rgba(0,0,0,0.03)", "rgba(255,255,255,0.03)"),
+                border: `1px solid ${getBg("rgba(0,0,0,0.05)", "rgba(255,255,255,0.1)")}`,
+                transition: "all 0.2s ease",
+                "&:focus": {
+                  backgroundColor: getBg("white", "rgba(255,255,255,0.08)"),
+                  borderColor: "#2f80ed",
+                  boxShadow: "0 0 0 4px rgba(47, 128, 237, 0.1)",
+                },
+              },
+            }}
           />
 
           <Group gap={isMobile ? "xs" : "md"} wrap="nowrap">
             {/* Notification Bell */}
-            <Menu shadow="md" width={320} position="bottom-end">
-              <Menu.Target>
-                <Indicator
-                  inline
-                  label={unreadCount}
-                  size={16}
-                  color="red"
-                  disabled={unreadCount === 0}
-                >
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size={isMobile ? "md" : "lg"}
+            {user && (
+              <Menu shadow="md" width={320} position="bottom-end">
+                <Menu.Target>
+                  <Indicator
+                    inline
+                    label={unreadCount}
+                    size={16}
+                    color="red"
+                    disabled={unreadCount === 0}
                   >
-                    <IconBell size={isMobile ? 20 : 24} />
-                  </ActionIcon>
-                </Indicator>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Box
-                  p="xs"
-                  fw={700}
-                  style={{
-                    borderBottom: `1px solid ${getBg("#e9ecef", "#2C2E33")}`,
-                  }}
-                >
-                  Notifications
-                </Box>
-                <ScrollArea h={250}>
-                  {notifications.length === 0 ? (
-                    <Text ta="center" c="dimmed" py="md">
-                      No notifications
-                    </Text>
-                  ) : (
-                    notifications.map((n) => (
-                      <Menu.Item key={n._id || n.id}>
-                        <Group gap="sm" wrap="nowrap">
-                          <Box>
-                            <Text size="sm" fw={n.isRead ? 400 : 700}>
-                              {n.message}
-                            </Text>
-                            <Text size="xs" c="dimmed">
-                              {new Date(n.createdAt).toLocaleString()}
-                            </Text>
-                          </Box>
-                          {!n.isRead && (
-                            <Badge size="xs" color="red" variant="filled">
-                              new
-                            </Badge>
-                          )}
-                        </Group>
-                      </Menu.Item>
-                    ))
-                  )}
-                </ScrollArea>
-                <Menu.Divider />
-                <Menu.Item component={Link} href={getUserRoute("/user/alert")}>
-                  View all
-                </Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      size={isMobile ? "md" : "lg"}
+                    >
+                      <IconBell size={isMobile ? 20 : 24} />
+                    </ActionIcon>
+                  </Indicator>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  <Box
+                    p="xs"
+                    fw={700}
+                    style={{
+                      borderBottom: `1px solid ${getBg("#e9ecef", "#2C2E33")}`,
+                    }}
+                  >
+                    Notifications
+                  </Box>
+                  <ScrollArea h={250}>
+                    {notifications.length === 0 ? (
+                      <Text ta="center" c="dimmed" py="md">
+                        No notifications
+                      </Text>
+                    ) : (
+                      notifications.map((n) => (
+                        <Menu.Item key={n.id}>
+                          <Group gap="sm" wrap="nowrap">
+                            <Box>
+                              <Text size="sm" fw={n.read ? 400 : 700}>
+                                {n.message}
+                              </Text>
+                              <Text size="xs" c="dimmed">
+                                {n.time}
+                              </Text>
+                            </Box>
+                            {!n.read && (
+                              <Badge size="xs" color="red" variant="filled">
+                                new
+                              </Badge>
+                            )}
+                          </Group>
+                        </Menu.Item>
+                      ))
+                    )}
+                  </ScrollArea>
+                  <Menu.Divider />
+                  <Menu.Item component={Link} href={getUserRoute("/user/alert")}>
+                    View all
+                  </Menu.Item>
+                </Menu.Dropdown>
+              </Menu>
+            )}
+
+            {/* Direct Notifications Page Icon */}
+            <Indicator
+              inline
+              label={unreadCount}
+              size={16}
+              color="red"
+              disabled={unreadCount === 0}
+            >
+              <ActionIcon
+                variant="light"
+                color="blue"
+                size={isMobile ? "md" : "lg"}
+                radius="xl"
+                component={Link}
+                href={getUserRoute("/user/notifications")}
+                title="Notifications"
+                style={{
+                  border: `1.5px solid ${colorScheme === "dark" ? "#2f80ed55" : "#2f80ed33"}`,
+                }}
+              >
+                <IconMail size={isMobile ? 18 : 22} />
+              </ActionIcon>
+            </Indicator>
 
             {/* Theme Toggle */}
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              size={isMobile ? "md" : "lg"}
-              onClick={toggleColorScheme}
-            >
-              {colorScheme === "dark" ? (
-                <IconSun size={isMobile ? 20 : 24} />
-              ) : (
-                <IconMoon size={isMobile ? 20 : 24} />
-              )}
-            </ActionIcon>
+            {user && (
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size={isMobile ? "md" : "lg"}
+                onClick={toggleColorScheme}
+              >
+                {colorScheme === "dark" ? (
+                  <IconSun size={isMobile ? 20 : 24} />
+                ) : (
+                  <IconMoon size={isMobile ? 20 : 24} />
+                )}
+              </ActionIcon>
+            )}
+
+            {showGoToDashboard && user && (
+              <Button
+                component={Link}
+                href={user?.role === "admin" ? "/admin" : "/user/dashboard"}
+                color="blue"
+                size={isMobile ? "xs" : "sm"}
+                radius="md"
+              >
+                Go to Dashboard
+              </Button>
+            )}
 
             {/* User Menu / Auth Buttons */}
             {user ? (
@@ -305,9 +360,17 @@ export default function DashboardHeader({
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconBell size={18} />}
-                      onClick={() => router.push(getUserRoute("/user/alert"))}
+                      component={Link}
+                      href={getUserRoute("/user/notifications")}
                     >
-                      My Notifications
+                      Notifications
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconAlertCircle size={18} />}
+                      component={Link}
+                      href={getUserRoute("/user/alert")}
+                    >
+                      My Alerts
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconHistory size={18} />}
@@ -322,6 +385,13 @@ export default function DashboardHeader({
                       href={getUserRoute("/user/settings")}
                     >
                       Account Settings
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconMessage size={18} />}
+                      component={Link}
+                      href={getUserRoute("/user/feedback")}
+                    >
+                      Give Feedback
                     </Menu.Item>
                   </Stack>
                   <Menu.Divider />

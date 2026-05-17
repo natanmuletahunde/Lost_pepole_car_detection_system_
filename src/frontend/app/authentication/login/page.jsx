@@ -145,7 +145,7 @@ export default function LoginPage() {
       notify('Success', `Welcome ${user.firstName}`, 'green', <IconCheck />);
 
       setTimeout(() => {
-        router.push(user.role === 'admin' ? '/admin' : '/user/dashboard');
+        router.push(user.role === 'admin' ? '/admin' : '/user/homepage');
       }, 800);
     } catch (err) {
       setLoginError(err.message);
