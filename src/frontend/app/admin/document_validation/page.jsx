@@ -21,6 +21,8 @@ import {
   useMantineTheme,
   Loader,
   Tabs,
+  Drawer,
+  Textarea,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
@@ -30,7 +32,9 @@ import {
   IconRefresh,
   IconCar,
   IconEyeOff,
-  IconFileCheck
+  IconFileCheck,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@tabler/icons-react";
 import { adminFetchPaginatedList, adminFetch, uploadUrl } from "@/app/lib/adminApi";
 
@@ -84,6 +88,14 @@ export default function DocumentValidationPage() {
   const cardBg = getBg(colorScheme, "white", theme.colors.dark[6]);
 
   const [activeTab, setActiveTab] = useState("sightings");
+
+  const [previewDrawerOpen, setPreviewDrawerOpen] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewDocId, setPreviewDocId] = useState(null);
+  const [previewReason, setPreviewReason] = useState("");
+
+  const previewUrl = previewUrls[previewIndex] || "";
 
   const [docs, setDocs] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -149,8 +161,9 @@ export default function DocumentValidationPage() {
     return res;
   }, [currentList, statusFilter, activeTab]);
 
-  const openPreview = (url) => {
-    if (!url) {
+  const openPreview = (urls, id) => {
+    const arr = Array.isArray(urls) ? urls.filter(Boolean) : (urls ? [urls] : []);
+    if (arr.length === 0) {
       notifications.show({
         title: "No preview",
         message: "No document/image available",
@@ -158,24 +171,29 @@ export default function DocumentValidationPage() {
       });
       return;
     }
-    window.open(url, "_blank");
+    setPreviewUrls(arr);
+    setPreviewIndex(0);
+    setPreviewDocId(id);
+    setPreviewReason("");
+    setPreviewDrawerOpen(true);
   };
 
-  const approveSighting = async (id) => {
-    if (!confirm("Approve this sighting?")) return;
+  const approveSighting = async (id, skipConfirm = false) => {
+    if (!skipConfirm && !confirm("Approve this sighting?")) return;
     try {
       await adminFetch(`/admin/sightings/${id}/approve`, { method: "PATCH", body: JSON.stringify({}) });
       notifications.show({ title: "Approved", message: "Sighting confirmed", color: "green" });
       fetchDocs();
+      if (skipConfirm) setPreviewDrawerOpen(false);
     } catch (err) {
       console.error(err);
       notifications.show({ title: "Error", message: "Could not approve", color: "red" });
     }
   };
 
-  const rejectSighting = async (id) => {
-    const reason = window.prompt("Rejection reason (optional)") || "";
-    if (!confirm("Reject this sighting?")) return;
+  const rejectSighting = async (id, reasonInput, skipConfirm = false) => {
+    const reason = skipConfirm ? reasonInput : (window.prompt("Rejection reason (optional)") || "");
+    if (!skipConfirm && !confirm("Reject this sighting?")) return;
     try {
       await adminFetch(`/admin/sightings/${id}/reject`, {
         method: "PATCH",
@@ -183,19 +201,20 @@ export default function DocumentValidationPage() {
       });
       notifications.show({ title: "Rejected", message: "Sighting marked reviewed", color: "orange" });
       fetchDocs();
+      if (skipConfirm) setPreviewDrawerOpen(false);
     } catch (err) {
       console.error(err);
       notifications.show({ title: "Error", message: "Could not reject", color: "red" });
     }
   };
 
-  const verifyVehicle = async (id, action) => {
+  const verifyVehicle = async (id, action, reasonInput, skipConfirm = false) => {
     let reason = "";
     if (action === "reject") {
-      reason = window.prompt("Rejection reason (optional)") || "";
-      if (!confirm("Reject this vehicle document?")) return;
+      reason = skipConfirm ? reasonInput : (window.prompt("Rejection reason (optional)") || "");
+      if (!skipConfirm && !confirm("Reject this vehicle document?")) return;
     } else {
-      if (!confirm("Approve this vehicle ownership document?")) return;
+      if (!skipConfirm && !confirm("Approve this vehicle ownership document?")) return;
     }
 
     try {
@@ -209,6 +228,7 @@ export default function DocumentValidationPage() {
         color: action === 'approve' ? "green" : "orange" 
       });
       fetchDocs();
+      if (skipConfirm) setPreviewDrawerOpen(false);
     } catch (err) {
       console.error(err);
       notifications.show({ title: "Error", message: "Could not verify vehicle", color: "red" });
@@ -338,12 +358,15 @@ export default function DocumentValidationPage() {
                     <Table.Td>
                       {d.previews && d.previews.length > 0 ? (
                         <Group gap="xs">
-                          {d.previews.map((pUrl, idx) => (
-                            <Avatar key={idx} src={pUrl} radius="sm" size={48} style={{ cursor: 'pointer' }} onClick={() => openPreview(pUrl)} />
+                          {d.previews.slice(0, 3).map((pUrl, idx) => (
+                            <Avatar key={idx} src={pUrl} radius="sm" size={48} style={{ cursor: 'pointer', outline: idx === 0 ? '2px solid #4318FF' : 'none' }} onClick={() => openPreview(d.previews, d.id)} />
                           ))}
+                          {d.previews.length > 3 && (
+                            <Badge color="blue" variant="filled" style={{ cursor: 'pointer' }} onClick={() => openPreview(d.previews, d.id)}>+{d.previews.length - 3}</Badge>
+                          )}
                         </Group>
                       ) : d.preview ? (
-                        <Avatar src={d.preview} radius="sm" size={48} style={{ cursor: 'pointer' }} onClick={() => openPreview(d.preview)} />
+                        <Avatar src={d.preview} radius="sm" size={48} style={{ cursor: 'pointer' }} onClick={() => openPreview([d.preview], d.id)} />
                       ) : (
                         <Badge color="gray">No Document</Badge>
                       )}
@@ -358,7 +381,7 @@ export default function DocumentValidationPage() {
                     </Table.Td>
                     <Table.Td>
                       <Group gap={4} justify="flex-end">
-                        <ActionIcon variant="subtle" color="blue" onClick={() => openPreview(d.preview)} disabled={!d.preview}>
+                        <ActionIcon variant="subtle" color="blue" onClick={() => openPreview(d.previews?.length ? d.previews : [d.preview], d.id)} disabled={!d.preview && !(d.previews?.length)}>
                           <IconEye size={18} />
                         </ActionIcon>
                         {activeTab === "sightings" ? (
@@ -400,6 +423,87 @@ export default function DocumentValidationPage() {
           <Pagination total={totalPages} value={activePage} onChange={setActivePage} size="sm" />
         </Group>
       </Paper>
+
+      <Drawer
+        opened={previewDrawerOpen}
+        onClose={() => setPreviewDrawerOpen(false)}
+        position="right"
+        title={<Text fw={700} size="lg">Document Action Panel</Text>}
+        size="lg"
+      >
+        <Box style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)' }}>
+          {previewUrl && (
+            <Paper withBorder style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden', borderRadius: '8px' }} mb="md">
+               {previewUrl.toLowerCase().endsWith('.pdf') ? (
+                  <iframe src={previewUrl} width="100%" height="100%" style={{ border: 'none' }} title="PDF Preview" />
+               ) : (
+                  <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+               )}
+               {previewUrls.length > 1 && (
+                 <>
+                   <ActionIcon
+                     variant="filled"
+                     color="dark"
+                     radius="xl"
+                     size="lg"
+                     style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', opacity: 0.8, zIndex: 10 }}
+                     onClick={() => setPreviewIndex(i => (i - 1 + previewUrls.length) % previewUrls.length)}
+                     disabled={previewUrls.length <= 1}
+                   >
+                     <IconChevronLeft size={20} />
+                   </ActionIcon>
+                   <ActionIcon
+                     variant="filled"
+                     color="dark"
+                     radius="xl"
+                     size="lg"
+                     style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', opacity: 0.8, zIndex: 10 }}
+                     onClick={() => setPreviewIndex(i => (i + 1) % previewUrls.length)}
+                     disabled={previewUrls.length <= 1}
+                   >
+                     <IconChevronRight size={20} />
+                   </ActionIcon>
+                   <Text size="xs" style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.5)', color: 'white', padding: '2px 10px', borderRadius: 12 }}>
+                     {previewIndex + 1} / {previewUrls.length}
+                   </Text>
+                 </>
+               )}
+            </Paper>
+          )}
+          
+          <Box>
+            <Textarea
+              label="Review Notes (Optional)"
+              placeholder="Add reason for rejection or approval notes..."
+              value={previewReason}
+              onChange={(e) => setPreviewReason(e.currentTarget.value)}
+              minRows={3}
+              mb="md"
+            />
+            <Group grow>
+              <Button 
+                color="red" 
+                variant="light" 
+                onClick={() => {
+                  if (activeTab === "sightings") rejectSighting(previewDocId, previewReason, true);
+                  else verifyVehicle(previewDocId, "reject", previewReason, true);
+                }}
+              >
+                Reject
+              </Button>
+              <Button 
+                color="green" 
+                onClick={() => {
+                  if (activeTab === "sightings") approveSighting(previewDocId, true);
+                  else verifyVehicle(previewDocId, "approve", previewReason, true);
+                }}
+              >
+                Approve
+              </Button>
+            </Group>
+          </Box>
+        </Box>
+      </Drawer>
     </Box>
   );
 }
