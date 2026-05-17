@@ -39,7 +39,20 @@ const app = express();
 connectDB();
 
 // ================= SECURITY =================
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "blob:", "http://localhost:5000", "http://localhost:3000"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        connectSrc: ["'self'", "http://localhost:5000", "ws://localhost:3000"],
+      },
+    },
+  })
+);
 
 app.use(cors({
   origin: 'http://localhost:3000',
@@ -66,6 +79,11 @@ app.use(expressSanitizer());
 // ================= FILES =================
 const uploadPath = path.join(process.cwd(), "uploads");
 
+app.use("/uploads", (req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  next();
+});
 app.use(
   "/uploads",
   express.static(uploadPath, {

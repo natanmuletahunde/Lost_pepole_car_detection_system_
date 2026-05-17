@@ -36,6 +36,17 @@ const missingVehicleSchema = new mongoose.Schema({
     default: false
   },
 
+  verificationStatus: {
+    type: String,
+    enum: ['Pending', 'Verified', 'Rejected'],
+    default: 'Pending'
+  },
+
+  ownershipDocumentUrl: {
+    type: [String],
+    default: []
+  },
+
   reportedBy: {
     userId: String,
     firstName: String,

@@ -18,7 +18,9 @@ import {
   Pagination,
   Tooltip,
   useMantineColorScheme,
+  useMantineTheme,
   Loader,
+  Tabs,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
@@ -26,8 +28,11 @@ import {
   IconDownload,
   IconEye,
   IconRefresh,
+  IconCar,
+  IconEyeOff,
+  IconFileCheck
 } from "@tabler/icons-react";
-import { adminFetchPaginatedList, uploadUrl } from "@/app/lib/adminApi";
+import { adminFetchPaginatedList, adminFetch, uploadUrl } from "@/app/lib/adminApi";
 
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
 const getTextColor = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
@@ -47,18 +52,46 @@ const mapSightingToDoc = (s) => {
   };
 };
 
+const mapVehicleToDoc = (v) => {
+  const u = v.reportedBy;
+  const name = u ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : "Unknown";
+  let imgArray = [];
+  if (Array.isArray(v.ownershipDocumentUrl)) {
+    imgArray = v.ownershipDocumentUrl.map(uploadUrl);
+  } else if (typeof v.ownershipDocumentUrl === 'string') {
+    imgArray = [uploadUrl(v.ownershipDocumentUrl)];
+  }
+
+  return {
+    id: v._id,
+    uploader: name || u?.email || "Unknown",
+    type: "Vehicle Ownership",
+    preview: imgArray[0] || "",
+    previews: imgArray,
+    submittedAt: v.createdAt,
+    status: v.verificationStatus || "Pending",
+    raw: v,
+  };
+};
+
 export default function DocumentValidationPage() {
   const { colorScheme } = useMantineColorScheme();
+  const theme = useMantineTheme();
 
   const mainBg = getBg(colorScheme, "#F4F7FE", theme.colors.dark[7]);
   const primaryText = getTextColor(colorScheme, "#2B3674", theme.colors.gray[3]);
   const headerBg = getBg(colorScheme, "white", theme.colors.dark[6]);
   const cardBg = getBg(colorScheme, "white", theme.colors.dark[6]);
 
+  const [activeTab, setActiveTab] = useState("sightings");
+
   const [docs, setDocs] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(null);
+  
   const [activePage, setActivePage] = useState(1);
   const [pageSize, setPageSize] = useState("10");
   const [totalPages, setTotalPages] = useState(1);
@@ -71,7 +104,7 @@ export default function DocumentValidationPage() {
 
   useEffect(() => {
     setActivePage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, activeTab]);
 
   const fetchDocs = async () => {
     try {
@@ -79,14 +112,21 @@ export default function DocumentValidationPage() {
       const params = new URLSearchParams();
       params.set("page", String(activePage));
       params.set("limit", String(parseInt(pageSize, 10) || 10));
-      params.set("status", "pending");
       if (debouncedSearch) params.set("search", debouncedSearch);
-      const { data, meta } = await adminFetchPaginatedList(`/sightings?${params.toString()}`);
-      setDocs((data || []).map(mapSightingToDoc));
-      setTotalPages(meta?.pages || 1);
+
+      if (activeTab === "sightings") {
+        params.set("status", "pending");
+        const { data, meta } = await adminFetchPaginatedList(`/sightings?${params.toString()}`);
+        setDocs((data || []).map(mapSightingToDoc));
+        setTotalPages(meta?.pages || 1);
+      } else {
+        const { data } = await adminFetchPaginatedList(`/admin/vehicles/pending-validation?${params.toString()}`);
+        setVehicles((data?.vehicles || []).map(mapVehicleToDoc));
+        setTotalPages(data?.pagination?.pages || 1);
+      }
     } catch (err) {
       console.error(err);
-      notifications.show({ title: "Error", message: "Could not load pending sightings", color: "red" });
+      notifications.show({ title: "Error", message: "Could not load data", color: "red" });
     } finally {
       setLoading(false);
     }
@@ -94,21 +134,26 @@ export default function DocumentValidationPage() {
 
   useEffect(() => {
     fetchDocs();
-  }, [activePage, pageSize, debouncedSearch]);
+  }, [activePage, pageSize, debouncedSearch, activeTab]);
+
+  const currentList = activeTab === "sightings" ? docs : vehicles;
 
   const filtered = useMemo(() => {
-    let res = [...docs];
+    let res = [...currentList];
     if (statusFilter && statusFilter !== "All") {
-      res = res.filter((d) => d.status === statusFilter);
+      res = res.filter((d) => {
+        if (activeTab === "sightings") return d.status === statusFilter;
+        return d.status.toLowerCase() === statusFilter.toLowerCase();
+      });
     }
     return res;
-  }, [docs, statusFilter]);
+  }, [currentList, statusFilter, activeTab]);
 
   const openPreview = (url) => {
     if (!url) {
       notifications.show({
         title: "No preview",
-        message: "No image for this sighting",
+        message: "No document/image available",
         color: "yellow",
       });
       return;
@@ -116,7 +161,7 @@ export default function DocumentValidationPage() {
     window.open(url, "_blank");
   };
 
-  const approve = async (id) => {
+  const approveSighting = async (id) => {
     if (!confirm("Approve this sighting?")) return;
     try {
       await adminFetch(`/admin/sightings/${id}/approve`, { method: "PATCH", body: JSON.stringify({}) });
@@ -128,7 +173,7 @@ export default function DocumentValidationPage() {
     }
   };
 
-  const reject = async (id) => {
+  const rejectSighting = async (id) => {
     const reason = window.prompt("Rejection reason (optional)") || "";
     if (!confirm("Reject this sighting?")) return;
     try {
@@ -144,6 +189,32 @@ export default function DocumentValidationPage() {
     }
   };
 
+  const verifyVehicle = async (id, action) => {
+    let reason = "";
+    if (action === "reject") {
+      reason = window.prompt("Rejection reason (optional)") || "";
+      if (!confirm("Reject this vehicle document?")) return;
+    } else {
+      if (!confirm("Approve this vehicle ownership document?")) return;
+    }
+
+    try {
+      await adminFetch(`/admin/vehicles/${id}/verify`, {
+        method: "PATCH",
+        body: JSON.stringify({ action, reason }),
+      });
+      notifications.show({ 
+        title: action === 'approve' ? "Approved" : "Rejected", 
+        message: `Vehicle document ${action}d successfully`, 
+        color: action === 'approve' ? "green" : "orange" 
+      });
+      fetchDocs();
+    } catch (err) {
+      console.error(err);
+      notifications.show({ title: "Error", message: "Could not verify vehicle", color: "red" });
+    }
+  };
+
   const exportToCSV = () => {
     const headers = ["ID", "Uploader", "Type", "Submitted At", "Status"];
     const rows = filtered.map((d) => [d.id, d.uploader, d.type, d.submittedAt, d.status]);
@@ -152,21 +223,11 @@ export default function DocumentValidationPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `sightings_${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `${activeTab}_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     notifications.show({ title: "Exported", message: `${filtered.length} rows`, color: "green" });
   };
-
-  if (loading && docs.length === 0) {
-    return (
-      <Box bg={mainBg} style={{ minHeight: "100vh" }} p="xl">
-        <Group justify="center" mt={100}>
-          <Loader size="xl" />
-        </Group>
-      </Box>
-    );
-  }
 
   return (
     <Box bg={mainBg} style={{ minHeight: "100vh" }} p="xl">
@@ -176,12 +237,12 @@ export default function DocumentValidationPage() {
             Document Validation
           </Title>
           <Badge size="lg" variant="light" color="blue">
-            Pending sightings
+            {activeTab === 'sightings' ? 'Pending sightings' : 'Pending vehicles'}
           </Badge>
         </Group>
         <Group bg={headerBg} p={8} style={{ borderRadius: "30px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
           <TextInput
-            placeholder="Search by description"
+            placeholder="Search..."
             leftSection={<IconSearch size={16} />}
             radius="md"
             w={320}
@@ -196,13 +257,24 @@ export default function DocumentValidationPage() {
         </Group>
       </Group>
 
+      <Tabs value={activeTab} onChange={setActiveTab} mb="xl">
+        <Tabs.List>
+          <Tabs.Tab value="sightings" leftSection={<IconEyeOff size={16} />}>
+            Sightings Validation
+          </Tabs.Tab>
+          <Tabs.Tab value="vehicles" leftSection={<IconCar size={16} />}>
+            Vehicle Ownership Documents
+          </Tabs.Tab>
+        </Tabs.List>
+      </Tabs>
+
       <SimpleGrid cols={{ base: 1, sm: 3 }} mb="lg">
         <Paper p="md" radius="md" withBorder bg={cardBg}>
           <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
             Queue
           </Text>
           <Text size="xl" fw={800}>
-            {docs.length}
+            {currentList.length}
           </Text>
           <Text size="xs" c="dimmed">
             Current page (pending)
@@ -214,7 +286,11 @@ export default function DocumentValidationPage() {
         <Group justify="space-between" mb="md">
           <Select
             placeholder="Status"
-            data={["All", "pending", "reviewed", "confirmed", "resolved"]}
+            data={
+              activeTab === "sightings" 
+                ? ["All", "pending", "reviewed", "confirmed", "resolved"]
+                : ["All", "Pending", "Verified", "Rejected"]
+            }
             value={statusFilter}
             onChange={setStatusFilter}
             w={200}
@@ -229,7 +305,7 @@ export default function DocumentValidationPage() {
           <Table verticalSpacing="sm" highlightOnHover>
             <Table.Thead style={{ background: "#4318FF" }}>
               <Table.Tr>
-                <Table.Th c="white">Preview</Table.Th>
+                <Table.Th c="white">Document Preview</Table.Th>
                 <Table.Th c="white">Reporter</Table.Th>
                 <Table.Th c="white">Type</Table.Th>
                 <Table.Th c="white">Submitted</Table.Th>
@@ -240,11 +316,19 @@ export default function DocumentValidationPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <Table.Tr>
+                  <Table.Td colSpan={6}>
+                    <Group justify="center" py="xl">
+                      <Loader />
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ) : filtered.length === 0 ? (
                 <Table.Tr>
                   <Table.Td colSpan={6}>
                     <Text ta="center" c="dimmed" py="xl">
-                      No pending sightings
+                      No pending {activeTab}
                     </Text>
                   </Table.Td>
                 </Table.Tr>
@@ -252,25 +336,50 @@ export default function DocumentValidationPage() {
                 filtered.map((d) => (
                   <Table.Tr key={d.id}>
                     <Table.Td>
-                      <Avatar src={d.preview} radius="sm" size={48} />
+                      {d.previews && d.previews.length > 0 ? (
+                        <Group gap="xs">
+                          {d.previews.map((pUrl, idx) => (
+                            <Avatar key={idx} src={pUrl} radius="sm" size={48} style={{ cursor: 'pointer' }} onClick={() => openPreview(pUrl)} />
+                          ))}
+                        </Group>
+                      ) : d.preview ? (
+                        <Avatar src={d.preview} radius="sm" size={48} style={{ cursor: 'pointer' }} onClick={() => openPreview(d.preview)} />
+                      ) : (
+                        <Badge color="gray">No Document</Badge>
+                      )}
                     </Table.Td>
                     <Table.Td>{d.uploader}</Table.Td>
                     <Table.Td>{d.type}</Table.Td>
                     <Table.Td>{new Date(d.submittedAt).toLocaleString()}</Table.Td>
                     <Table.Td>
-                      <Badge color="yellow">{d.status}</Badge>
+                      <Badge color={d.status.toLowerCase() === 'pending' ? 'yellow' : d.status.toLowerCase() === 'verified' ? 'green' : 'red'}>
+                        {d.status}
+                      </Badge>
                     </Table.Td>
                     <Table.Td>
                       <Group gap={4} justify="flex-end">
-                        <ActionIcon variant="subtle" color="blue" onClick={() => openPreview(d.preview)}>
+                        <ActionIcon variant="subtle" color="blue" onClick={() => openPreview(d.preview)} disabled={!d.preview}>
                           <IconEye size={18} />
                         </ActionIcon>
-                        <Button size="xs" color="green" onClick={() => approve(d.id)}>
-                          Approve
-                        </Button>
-                        <Button size="xs" color="red" variant="light" onClick={() => reject(d.id)}>
-                          Reject
-                        </Button>
+                        {activeTab === "sightings" ? (
+                          <>
+                            <Button size="xs" color="green" onClick={() => approveSighting(d.id)}>
+                              Approve
+                            </Button>
+                            <Button size="xs" color="red" variant="light" onClick={() => rejectSighting(d.id)}>
+                              Reject
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button size="xs" color="green" onClick={() => verifyVehicle(d.id, "approve")}>
+                              Verify
+                            </Button>
+                            <Button size="xs" color="red" variant="light" onClick={() => verifyVehicle(d.id, "reject")}>
+                              Reject
+                            </Button>
+                          </>
+                        )}
                       </Group>
                     </Table.Td>
                   </Table.Tr>
