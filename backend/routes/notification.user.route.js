@@ -7,4 +7,10 @@ router.get("/my-notifications", controller.getNotifications);
 // mark as read
 router.patch("/:id/read", controller.markAsRead);
 
+// delete single notification
+router.delete("/:id", controller.deleteNotification);
+
+// clear all notifications
+router.delete("/", controller.clearNotifications);
+
 module.exports = router;
