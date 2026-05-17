@@ -1,4 +1,5 @@
 const Notification = require("../models/Notification");
+const User = require("../models/User");
 
 // GET ADMIN NOTIFICATIONS
 exports.getNotifications = async (req, res) => {
@@ -67,6 +68,36 @@ exports.clearNotifications = async (req, res) => {
       success: true,
       message: "All notifications cleared",
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// SEND NOTIFICATION TO ALL ADMINS (called when user confirms found)
+exports.sendAdminNotification = async (req, res) => {
+  try {
+    const { title, message, type = 'success' } = req.body;
+    if (!title || !message) {
+      return res.status(400).json({ success: false, message: 'title and message are required' });
+    }
+
+    // Find all admin and moderator users
+    const admins = await User.find({ role: { $in: ['admin', 'moderator'] } }).select('_id');
+    if (admins.length === 0) {
+      return res.json({ success: true, message: 'No admins to notify' });
+    }
+
+    const notifDocs = admins.map(a => ({
+      recipient: a._id,
+      title,
+      message,
+      type,
+      priority: 'high',
+    }));
+
+    await Notification.insertMany(notifDocs);
+
+    res.json({ success: true, message: `Notified ${admins.length} admin(s)` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

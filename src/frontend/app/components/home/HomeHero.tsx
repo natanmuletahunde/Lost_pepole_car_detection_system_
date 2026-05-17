@@ -211,6 +211,7 @@ export default function HomeHero({
   );
 }
 
+
 function BadgeSection() {
   return (
     <Box

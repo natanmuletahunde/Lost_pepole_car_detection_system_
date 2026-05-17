@@ -190,3 +190,23 @@ exports.updateMissingVehicle = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// ==============================
+// RESOLVE CASE (reporter confirms found)
+// ==============================
+exports.resolveMissingVehicle = async (req, res) => {
+  try {
+    const vehicle = await MissingVehicle.findById(req.params.id);
+    if (!vehicle) {
+      return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    }
+
+    vehicle.status = 'Resolved';
+    vehicle.lastUpdated = new Date();
+    await vehicle.save();
+
+    res.json({ success: true, message: 'Case marked as resolved', data: vehicle });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -20,6 +20,9 @@ router.get('/', controller.getMissingPersons);
 // GET ONE
 router.get('/:id', controller.getMissingPersonById);
 
+// RESOLVE (reporter confirms found)
+router.patch('/:id/resolve', protect, controller.resolveMissingPerson);
+
 // UPDATE
 router.patch('/:id', protect, controller.updateMissingPerson);
 
