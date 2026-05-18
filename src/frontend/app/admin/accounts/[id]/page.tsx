@@ -40,7 +40,7 @@ import {
 import { adminFetch } from "@/app/lib/adminApi";
 
 // Helper functions
-const formatDate = (dateString) => {
+const formatDate = (dateString: string | Date | null | undefined) => {
   if (!dateString) return "—";
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "—";
@@ -54,7 +54,7 @@ const formatDate = (dateString) => {
 };
 
 // Map API user to component shape (for the edit form)
-const mapApiToEditForm = (apiUser) => ({
+const mapApiToEditForm = (apiUser: any) => ({
   id: String(apiUser._id || apiUser.id),
   name: `${apiUser.firstName} ${apiUser.lastName}`.trim(),
   email: apiUser.email,
@@ -84,7 +84,7 @@ export default function UserDetailPage() {
   const fetchUser = async () => {
     try {
       setLoading(true);
-      const data = await adminFetch(`/admin/users/${params.id}`);
+      const data = (await adminFetch(`/admin/users/${params.id}`)) as any;
       setUser(data.user);
       setUserStats(data.stats || null);
     } catch (error) {
@@ -133,13 +133,13 @@ export default function UserDetailPage() {
   }, [editingUser]);
 
   // Update user
-  const updateUser = async (values) => {
+  const updateUser = async (values: any) => {
     try {
       const nameParts = values.name.split(" ");
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
-      const payload = await adminFetch(`/admin/users/${values.id}`, {
+      const payload = (await adminFetch(`/admin/users/${values.id}`, {
         method: "PATCH",
         body: JSON.stringify({
           firstName,
@@ -150,7 +150,7 @@ export default function UserDetailPage() {
           address: values.address,
           isActive: values.isActive,
         }),
-      });
+      })) as any;
       setUser(payload.user);
       notifications.show({
         title: "Updated",
@@ -172,7 +172,7 @@ export default function UserDetailPage() {
   // Delete user
   const deleteUser = async () => {
     try {
-      const uid = String(user._id || user.id);
+      const uid = String(user?._id || user?.id);
       await adminFetch(`/admin/users/${uid}`, { method: "DELETE" });
       notifications.show({
         title: "Deleted",
@@ -194,12 +194,12 @@ export default function UserDetailPage() {
   // Toggle account status
   const toggleUserStatus = async () => {
     try {
-      const newStatus = !user.isActive;
-      const uid = String(user._id || user.id);
-      const payload = await adminFetch(`/admin/users/${uid}`, {
+      const newStatus = !user?.isActive;
+      const uid = String(user?._id || user?.id);
+      const payload = (await adminFetch(`/admin/users/${uid}`, {
         method: "PATCH",
         body: JSON.stringify({ isActive: newStatus }),
-      });
+      })) as any;
       setUser(payload.user);
       notifications.show({
         title: "Status updated",
@@ -222,7 +222,7 @@ export default function UserDetailPage() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       notifications.show({
         title: "Password reset",
-        message: `A password reset link has been sent to ${user.email}`,
+        message: `A password reset link has been sent to ${user?.email}`,
         color: "green",
       });
       resetPasswordModalHandlers.close();
