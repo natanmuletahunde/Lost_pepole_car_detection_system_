@@ -1,36 +1,39 @@
 import { Title, Text, SimpleGrid, Card, ThemeIcon, List } from "@mantine/core";
 import { IconCheck, IconUserPlus, IconCar, IconAlertTriangle, IconStethoscope, IconScale, IconShieldCheck, IconFileDescription } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 
 const PRIMARY_COLOR = "#0034D1";
 const PRIMARY_GRADIENT = `linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #0066ff 100%)`;
 
-const caseTypes = [
-  {
-    title: "Missing Person",
-    icon: IconUserPlus,
-    description: "Report a missing family member or individual. Include photos, description, and last seen location.",
-    features: ["Full name and age", "Physical description", "Last known location", "Recent photos"],
-  },
-  {
-    title: "Missing Vehicle",
-    icon: IconCar,
-    description: "Report stolen or missing vehicles. Include license plate, model, and identifying features.",
-    features: ["Brand and model", "License plate number", "Color and features", "Vehicle images"],
-  },
-  {
-    title: "Special Cases",
-    icon: IconAlertTriangle,
-    description: "Report mentally ill persons or criminal background cases. Requires official documentation.",
-    features: ["Doctor's report (mentally ill)", "Court order/arrest warrant", "Admin verification", "Official documents"],
-    featureIcons: [IconStethoscope, IconScale, IconShieldCheck, IconFileDescription],
-  },
-];
-
 export default function CaseTypes() {
+  const t = useTranslations("HowItWorks");
+
+  const caseTypes = [
+    {
+      title: t("missingPerson"),
+      icon: IconUserPlus,
+      description: t("missingPersonDesc"),
+      features: t.raw("missingPersonFeatures"),
+    },
+    {
+      title: t("missingVehicle"),
+      icon: IconCar,
+      description: t("missingVehicleDesc"),
+      features: t.raw("missingVehicleFeatures"),
+    },
+    {
+      title: t("specialCases"),
+      icon: IconAlertTriangle,
+      description: t("specialCasesDesc"),
+      features: t.raw("specialCasesFeatures"),
+      featureIcons: [IconStethoscope, IconScale, IconShieldCheck, IconFileDescription],
+    },
+  ];
+
   return (
     <>
-      <Title order={2} fw={800} ta="center" mb={10}>What Can You Report?</Title>
-      <Text c="dimmed" ta="center" mb={50} maw={600} mx="auto">Three types of cases you can register in our system</Text>
+      <Title order={2} fw={800} ta="center" mb={10}>{t("reportTitle")}</Title>
+      <Text c="dimmed" ta="center" mb={50} maw={600} mx="auto">{t("reportSubtitle")}</Text>
       
       <SimpleGrid cols={{ base: 1, md: 3 }} spacing={30} mb={50}>
         {caseTypes.map((type, idx) => {

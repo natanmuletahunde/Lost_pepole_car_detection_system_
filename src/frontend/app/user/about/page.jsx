@@ -1,11 +1,13 @@
 'use client';
 
-import { Container, Grid, Title, Text, TextInput, Textarea, Button, Box, SimpleGrid,  useMantineColorScheme } from '@mantine/core';
+import { Container, Grid, Title, Text, TextInput, Textarea, Button, Box, SimpleGrid, useMantineColorScheme } from '@mantine/core';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import MainFooter from '../../../app/components/MainFooter';
 import DashboardHeader from '../dashboard/DashboardHeader';
 
 export default function AboutPage() {
+  const t = useTranslations("AboutUs");
   const { colorScheme } = useMantineColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -25,29 +27,24 @@ export default function AboutPage() {
         <Container size="lg" py={60} style={{ position: 'relative', zIndex: 1 }}>
           <Grid gutter={80} align="flex-start">
             <Grid.Col span={{ base: 12, md: 6 }}>
-              <Title order={1} size={64} fw={900} mb="xs">About</Title>
-              <Text c="dimmed" size="lg" mb={30}>Subheading for description or instructions</Text>
-              
-              <Text size="sm" fw={700} mb="md">
-                Body text for your whole article or post.
-              </Text>
+              <Title order={1} size={64} fw={900} mb="xs">{t("title")}</Title>
+              <Text c="dimmed" size="lg" mb={30}>{t("subtitle")}</Text>
               
               <Text size="sm" mb={40} style={{ lineHeight: 1.8, color: isDark ? '#C1C2C5' : '#1A1B1E' }}>
-                Excepteur efficient emerging, minim veniam anim aute carefully curated Ginza conversation exquisite perfect nostrud nisi 
-                intricate Content. Qui international first-class nulla ut.
+                {t("bodyText")}
               </Text>
 
               <Box mt={50}>
-                <Title order={2} size={32} fw={800} mb="xl">Contact us</Title>
-                <form>
+                <Title order={2} size={32} fw={800} mb="xl">{t("contactTitle")}</Title>
+                <form onSubmit={(e) => e.preventDefault()}>
                   <SimpleGrid cols={2} mb="md">
-                    <TextInput label="First name" placeholder="example" radius="md" size="md" />
-                    <TextInput label="Last name" placeholder="Example" radius="md" size="md" />
+                    <TextInput label={t("firstName")} placeholder={t("placeholderName")} radius="md" size="md" />
+                    <TextInput label={t("lastName")} placeholder={t("placeholderName")} radius="md" size="md" />
                   </SimpleGrid>
-                  <TextInput label="Email address" placeholder="email@userexample.net" mb="md" radius="md" size="md" />
-                  <Textarea label="Your message" placeholder="Enter your question or message" minRows={4} mb="xl" radius="md" />
+                  <TextInput label={t("emailAddress")} placeholder={t("placeholderEmail")} mb="md" radius="md" size="md" />
+                  <Textarea label={t("yourMessage")} placeholder={t("placeholderMsg")} minRows={4} mb="xl" radius="md" />
                   {/* ✅ Curvy Button to match theme */}
-                  <Button size="lg" fullWidth radius="xl" color="blue">Submit</Button>
+                  <Button type="submit" size="lg" fullWidth radius="xl" color="blue">{t("submit")}</Button>
                 </form>
               </Box>
             </Grid.Col>

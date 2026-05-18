@@ -162,6 +162,14 @@ export const useSettingsForm = () => {
       }
 
       // 6. Save system preferences scoped to the user in localStorage
+      let oldLanguage = "en";
+      try {
+        const stored = localStorage.getItem(`user_preferences_${userId}`);
+        if (stored) {
+          oldLanguage = JSON.parse(stored).language || "en";
+        }
+      } catch (e) {}
+
       const prefsToSave = {
         language: formData.language,
         theme: formData.theme,
@@ -174,6 +182,15 @@ export const useSettingsForm = () => {
         allowDataCollection: formData.allowDataCollection,
       };
       localStorage.setItem(`user_preferences_${userId}`, JSON.stringify(prefsToSave));
+
+      // If language changed, set the cookie and trigger reload
+      if (formData.language && formData.language !== oldLanguage) {
+        document.cookie = `locale=${formData.language}; path=/; max-age=31536000; SameSite=Lax`;
+        window.dispatchEvent(new CustomEvent('appLanguageChanged', { detail: formData.language }));
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
 
       // 7. Clear password input fields in UI and update the visual avatar state
       setFormData((prev) => ({

@@ -4,7 +4,7 @@ import { Box, Container, Title, Text, Group, Card, Badge, Button, Center, Loader
 import { IconCar, IconUser as IconUserPerson, IconAlertCircle, IconMapPin, IconMap } from "@tabler/icons-react";
 import Image from "next/image";
 import Link from "next/link";
-import { apiClient } from "../../../backend/apiClient"; // I will use the built-in fetch if apiClient is not available, or define it locally.
+import { useTranslations } from "next-intl";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 const API_ROOT = API_BASE_URL.replace(/\/api\/v1\/?$/, '') || 'http://localhost:5000';
@@ -24,13 +24,12 @@ function getImageUrl(item: any) {
 }
 
 export default function HomeShowcase() {
+  const t = useTranslations("Showcase");
+  const tCommon = useTranslations("Common");
   const { colorScheme } = useMantineColorScheme();
   const getBg = (light: string, dark: string) => (colorScheme === "dark" ? dark : light);
   const getJustify = (items: any[]) => {
     if (items.length === 1) return "center";
-    if (items.length > 1 && items.length <= 3) {
-      return { base: "flex-start", sm: "center" };
-    }
     return "flex-start";
   };
 
@@ -65,29 +64,32 @@ export default function HomeShowcase() {
       }
     };
 
-    fetchMissingData();
+    const timer = setTimeout(() => {
+      fetchMissingData();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <Box id="cases" py={{ base: 60, md: 100 }} bg="transparent">
       <Container size="xl">
         <Title order={2} ta="center" fw={900} mb="sm" style={{ color: "#2f80ed" }}>
-          Active Community Alerts
+          {t("title")}
         </Title>
         <Text c="dimmed" ta="center" maw={600} mx="auto" mb={50}>
-          Take a look at the current active cases. Your vigilance can help bring someone home or recover a stolen vehicle.
+          {t("subtitle")}
         </Text>
 
         <Box mb={60}>
           <Flex align="center" gap="sm" mb="lg">
             <IconUserPerson size={24} color="#2f80ed" />
-            <Title order={3}>Have you seen this person?</Title>
+            <Title order={3}>{t("personTitle")}</Title>
           </Flex>
           {dataLoading ? (
             <Center py="xl"><Loader color="blue" /></Center>
           ) : missingPersons.length === 0 ? (
-            <Alert icon={<IconAlertCircle size={16} />} title="No persons" color="blue" variant="light">
-              No missing persons reported currently.
+            <Alert icon={<IconAlertCircle size={16} />} title={t("personTitle")} color="blue" variant="light">
+              {t("noPersons")}
             </Alert>
           ) : (
             <ScrollArea w="100%" pb="xl">
@@ -107,16 +109,16 @@ export default function HomeShowcase() {
                       <Box p="xs">
                         <Text size="sm" fw={700} lineClamp={1}>{person.firstName} {person.lastName}</Text>
                         <Group gap="xs" mt={2}>
-                          <Badge size="xs" color="pink" variant="light">{person.gender || "Unknown"}</Badge>
-                          <Badge size="xs" color="cyan" variant="light">Age {person.age || "?"}</Badge>
+                          <Badge size="xs" color="pink" variant="light">{person.gender || tCommon("unknown")}</Badge>
+                          <Badge size="xs" color="cyan" variant="light">{t("age")} {person.age || "?"}</Badge>
                         </Group>
                         <Group gap={4} mt={4}>
                           <IconMapPin size={12} />
-                          <Text size="xs" lineClamp={1}>{person.location || "Location unknown"}</Text>
+                          <Text size="xs" lineClamp={1}>{person.location || t("locationUnknown")}</Text>
                         </Group>
-                        <Badge size="xs" color="red" variant="filled" fullWidth mt={6}>ACTIVE</Badge>
+                        <Badge size="xs" color="red" variant="filled" fullWidth mt={6}>{tCommon("active")}</Badge>
                         <Button component={Link} href={`/user/report-sighting?type=Person&caseId=${person.caseId || personId}`} size="xs" variant="light" color="blue" fullWidth mt="xs" leftSection={<IconMap size={14} />}>
-                          Report Sighting
+                          {t("reportSighting")}
                         </Button>
                       </Box>
                     </Card>
@@ -130,13 +132,13 @@ export default function HomeShowcase() {
         <Box>
           <Flex align="center" gap="sm" mb="lg">
             <IconCar size={24} color="#2f80ed" />
-            <Title order={3}>Have you seen this car?</Title>
+            <Title order={3}>{t("carTitle")}</Title>
           </Flex>
           {dataLoading ? (
             <Center py="xl"><Loader color="blue" /></Center>
           ) : missingVehicles.length === 0 ? (
-            <Alert icon={<IconAlertCircle size={16} />} title="No vehicles" color="blue" variant="light">
-              No missing vehicles reported currently.
+            <Alert icon={<IconAlertCircle size={16} />} title={t("carTitle")} color="blue" variant="light">
+              {t("noVehicles")}
             </Alert>
           ) : (
             <ScrollArea w="100%" pb="xl">
@@ -157,15 +159,15 @@ export default function HomeShowcase() {
                         <Text size="sm" fw={700} lineClamp={1}>{vehicle.brand} {vehicle.model}</Text>
                         <Group gap={4} mt={4}>
                           <IconMapPin size={12} />
-                          <Text size="xs" lineClamp={1}>{vehicle.location || "Location unknown"}</Text>
+                          <Text size="xs" lineClamp={1}>{vehicle.location || t("locationUnknown")}</Text>
                         </Group>
                         <Group gap="xs" mt={4} justify="space-between">
-                          <Badge size="xs" color="blue" variant="light">{vehicle.color || "N/A"}</Badge>
+                          <Badge size="xs" color="blue" variant="light">{vehicle.color || tCommon("unknown")}</Badge>
                           <Text size="xs" fw={600} style={{ fontFamily: "monospace" }}>{vehicle.plateNumber || "No plate"}</Text>
                         </Group>
-                        <Badge size="xs" color="red" variant="filled" fullWidth mt={6}>ACTIVE</Badge>
+                        <Badge size="xs" color="red" variant="filled" fullWidth mt={6}>{tCommon("active")}</Badge>
                         <Button component={Link} href={`/user/report-sighting?type=Vehicle&caseId=${vehicle.caseId || vehicleId}`} size="xs" variant="light" color="blue" fullWidth mt="xs" leftSection={<IconMap size={14} />}>
-                          Report Sighting
+                          {t("reportSighting")}
                         </Button>
                       </Box>
                     </Card>

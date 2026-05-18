@@ -2,6 +2,7 @@
 import { Box, Container, Grid, Title, Text, Stack, Paper, Group, Skeleton, Alert } from "@mantine/core";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { 
   IconFileReport, 
   IconCheck, 
@@ -11,6 +12,7 @@ import {
 } from "@tabler/icons-react";
 
 export default function HomeStats() {
+  const t = useTranslations("Stats");
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,16 +32,16 @@ export default function HomeStats() {
         };
 
         setStats([
-          { value: formatNumber(totalReports), label: "Total Reports", icon: IconFileReport, color: "blue" },
-          { value: formatNumber(resolvedCases), label: "Resolved Cases", icon: IconCheck, color: "teal" },
-          { value: formatNumber(activeUsers), label: "Active Users", icon: IconUsers, color: "indigo" },
-          { value: formatNumber(devicesConnected), label: "Active Devices", icon: IconDevices, color: "cyan" },
+          { value: formatNumber(totalReports), label: t("totalReports"), icon: IconFileReport, color: "blue" },
+          { value: formatNumber(resolvedCases), label: t("resolvedCases"), icon: IconCheck, color: "teal" },
+          { value: formatNumber(activeUsers), label: t("activeUsers"), icon: IconUsers, color: "indigo" },
+          { value: formatNumber(devicesConnected), label: t("activeDevices"), icon: IconDevices, color: "cyan" },
         ]);
         setError(null);
       }
     } catch (error) {
       console.error("Failed to fetch stats:", error);
-      setError("Unable to load real-time statistics.");
+      setError(t("error"));
     } finally {
       setLoading(false);
     }
@@ -77,10 +79,10 @@ export default function HomeStats() {
             size="sm" 
             style={{ letterSpacing: 2, textTransform: "uppercase" }}
           >
-            Live Platform Metrics
+            {t("liveMetrics")}
           </Text>
           <Title order={2} size={36} fw={900} c="white" ta="center">
-            Real-time Impact Tracking
+            {t("title")}
           </Title>
         </Stack>
 
@@ -122,7 +124,6 @@ export default function HomeStats() {
                     <Stack align="center" gap={15}>
                       <Box 
                         p={12} 
-                        radius="md" 
                         style={{ 
                           background: `rgba(var(--mantine-color-${stat.color}-6-rgb), 0.1)`,
                           borderRadius: "16px"

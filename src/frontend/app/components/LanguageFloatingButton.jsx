@@ -7,19 +7,11 @@ import { notifications } from '@mantine/notifications';
 
 const languages = [
   { value: "en", label: "🇬🇧 English", nativeName: "English" },
-  { value: "es", label: "🇪🇸 Spanish", nativeName: "Español" },
-  { value: "fr", label: "🇫🇷 French", nativeName: "Français" },
-  { value: "de", label: "🇩🇪 German", nativeName: "Deutsch" },
-  { value: "zh", label: "🇨🇳 Chinese", nativeName: "中文" },
   { value: "am", label: "🇪🇹 Amharic", nativeName: "አማርኛ" },
 ];
 
 const updateMessages = {
   en: "Language updated to English",
-  es: "Idioma cambiado a Español",
-  fr: "Langue configurée en Français",
-  de: "Sprache auf Deutsch eingestellt",
-  zh: "语言设置为中文",
   am: "ቋንቋ ወደ አማርኛ ተቀይሯል"
 };
 
@@ -43,10 +35,12 @@ export default function LanguageFloatingButton() {
           const userId = u._id || u.id;
           const prefs = localStorage.getItem(`user_preferences_${userId}`);
           if (prefs) {
-            const parsedPrefs = JSON.parse(prefs);
-            if (parsedPrefs.language) {
-              initialLang = parsedPrefs.language;
-            }
+            try {
+              const parsedPrefs = JSON.parse(prefs);
+              if (parsedPrefs && parsedPrefs.language) {
+                initialLang = parsedPrefs.language;
+              }
+            } catch (err) {}
           }
         }
       }
@@ -103,7 +97,10 @@ export default function LanguageFloatingButton() {
       // 3. Dispatch global custom event so other components update dynamically
       window.dispatchEvent(new CustomEvent('appLanguageChanged', { detail: langCode }));
 
-      // 4. Trigger a beautiful Mantine notification toast
+      // 4. Update standard locale cookie for Next.js Middleware and Server Side Rendering
+      document.cookie = `locale=${langCode}; path=/; max-age=31536000; SameSite=Lax`;
+
+      // 5. Trigger a beautiful Mantine notification toast
       const selectedLang = languages.find(l => l.value === langCode);
       const flag = selectedLang ? selectedLang.label.split(' ')[0] : '🌐';
       notifications.show({
@@ -116,6 +113,12 @@ export default function LanguageFloatingButton() {
           border: '1px solid rgba(47, 128, 237, 0.15)',
         }
       });
+
+      // 6. Reload page with a 1000ms delay to let the toast render and show transitions
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+
     } catch (error) {
       console.error("Failed saving language preference:", error);
     }

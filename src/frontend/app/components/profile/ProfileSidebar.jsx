@@ -9,19 +9,21 @@ import {
   IconLogout,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const getTextColor = (colorScheme, light, dark) =>
   colorScheme === "dark" ? dark : light;
 
 const navItems = [
-  { id: "account", label: "Your account", icon: IconUser },
-  { id: "security", label: "Security", icon: IconShieldLock },
-  { id: "appearance", label: "Appearance", icon: IconBrush },
-  { id: "alert-history", label: "Alert history", icon: IconClock },
+  { id: "account", labelKey: "tabAccount", icon: IconUser },
+  { id: "security", labelKey: "tabSecurity", icon: IconShieldLock },
+  { id: "appearance", labelKey: "tabAppearance", icon: IconBrush },
+  { id: "alert-history", labelKey: "tabAlertHistory", icon: IconClock },
 ];
 
 export default function ProfileSidebar({ activeTab, setActiveTab, colorScheme }) {
   const router = useRouter();
+  const t = useTranslations("Profile");
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
@@ -70,7 +72,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab, colorScheme })
                     size="sm"
                     c={isActive ? "blue" : getTextColor(colorScheme, "black", "#e0e0e0")}
                   >
-                    {item.label}
+                    {t(item.labelKey)}
                   </Text>
                 </Group>
               </UnstyledButton>
@@ -90,7 +92,7 @@ export default function ProfileSidebar({ activeTab, setActiveTab, colorScheme })
           <Group gap="sm">
             <IconLogout size={18} color="#fa5252" />
             <Text size="sm" c="red.6">
-              Sign out
+              {t("signOut")}
             </Text>
           </Group>
         </UnstyledButton>

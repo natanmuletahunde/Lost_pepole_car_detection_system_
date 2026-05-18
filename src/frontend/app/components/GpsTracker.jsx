@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -38,6 +39,7 @@ const GPS_DEVICES_API = `${API_BASE_URL}/gpsDevices`;
 const GPS_LOCATIONS_API = `${API_BASE_URL}/gpsLocations`;
 
 export default function GpsTracker() {
+  const t = useTranslations("GPSTracking");
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
   const mapRef = useRef(null);
@@ -88,8 +90,8 @@ export default function GpsTracker() {
     } catch (error) {
       console.error(error);
       notifications.show({
-        title: 'Error',
-        message: 'Could not load GPS devices',
+        title: t("locationError"),
+        message: t("noActiveDevices"),
         color: 'red',
         icon: <IconAlertCircle size={16} />,
       });
@@ -129,8 +131,8 @@ export default function GpsTracker() {
 
     // Add layer control
     const baseLayers = {
-      'Street View': streetLayer,
-      'Satellite View': satelliteLayer,
+      [t('streetView')]: streetLayer,
+      [t('satelliteView')]: satelliteLayer,
     };
     L.control.layers(baseLayers).addTo(map);
 
@@ -146,12 +148,12 @@ export default function GpsTracker() {
         btn.style.width = '34px';
         btn.style.height = '34px';
         btn.style.cursor = 'pointer';
-        btn.title = 'Zoom to my location';
+        btn.title = t("selectCenter");
         btn.onclick = () => {
           if (!navigator.geolocation) {
             notifications.show({
-              title: 'Not supported',
-              message: 'Your browser does not support geolocation',
+              title: t("unsupported"),
+              message: t("unsupportedDesc"),
               color: 'yellow',
             });
             return;
@@ -162,7 +164,7 @@ export default function GpsTracker() {
             },
             (error) => {
               notifications.show({
-                title: 'Location error',
+                title: t("locationError"),
                 message: error.message,
                 color: 'red',
               });
@@ -217,9 +219,9 @@ export default function GpsTracker() {
           .bindPopup(`
             <b>${device.name}</b><br>
             ${device.lastLocation.address || device.lastLocation.location}<br>
-            Last seen: ${new Date(device.lastLocation.timestamp).toLocaleString()}<br>
-            Battery: ${device.battery}%<br>
-            Status: ${device.status}
+            ${t('lastSeenLabel')}: ${new Date(device.lastLocation.timestamp).toLocaleString()}<br>
+            ${t('batteryLabel')}: ${device.battery}%<br>
+            ${t('statusLabel')}: ${device.status === 'active' ? t('active') : device.status === 'low_battery' ? t('lowBattery') : t('inactive')}
           `)
           .addTo(map);
         markersRef.current[device.id] = marker;
@@ -233,7 +235,7 @@ export default function GpsTracker() {
           fillOpacity: 0.2,
           weight: 2,
         }).addTo(map);
-        circle.bindPopup(`<b>${device.name}</b><br>Geofence radius: ${device.geofence.radius} meters`);
+        circle.bindPopup(`<b>${device.name}</b><br>${t('geofenceRadiusLabel')}: ${device.geofence.radius} ${t('meters')}`);
         geofenceLayersRef.current.push(circle);
       }
     });
@@ -248,8 +250,8 @@ export default function GpsTracker() {
     } catch (error) {
       console.error(error);
       notifications.show({
-        title: 'Error',
-        message: 'Could not load location history',
+        title: t('locationError'),
+        message: t('errorHistory'),
         color: 'red',
         icon: <IconAlertCircle size={16} />,
       });
@@ -274,8 +276,8 @@ export default function GpsTracker() {
       });
       if (response.ok) {
         notifications.show({
-          title: 'Success',
-          message: 'Geofence saved for this device',
+          title: t('success'),
+          message: t('geofenceSaved'),
           color: 'green',
           icon: <IconCheck size={16} />,
         });
@@ -287,8 +289,8 @@ export default function GpsTracker() {
       }
     } catch (error) {
       notifications.show({
-        title: 'Error',
-        message: 'Could not save geofence',
+        title: t('locationError'),
+        message: t('errorGeofence'),
         color: 'red',
         icon: <IconAlertCircle size={16} />,
       });
@@ -298,8 +300,8 @@ export default function GpsTracker() {
   const startGeofenceMode = () => {
     setGeofenceMode(true);
     notifications.show({
-      title: 'Select Center',
-      message: 'Click on the map to set the geofence center',
+      title: t('selectCenter'),
+      message: t('clickMap'),
       color: 'blue',
       icon: <IconCrosshair size={16} />,
       autoClose: 5000,
@@ -352,7 +354,7 @@ export default function GpsTracker() {
             <ScrollArea h="100%">
               <Stack gap="xs" p="xs">
                 {devices.length === 0 ? (
-                  <Text c="dimmed" ta="center" py="xl">No active GPS devices</Text>
+                  <Text c="dimmed" ta="center" py="xl">{t('noActiveDevices')}</Text>
                 ) : (
                   devices.map((device) => (
                     <Card
@@ -383,20 +385,20 @@ export default function GpsTracker() {
                           }
                           variant="light"
                         >
-                          {device.status === 'active' ? 'Active' : device.status === 'low_battery' ? 'Low Battery' : 'Inactive'}
+                          {device.status === 'active' ? t('active') : device.status === 'low_battery' ? t('lowBattery') : t('inactive')}
                         </Badge>
                       </Group>
                       <Text size="sm" c="dimmed" mt={4}>
-                        {device.lastLocation?.address || device.lastLocation?.location || 'No location data'}
+                        {device.lastLocation?.address || device.lastLocation?.location || t('noLocationData')}
                       </Text>
                       <Group gap="xs" mt={4}>
                         <IconMapPin size={12} />
                         <Text size="xs" c="dimmed">
-                          {device.lastLocation?.timestamp ? new Date(device.lastLocation.timestamp).toLocaleString() : 'Unknown'}
+                          {device.lastLocation?.timestamp ? new Date(device.lastLocation.timestamp).toLocaleString() : t('unknown')}
                         </Text>
                       </Group>
                       {device.battery !== undefined && (
-                        <Text size="xs" c="dimmed" mt={2}>Battery: {device.battery}%</Text>
+                        <Text size="xs" c="dimmed" mt={2}>{t('batteryLabel')}: {device.battery}%</Text>
                       )}
                     </Card>
                   ))
@@ -427,7 +429,7 @@ export default function GpsTracker() {
                   pointerEvents: 'none',
                 }}
               >
-                <Text size="sm" fw={500}>Click on map to set geofence center</Text>
+                <Text size="sm" fw={500}>{t('clickMap')}</Text>
               </Box>
             )}
           </Box>
@@ -438,9 +440,9 @@ export default function GpsTracker() {
         <Paper withBorder radius="md" mt="md" p="md">
           <Group justify="space-between" mb="sm">
             <Group>
-              <Text fw={700}>Device: {selectedDevice.name}</Text>
+              <Text fw={700}>{t('deviceTitle', { name: selectedDevice.name })}</Text>
               <Badge color={selectedDevice.status === 'active' ? 'green' : 'orange'}>
-                {selectedDevice.status === 'active' ? 'Online' : 'Offline'}
+                {selectedDevice.status === 'active' ? t('online') : t('offline')}
               </Badge>
             </Group>
             <Group>
@@ -451,7 +453,7 @@ export default function GpsTracker() {
                 onClick={startGeofenceMode}
                 disabled={geofenceMode}
               >
-                Set Geofence
+                {t('setGeofence')}
               </Button>
               <Button
                 size="xs"
@@ -459,20 +461,22 @@ export default function GpsTracker() {
                 leftSection={<IconHistory size={14} />}
                 onClick={() => fetchLocationHistory(selectedDevice.id)}
               >
-                Refresh History
+                {t('refreshHistory')}
               </Button>
             </Group>
           </Group>
 
           <Text size="sm" c="dimmed" mb="sm">
-            Last known: {selectedDevice.lastLocation?.address || selectedDevice.lastLocation?.location || 'Unknown'} at{' '}
-            {selectedDevice.lastLocation?.timestamp ? new Date(selectedDevice.lastLocation.timestamp).toLocaleString() : 'Unknown'}
+            {t('lastKnown', {
+              address: selectedDevice.lastLocation?.address || selectedDevice.lastLocation?.location || t('unknown'),
+              time: selectedDevice.lastLocation?.timestamp ? new Date(selectedDevice.lastLocation.timestamp).toLocaleString() : t('unknown')
+            })}
           </Text>
 
-          <Text fw={600} mb="xs">Recent Locations</Text>
+          <Text fw={600} mb="xs">{t('recentLocations')}</Text>
           <ScrollArea h={200}>
             {locationHistory.length === 0 ? (
-              <Text c="dimmed" ta="center" py="md">No location history</Text>
+              <Text c="dimmed" ta="center" py="md">{t('noLocationHistory')}</Text>
             ) : (
               <Stack gap="xs">
                 {locationHistory.map((loc) => (
@@ -491,26 +495,26 @@ export default function GpsTracker() {
       <Modal
         opened={geofenceModalOpen}
         onClose={() => setGeofenceModalOpen(false)}
-        title={`Set Geofence for ${selectedDevice?.name || 'Device'}`}
+        title={t('setGeofenceForDevice', { name: selectedDevice?.name || t('unknown') })}
         size="sm"
       >
         <Stack>
-          <Text size="sm">Define a circular geofence around the selected point.</Text>
+          <Text size="sm">{t('defineGeofence')}</Text>
           {newGeofence.lat && newGeofence.lng && (
             <Box>
-              <Text size="xs">Center: {newGeofence.lat.toFixed(4)}, {newGeofence.lng.toFixed(4)}</Text>
-              <Text size="xs">Radius: {newGeofence.radius} meters</Text>
+              <Text size="xs">{t('center')}: {newGeofence.lat.toFixed(4)}, {newGeofence.lng.toFixed(4)}</Text>
+              <Text size="xs">{t('radius')}: {newGeofence.radius} {t('meters')}</Text>
             </Box>
           )}
           <TextInput
-            label="Radius (meters)"
+            label={t('radiusMeters')}
             type="number"
             value={newGeofence.radius}
             onChange={(e) => setNewGeofence({ ...newGeofence, radius: parseInt(e.target.value, 10) })}
           />
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={() => setGeofenceModalOpen(false)}>Cancel</Button>
-            <Button color="blue" onClick={handleSetGeofence}>Save Geofence</Button>
+            <Button variant="default" onClick={() => setGeofenceModalOpen(false)}>{t('cancel')}</Button>
+            <Button color="blue" onClick={handleSetGeofence}>{t('saveGeofence')}</Button>
           </Group>
         </Stack>
       </Modal>

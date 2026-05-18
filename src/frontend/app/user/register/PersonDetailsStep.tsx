@@ -8,6 +8,7 @@ import {
 import {
   IconUserPlus, IconCheck, IconCamera, IconRefresh, IconX, IconPhoto, IconInfoCircle
 } from '@tabler/icons-react';
+import { useTranslations } from 'next-intl';
 
 export const PersonDetailsStep = ({
   formValues,
@@ -23,24 +24,27 @@ export const PersonDetailsStep = ({
   PRIMARY_DARK,
   getBg,
   gradientIconBox
-}) => {
+}: any) => {
+  const t = useTranslations("Register");
+  const tCommon = useTranslations("Common");
+
   // Handle multiple file selection using native input
-  const handleImageUpload = (event) => {
+  const handleImageUpload = (event: any) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
     
-    const newImages = Array.from(files).map(file => ({
+    const newImages = Array.from(files).map((file: any) => ({
       file,
       preview: URL.createObjectURL(file)
     }));
     
-    setPersonImages(prev => [...prev, ...newImages]);
+    setPersonImages((prev: any[]) => [...prev, ...newImages]);
     // Reset the input value so the same file can be uploaded again if removed
     event.target.value = '';
   };
 
-  const removeImage = (indexToRemove) => {
-    setPersonImages(prev => {
+  const removeImage = (indexToRemove: number) => {
+    setPersonImages((prev: any[]) => {
       URL.revokeObjectURL(prev[indexToRemove].preview);
       return prev.filter((_, idx) => idx !== indexToRemove);
     });
@@ -59,16 +63,16 @@ export const PersonDetailsStep = ({
       <Flex align="center" gap="md" mb="lg">
         <Box style={gradientIconBox}><IconUserPlus size={24} /></Box>
         <Box>
-          <Title order={4} style={{ color: PRIMARY_DARK }}>Personal Information</Title>
-          <Text c="dimmed" size="sm">Provide details about the missing person</Text>
+          <Title order={4} style={{ color: PRIMARY_DARK }}>{t("stepPersonDetails")}</Title>
+          <Text c="dimmed" size="sm">{t("personsPhotosDesc")}</Text>
         </Box>
       </Flex>
 
       <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mb="lg">
         <TextInput
           name="firstName"
-          label={<Text fw={600} size="sm">First name <Text span c={PRIMARY_COLOR}>*</Text></Text>}
-          placeholder="Enter first name"
+          label={<Text fw={600} size="sm">{t("firstName")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          placeholder={t("firstName")}
           radius="md"
           variant="filled"
           value={formValues.firstName}
@@ -76,8 +80,8 @@ export const PersonDetailsStep = ({
         />
         <TextInput
           name="middleName"
-          label={<Text fw={600} size="sm">Middle name</Text>}
-          placeholder="Enter middle name"
+          label={<Text fw={600} size="sm">{t("middleName")}</Text>}
+          placeholder={t("middleName")}
           radius="md"
           variant="filled"
           value={formValues.middleName}
@@ -85,8 +89,8 @@ export const PersonDetailsStep = ({
         />
         <TextInput
           name="lastName"
-          label={<Text fw={600} size="sm">Last name <Text span c={PRIMARY_COLOR}>*</Text></Text>}
-          placeholder="Enter last name"
+          label={<Text fw={600} size="sm">{t("lastName")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          placeholder={t("lastName")}
           radius="md"
           variant="filled"
           value={formValues.lastName}
@@ -97,8 +101,12 @@ export const PersonDetailsStep = ({
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md" mb="lg">
         <Select
           name="gender"
-          label={<Text fw={600} size="sm">Gender <Text span c={PRIMARY_COLOR}>*</Text></Text>}
-          data={['Male', 'Female', 'Other']}
+          label={<Text fw={600} size="sm">{t("gender")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          data={[
+            { value: 'Male', label: t("male") || 'Male' },
+            { value: 'Female', label: t("female") || 'Female' },
+            { value: 'Other', label: t("other") || 'Other' }
+          ]}
           radius="md"
           variant="filled"
           value={formValues.gender}
@@ -106,8 +114,8 @@ export const PersonDetailsStep = ({
         />
         <NumberInput
           name="age"
-          label={<Text fw={600} size="sm">Age <Text span c={PRIMARY_COLOR}>*</Text></Text>}
-          placeholder="Enter age"
+          label={<Text fw={600} size="sm">{t("age")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          placeholder={t("age")}
           radius="md"
           min={0}
           variant="filled"
@@ -116,8 +124,8 @@ export const PersonDetailsStep = ({
         />
         <NumberInput
           name="height"
-          label={<Text fw={600} size="sm">Height (cm)</Text>}
-          placeholder="Height in cm"
+          label={<Text fw={600} size="sm">{t("height")}</Text>}
+          placeholder={t("height")}
           radius="md"
           min={0}
           variant="filled"
@@ -126,8 +134,8 @@ export const PersonDetailsStep = ({
         />
         <NumberInput
           name="weight"
-          label={<Text fw={600} size="sm">Weight (kg)</Text>}
-          placeholder="Weight in kg"
+          label={<Text fw={600} size="sm">{t("weight")}</Text>}
+          placeholder={t("weight")}
           radius="md"
           min={0}
           variant="filled"
@@ -138,8 +146,8 @@ export const PersonDetailsStep = ({
 
       <Textarea
         name="description"
-        label={<Text fw={600} size="sm">Additional Description</Text>}
-        placeholder="Add any distinguishing features, clothing description, last seen with, medical conditions, etc."
+        label={<Text fw={600} size="sm">{t("description")}</Text>}
+        placeholder={t("descriptionPlaceholder")}
         minRows={4}
         radius="md"
         mb="lg"
@@ -150,12 +158,12 @@ export const PersonDetailsStep = ({
 
       <Select
         name="specialCase"
-        label={<Text fw={600} size="sm">Special Case (if applicable)</Text>}
-        placeholder="Select if the person has special circumstances"
+        label={<Text fw={600} size="sm">{t("specialCaseLabel")}</Text>}
+        placeholder={t("specialCasePlaceholder")}
         data={[
-          { value: 'none', label: 'None' },
-          { value: 'mentally-ill', label: 'Mentally Ill' },
-          { value: 'criminal', label: 'Criminal Background' }
+          { value: 'none', label: t("none") },
+          { value: 'mentally-ill', label: t("mentallyIll") },
+          { value: 'criminal', label: t("criminal") }
         ]}
         radius="md"
         clearable
@@ -179,10 +187,10 @@ export const PersonDetailsStep = ({
         }}
       >
         <Text fw={600} size="sm" mb="xs">
-          Upload Photos <Text span c={PRIMARY_COLOR}>* (at least 2 required)</Text>
+          {t("uploadPhotos")} <Text span c={PRIMARY_COLOR}>{t("uploadPhotosReq")}</Text>
         </Text>
         <Text size="sm" c="dimmed" mb="md">
-          Clear, recent photos of the missing person
+          {t("clearRecentPhotos")}
         </Text>
         <input
           type="file"
@@ -194,7 +202,7 @@ export const PersonDetailsStep = ({
 
         {personImages.length === 0 && (
           <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light" mt="md" radius="md">
-            <Text size="sm">Please upload at least 2 clear photos of the missing person.</Text>
+            <Text size="sm">{t("atLeast2Photos")}</Text>
           </Alert>
         )}
 
@@ -202,16 +210,16 @@ export const PersonDetailsStep = ({
           <Box mt="lg">
             <Flex justify="space-between" align="center" mb="sm">
               <Text size="sm" fw={600} c={PRIMARY_DARK}>
-                Uploaded Images ({personImages.length} / 2+)
+                {t("uploadedImages")} ({personImages.length} / 2+)
               </Text>
               {personImages.length < 2 && (
                 <Badge color="orange" variant="light" size="sm">
-                  Need {2 - personImages.length} more
+                  {t("needMore", { count: 2 - personImages.length })}
                 </Badge>
               )}
             </Flex>
             <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="sm">
-              {personImages.map((img, idx) => (
+              {personImages.map((img: any, idx: number) => (
                 <Box
                   key={idx}
                   style={{
@@ -248,7 +256,7 @@ export const PersonDetailsStep = ({
               ))}
             </SimpleGrid>
             <Text size="xs" c="dimmed" mt="sm" ta="center">
-              Select more files to add images • Click ✗ to remove
+              {t("clickToUpload")}
             </Text>
           </Box>
         )}

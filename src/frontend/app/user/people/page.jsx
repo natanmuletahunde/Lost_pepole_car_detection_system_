@@ -21,6 +21,7 @@ import { IconUser as IconUserPerson, IconMapPin, IconMap, IconAlertCircle, IconA
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { apiClient } from "../../lib/apiClient";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -38,6 +39,8 @@ function getImageUrl(item) {
 }
 
 export default function PeoplePage() {
+  const t = useTranslations("People");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const { colorScheme } = useMantineColorScheme();
   const [missingPersons, setMissingPersons] = useState([]);
@@ -60,7 +63,7 @@ export default function PeoplePage() {
           const persons = extractArray(await res.json());
           setMissingPersons(persons.filter((p) => p.status === "Active"));
         } else {
-          setError("Failed to fetch persons");
+          setError(t("error"));
         }
       } catch (err) {
         setError(err.message);
@@ -69,7 +72,10 @@ export default function PeoplePage() {
       }
     };
 
-    fetchPersons();
+    const timer = setTimeout(() => {
+      fetchPersons();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   if (loading) {
@@ -94,21 +100,21 @@ export default function PeoplePage() {
         </ActionIcon>
         <Box>
           <Title order={1} style={{ color: "#2f80ed" }}>
-            Missing Persons
+            {t("title")}
           </Title>
-          <Text c="dimmed">Help us locate these missing persons</Text>
+          <Text c="dimmed">{t("subtitle")}</Text>
         </Box>
       </Group>
 
       {error && (
-        <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red" mb="lg">
+        <Alert icon={<IconAlertCircle size={16} />} title={t("error")} color="red" mb="lg">
           {error}
         </Alert>
       )}
 
       {missingPersons.length === 0 && !error ? (
-        <Alert icon={<IconAlertCircle size={16} />} title="No persons" color="blue" variant="light">
-          No missing persons reported yet.
+        <Alert icon={<IconAlertCircle size={16} />} title={t("title")} color="blue" variant="light">
+          {t("noPersons")}
         </Alert>
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing="lg">
@@ -143,16 +149,16 @@ export default function PeoplePage() {
                   </Text>
                   <Group gap="xs" mt={4}>
                     <Badge size="sm" color="pink" variant="light">
-                      {person.gender || "Unknown"}
+                      {person.gender || tCommon("unknown")}
                     </Badge>
                     <Badge size="sm" color="cyan" variant="light">
-                      Age {person.age || "?"}
+                      {t("age")} {person.age || "?"}
                     </Badge>
                   </Group>
                   <Group gap={4} mt={8}>
                     <IconMapPin size={16} />
                     <Text size="sm" lineClamp={1}>
-                      {person.location || "Location unknown"}
+                      {person.location || tCommon("unknown")}
                     </Text>
                   </Group>
                   {person.description && (
@@ -161,7 +167,7 @@ export default function PeoplePage() {
                     </Text>
                   )}
                   <Badge size="sm" color="red" variant="filled" fullWidth mt={12}>
-                    ACTIVE
+                    {tCommon("active")}
                   </Badge>
                   <Button
                     component={Link}
@@ -177,7 +183,7 @@ export default function PeoplePage() {
                     mt="md"
                     leftSection={<IconMap size={16} />}
                   >
-                    Report Sighting
+                    {t("reportSighting")}
                   </Button>
                 </Box>
               </Card>

@@ -24,6 +24,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { notifications } from "@mantine/notifications";
+import { useTranslations } from "next-intl";
 
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -56,6 +57,7 @@ const simpleHash = async (str) => {
 };
 
 export default function SecurityTab({ colorScheme }) {
+  const t = useTranslations("Profile");
   const [pwdOpened, { open: openPwd, close: closePwd }] = useDisclosure(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
@@ -122,8 +124,8 @@ export default function SecurityTab({ colorScheme }) {
       }
 
       notifications.show({
-        title: "Password Updated",
-        message: "Your password has been changed successfully",
+        title: t("pwdUpdated"),
+        message: t("pwdUpdatedMsg"),
         color: "green",
         icon: <IconCheck size={18} />,
       });
@@ -131,8 +133,8 @@ export default function SecurityTab({ colorScheme }) {
       passwordForm.reset();
     } catch (error) {
       notifications.show({
-        title: "Password Update Failed",
-        message: error.message || "Could not change password.",
+        title: t("pwdUpdateFailed"),
+        message: error.message || t("pwdUpdateError"),
         color: "red",
         icon: <IconX size={18} />,
       });
@@ -147,10 +149,10 @@ export default function SecurityTab({ colorScheme }) {
   };
 
   const getPasswordStrengthLabel = () => {
-    if (passwordStrength < 30) return "Weak";
-    if (passwordStrength < 60) return "Fair";
-    if (passwordStrength < 80) return "Good";
-    return "Strong";
+    if (passwordStrength < 30) return t("weak");
+    if (passwordStrength < 60) return t("fair");
+    if (passwordStrength < 80) return t("goodStrength");
+    return t("strong");
   };
 
   // 2FA handlers
@@ -166,11 +168,11 @@ export default function SecurityTab({ colorScheme }) {
 
   const handleEnable2FA = async () => {
     if (pinValue.length !== 6 || !/^\d+$/.test(pinValue)) {
-      setPinError("PIN must be 6 digits");
+      setPinError(t("pinErrorDigit"));
       return;
     }
     if (pinValue !== confirmPinValue) {
-      setPinError("PINs do not match");
+      setPinError(t("pinErrorMatch"));
       return;
     }
     const hash = await simpleHash(pinValue);
@@ -182,8 +184,8 @@ export default function SecurityTab({ colorScheme }) {
     setConfirmPinValue("");
     setPinError("");
     notifications.show({
-      title: "2FA Enabled",
-      message: "Two-factor authentication has been enabled.",
+      title: t("twoFactorEnabledTitle"),
+      message: t("twoFactorEnabledMsg"),
       color: "green",
     });
   };
@@ -194,8 +196,8 @@ export default function SecurityTab({ colorScheme }) {
     setTwoFactorEnabled(false);
     setShow2FASetup(false);
     notifications.show({
-      title: "2FA Disabled",
-      message: "Two-factor authentication has been disabled.",
+      title: t("twoFactorDisabledTitle"),
+      message: t("twoFactorDisabledMsg"),
       color: "blue",
     });
   };
@@ -211,9 +213,9 @@ export default function SecurityTab({ colorScheme }) {
     <Stack gap="xl">
       {/* Change Password Card */}
       <Card withBorder radius="md" padding="lg" bg={getBg(colorScheme, "white", "#2c2e33")}>
-        <Text fw={500} size="md" mb="lg">Password</Text>
+        <Text fw={500} size="md" mb="lg">{t("currentPassword")}</Text>
         <Button variant="light" leftSection={<IconKey size={16} />} onClick={openPwd} fullWidth>
-          Change password
+          {t("changePassword")}
         </Button>
       </Card>
 
@@ -221,8 +223,8 @@ export default function SecurityTab({ colorScheme }) {
       <Card withBorder radius="md" padding="lg" bg={getBg(colorScheme, "white", "#2c2e33")}>
         <Group justify="space-between" mb="lg">
           <Box>
-            <Text fw={500} size="md">Two-factor authentication</Text>
-            <Text size="xs" c="dimmed">Add an extra layer of security</Text>
+            <Text fw={500} size="md">{t("twoFactor")}</Text>
+            <Text size="xs" c="dimmed">{t("twoFactorDesc")}</Text>
           </Box>
           <Switch size="md" checked={twoFactorEnabled} onChange={(e) => handleTwoFactorToggle(e.currentTarget.checked)} />
         </Group>
@@ -232,7 +234,7 @@ export default function SecurityTab({ colorScheme }) {
             {setupMode === "setup" ? (
               <Stack gap="md">
                 <Alert color="blue" variant="light" icon={<IconInfoCircle size={16} />}>
-                  Set up a 6-digit PIN
+                  {t("setupPin")}
                 </Alert>
                 <SimpleGrid cols={2}>
                   <PinInput length={6} type="number" value={pinValue} onChange={setPinValue} size="md" />
@@ -240,18 +242,18 @@ export default function SecurityTab({ colorScheme }) {
                 </SimpleGrid>
                 {pinError && <Text c="red" size="xs">{pinError}</Text>}
                 <Group justify="flex-end">
-                  <Button size="xs" variant="subtle" onClick={cancel2FASetup}>Cancel</Button>
-                  <Button size="xs" onClick={handleEnable2FA}>Enable</Button>
+                  <Button size="xs" variant="subtle" onClick={cancel2FASetup}>{t("cancel")}</Button>
+                  <Button size="xs" onClick={handleEnable2FA}>{t("enable")}</Button>
                 </Group>
               </Stack>
             ) : (
               <Stack gap="md">
                 <Alert color="red" variant="light" icon={<IconAlertTriangle size={16} />}>
-                  Disable two-factor authentication?
+                  {t("disable2FA")}
                 </Alert>
                 <Group justify="flex-end">
-                  <Button size="xs" variant="subtle" onClick={cancel2FASetup}>Cancel</Button>
-                  <Button size="xs" color="red" onClick={handleDisable2FA}>Disable</Button>
+                  <Button size="xs" variant="subtle" onClick={cancel2FASetup}>{t("cancel")}</Button>
+                  <Button size="xs" color="red" onClick={handleDisable2FA}>{t("disable")}</Button>
                 </Group>
               </Stack>
             )}
@@ -261,46 +263,60 @@ export default function SecurityTab({ colorScheme }) {
 
       {/* Login History Card */}
       <Card withBorder radius="md" padding="lg" bg={getBg(colorScheme, "white", "#2c2e33")}>
-        <Text fw={500} size="md" mb="lg">Login history</Text>
+        <Text fw={500} size="md" mb="lg">{t("loginHistory")}</Text>
         <Stack gap="sm">
           <Group justify="space-between">
             <Box>
-              <Text size="sm" fw={500}>Current session</Text>
-              <Text size="xs" c="dimmed">Addis Ababa, Ethiopia · Chrome on Windows</Text>
+              <Text size="sm" fw={500}>{t("currentSession")}</Text>
+              <Text size="xs" c="dimmed">{t("sessionInfo")}</Text>
             </Box>
           </Group>
         </Stack>
       </Card>
 
       {/* Change Password Modal */}
-      <Modal opened={pwdOpened} onClose={closePwd} title="Change password" centered size="md" radius="md">
+      <Modal opened={pwdOpened} onClose={closePwd} title={t("changePassword")} centered size="md" radius="md">
         <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)}>
           <Stack gap="md">
             <PasswordInput
-              label="Current password"
+              label={t("currentPassword")}
               {...passwordForm.register("currentPassword")}
-              error={passwordForm.formState.errors.currentPassword?.message}
+              error={passwordForm.formState.errors.currentPassword ? t("pwdSchemaCurrReq") : null}
             />
             <PasswordInput
-              label="New password"
+              label={t("newPassword")}
               {...passwordForm.register("newPassword")}
-              error={passwordForm.formState.errors.newPassword?.message}
+              error={
+                passwordForm.formState.errors.newPassword
+                  ? passwordForm.formState.errors.newPassword.message === "Password must be at least 8 characters"
+                    ? t("pwdSchemaMin")
+                    : passwordForm.formState.errors.newPassword.message === "Must contain uppercase"
+                    ? t("pwdSchemaUpper")
+                    : passwordForm.formState.errors.newPassword.message === "Must contain lowercase"
+                    ? t("pwdSchemaLower")
+                    : passwordForm.formState.errors.newPassword.message === "Must contain number"
+                    ? t("pwdSchemaNum")
+                    : passwordForm.formState.errors.newPassword.message === "Must contain special character"
+                    ? t("pwdSchemaSpecial")
+                    : passwordForm.formState.errors.newPassword.message
+                  : null
+              }
             />
             {passwordForm.watch("newPassword") && (
               <Box>
                 <Group justify="space-between" mb={4}>
-                  <Text size="xs" c="dimmed">Password strength</Text>
+                  <Text size="xs" c="dimmed">{t("passwordStrength")}</Text>
                   <Text size="xs" fw={600} c={getPasswordStrengthColor()}>{getPasswordStrengthLabel()}</Text>
                 </Group>
                 <Progress value={passwordStrength} color={getPasswordStrengthColor()} size="sm" />
               </Box>
             )}
             <PasswordInput
-              label="Confirm new password"
+              label={t("confirmPassword")}
               {...passwordForm.register("confirmPassword")}
-              error={passwordForm.formState.errors.confirmPassword?.message}
+              error={passwordForm.formState.errors.confirmPassword ? t("pwdSchemaMatch") : null}
             />
-            <Button type="submit" color="blue" fullWidth>Update password</Button>
+            <Button type="submit" color="blue" fullWidth>{t("changePassword")}</Button>
           </Stack>
         </form>
       </Modal>
