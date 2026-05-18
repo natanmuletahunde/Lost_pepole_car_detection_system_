@@ -2,6 +2,7 @@ const Detection = require('../models/Detection');
 const MissingPerson = require('../models/MissingPerson');
 const Notification = require('../models/Notification');
 const Sighting = require('../models/Sighting');
+const PcLocation = require('../models/PcLocation');
 const bot = require('../telegramBot');
 const axios = require('axios');
 const { SerialPort } = require('serialport');
@@ -36,6 +37,22 @@ try {
 let cachedLocation = { lat: null, lon: null, timestamp: 0 };
 
 async function getCurrentLocation() {
+  try {
+    // 1. Try to fetch the latest high-accuracy location reported by the device (saved via /api/v1/pc-location)
+    const latestPcLocation = await PcLocation.findOne().sort({ updatedAt: -1 });
+    if (latestPcLocation && latestPcLocation.latitude && latestPcLocation.longitude) {
+      console.log(`📍 Using latest high-accuracy PC Location: ${latestPcLocation.latitude}, ${latestPcLocation.longitude}`);
+      return {
+        lat: latestPcLocation.latitude,
+        lon: latestPcLocation.longitude,
+        location: latestPcLocation.address || 'Device Location'
+      };
+    }
+  } catch (dbErr) {
+    console.warn('⚠️ Error fetching PcLocation from DB:', dbErr.message);
+  }
+
+  // 2. Fallback to cached IP-based geolocation
   const now = Date.now();
 
   if (cachedLocation.lat && (now - cachedLocation.timestamp < 30 * 60 * 1000)) {
@@ -109,7 +126,10 @@ exports.createDetection = async (req, res) => {
       name,
       detectionImage,
       confidence,
-      behavior
+      behavior,
+      latitude,
+      longitude,
+      location
     } = req.body;
 
     if (!registrationId || !detectionImage) {
@@ -129,8 +149,17 @@ exports.createDetection = async (req, res) => {
       });
     }
 
-    const { lat, lon } = await getCurrentLocation();
-    const locationString = `${lat}, ${lon}`;
+    let lat, lon, locationString;
+    if (latitude !== undefined && longitude !== undefined) {
+      lat = Number(latitude);
+      lon = Number(longitude);
+      locationString = location || `${lat}, ${lon}`;
+    } else {
+      const loc = await getCurrentLocation();
+      lat = loc.lat;
+      lon = loc.lon;
+      locationString = `${lat}, ${lon}`;
+    }
 
     const mapsLink = `https://maps.google.com/?q=${lat},${lon}`;
 
