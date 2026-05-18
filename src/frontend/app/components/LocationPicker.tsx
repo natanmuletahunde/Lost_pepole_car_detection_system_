@@ -15,15 +15,14 @@ const selectedIcon = L.divIcon({
 
 // Default icon for extra markers (missing persons/vehicles)
 const defaultIcon = L.divIcon({
-  html: '●',
+  html: '<span style="color: #2f80ed; font-size: 20px; line-height: 16px;">●</span>',
   className: 'default-marker',
   iconSize: [16, 16],
   popupAnchor: [0, -8],
-  style: { color: '#2f80ed', fontSize: '20px', lineHeight: '16px' },
 });
 
 // Handler for map clicks (only updates the selected marker)
-function MapClickHandler({ onMapClick }) {
+function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
   useMapEvents({
     click(e) {
       onMapClick(e.latlng.lat, e.latlng.lng);
@@ -36,11 +35,15 @@ const LocationPicker = memo(({
   onLocationSelect,
   initialPosition = [9.03, 38.74],
   markers = [], // array of { lat, lng, title, type? }
+}: {
+  onLocationSelect: (lat: number, lng: number, address: string) => void;
+  initialPosition?: [number, number];
+  markers?: Array<{ lat: number; lng: number; title?: string; type?: string }>;
 }) => {
   const [position, setPosition] = useState(initialPosition);
-  const timeoutRef = useRef(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleMapClick = async (lat, lng) => {
+  const handleMapClick = async (lat: number, lng: number) => {
     setPosition([lat, lng]);
 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);

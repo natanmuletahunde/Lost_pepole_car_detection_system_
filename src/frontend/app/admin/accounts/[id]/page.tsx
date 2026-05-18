@@ -70,10 +70,10 @@ export default function UserDetailPage() {
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
-  const [user, setUser] = useState(null);
-  const [userStats, setUserStats] = useState(null);
+  const [user, setUser] = useState<any>(null);
+  const [userStats, setUserStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [editingUser, setEditingUser] = useState(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
 
   // Modal controls
   const [editModalOpened, editModalHandlers] = useDisclosure(false);
@@ -84,7 +84,11 @@ export default function UserDetailPage() {
   const fetchUser = async () => {
     try {
       setLoading(true);
+<<<<<<< HEAD
       const data = (await adminFetch(`/admin/users/${params.id}`)) as any;
+=======
+      const data: any = await adminFetch(`/admin/users/${params.id}`);
+>>>>>>> c8e67e378a0a722560a7fddf717e6ab07ae85602
       setUser(data.user);
       setUserStats(data.stats || null);
     } catch (error) {
@@ -139,7 +143,11 @@ export default function UserDetailPage() {
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
+<<<<<<< HEAD
       const payload = (await adminFetch(`/admin/users/${values.id}`, {
+=======
+      const payload: any = await adminFetch(`/admin/users/${values.id}`, {
+>>>>>>> c8e67e378a0a722560a7fddf717e6ab07ae85602
         method: "PATCH",
         body: JSON.stringify({
           firstName,
@@ -172,7 +180,12 @@ export default function UserDetailPage() {
   // Delete user
   const deleteUser = async () => {
     try {
+<<<<<<< HEAD
       const uid = String(user?._id || user?.id);
+=======
+      if (!user) return;
+      const uid = String((user as any)._id || (user as any).id);
+>>>>>>> c8e67e378a0a722560a7fddf717e6ab07ae85602
       await adminFetch(`/admin/users/${uid}`, { method: "DELETE" });
       notifications.show({
         title: "Deleted",
@@ -194,9 +207,16 @@ export default function UserDetailPage() {
   // Toggle account status
   const toggleUserStatus = async () => {
     try {
+<<<<<<< HEAD
       const newStatus = !user?.isActive;
       const uid = String(user?._id || user?.id);
       const payload = (await adminFetch(`/admin/users/${uid}`, {
+=======
+      if (!user) return;
+      const newStatus = !(user as any).isActive;
+      const uid = String((user as any)._id || (user as any).id);
+      const payload: any = await adminFetch(`/admin/users/${uid}`, {
+>>>>>>> c8e67e378a0a722560a7fddf717e6ab07ae85602
         method: "PATCH",
         body: JSON.stringify({ isActive: newStatus }),
       })) as any;
@@ -218,11 +238,16 @@ export default function UserDetailPage() {
   // Reset password (simulated)
   const resetPassword = async () => {
     try {
+      if (!user) return;
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
       notifications.show({
         title: "Password reset",
+<<<<<<< HEAD
         message: `A password reset link has been sent to ${user?.email}`,
+=======
+        message: `A password reset link has been sent to ${(user as any).email}`,
+>>>>>>> c8e67e378a0a722560a7fddf717e6ab07ae85602
         color: "green",
       });
       resetPasswordModalHandlers.close();

@@ -49,11 +49,14 @@ import { PrivacySection } from "./SettingsSections/PrivacySection";
 import { useSettingsForm } from "./hooks/useSettingsForm";
 import { useUnsavedChanges } from "./hooks/useUnsavedChanges";
 import { validateSettings } from "./utils/validators";
+import DashboardHeader from "../../user/dashboard/DashboardHeader";
+import { useTranslations } from "next-intl";
 
 const getBg = (colorScheme, light, dark) =>
   colorScheme === "dark" ? dark : light;
 
 export default function UserSettingsPage() {
+  const t = useTranslations("Settings");
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
@@ -96,10 +99,24 @@ export default function UserSettingsPage() {
     } catch (_) {}
   }, []);
 
+  // Synchronize language change from floating button
+  useEffect(() => {
+    const handleLangChange = (event) => {
+      const newLang = event.detail;
+      if (newLang && formData.language !== newLang) {
+        handleChange("language", newLang);
+      }
+    };
+    window.addEventListener("appLanguageChanged", handleLangChange);
+    return () => {
+      window.removeEventListener("appLanguageChanged", handleLangChange);
+    };
+  }, [formData.language, handleChange]);
+
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("isAuthenticated");
-    router.push("/authentication/login");
+    router.push("/");
   };
 
   const handleSubmit = async (event) => {
@@ -108,7 +125,7 @@ export default function UserSettingsPage() {
     const errorKeys = Object.keys(validationErrors);
     if (errorKeys.length > 0) {
       setErrors(validationErrors);
-      setNotification({ type: "error", message: "Please fix the errors above" });
+      setNotification({ type: "error", message: t("errorFixAbove") });
       return;
     }
     await saveSettings();
@@ -116,11 +133,11 @@ export default function UserSettingsPage() {
 
   // Tabs layout configuration
   const tabsList = [
-    { id: "profile", label: "Profile Information", icon: IconUser, color: "blue", desc: "Display name & email info" },
-    { id: "security", label: "Security & Credentials", icon: IconShieldLock, color: "red", desc: "Passwords & login details" },
-    { id: "preferences", label: "System Preferences", icon: IconPalette, color: "violet", desc: "Themes, language & timezone" },
-    { id: "notifications", label: "Alert Notifications", icon: IconBellRinging, color: "orange", desc: "Configure dispatch parameters" },
-    { id: "privacy", label: "Privacy & Analytics", icon: IconShield, color: "green", desc: "Data collection & visibility" },
+    { id: "profile", label: t("profileInfo"), icon: IconUser, color: "blue", desc: t("profileDesc") },
+    { id: "security", label: t("securityCredentials"), icon: IconShieldLock, color: "red", desc: t("securityDesc") },
+    { id: "preferences", label: t("systemPreferences"), icon: IconPalette, color: "violet", desc: t("preferencesDesc") },
+    { id: "notifications", label: t("alertNotifications"), icon: IconBellRinging, color: "orange", desc: t("notificationsDesc") },
+    { id: "privacy", label: t("privacyAnalytics"), icon: IconShield, color: "green", desc: t("privacyDesc") },
   ];
 
   return (
@@ -164,77 +181,8 @@ export default function UserSettingsPage() {
         }
       ` }} />
 
-      {/* ── Beautiful Consistent Header ── */}
-      <Box
-        bg={headerBg}
-        py="xs"
-        style={{
-          borderBottom: `1px solid ${borderColor}`,
-          zIndex: 100,
-          backdropFilter: "blur(14px)",
-          boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.3)" : "0 4px 20px rgba(0,0,0,0.03)",
-        }}
-      >
-        <Container size="xl">
-          <Group justify="space-between">
-            <Group gap="md">
-              <Link href="/user/dashboard">
-                <Image
-                  src="/logo.jpg"
-                  alt="Logo"
-                  width={0}
-                  height={45}
-                  sizes="100vw"
-                  style={{ width: "auto", height: "45px", borderRadius: "8px" }}
-                />
-              </Link>
-              <Divider orientation="vertical" h={25} />
-              <Group gap="xs">
-                <IconShieldLock size={20} color={theme.colors.blue[6]} />
-                <Title order={4} fw={800} style={{ letterSpacing: -0.3 }}>Settings Center</Title>
-              </Group>
-            </Group>
-
-            <Group gap="lg">
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                size="lg"
-                component={Link}
-                href="/user/dashboard"
-                title="Go to Dashboard"
-              >
-                <IconHome size={22} />
-              </ActionIcon>
-
-              <Menu shadow="lg" width={220} radius="md" transitionProps={{ transition: 'pop' }}>
-                <Menu.Target>
-                  <UnstyledButton style={{ padding: '4px 8px', borderRadius: '8px' }}>
-                    <Group gap="xs">
-                      <Avatar src={null} alt="User" color="blue" size="sm" radius="xl" fw={700} bg="linear-gradient(135deg, #4DABF7 0%, #228BE6 100%)">
-                        {username[0]?.toUpperCase()}
-                      </Avatar>
-                      <Text fw={700} size="sm" visibleFrom="xs">{username}</Text>
-                    </Group>
-                  </UnstyledButton>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  <Menu.Item leftSection={<IconUser size={16} />} component={Link} href="/user/profile">
-                    My Profile
-                  </Menu.Item>
-                  <Menu.Item leftSection={<IconBell size={16} />} component={Link} href="/user/alert">
-                    System Alerts
-                  </Menu.Item>
-                  <Menu.Divider />
-                  <Menu.Item color="red" leftSection={<IconLogout size={16} />} onClick={handleLogout}>
-                    Logout
-                  </Menu.Item>
-                </Menu.Dropdown>
-              </Menu>
-            </Group>
-          </Group>
-        </Container>
-      </Box>
+      {/* ── Reusable Unified Header ── */}
+      <DashboardHeader />
 
       {/* ── Main Dashboard Settings Layout ── */}
       <Container size="xl" py={40} style={{ flex: 1 }}>
@@ -253,16 +201,16 @@ export default function UserSettingsPage() {
             <Group justify="space-between" align="center" wrap="nowrap">
               <Box>
                 <Group gap="xs" mb={4}>
-                  <Badge color="blue" variant="filled" size="sm" style={{ textTransform: "uppercase" }}>System Config</Badge>
+                  <Badge color="blue" variant="filled" size="sm" style={{ textTransform: "uppercase" }}>{t("badge")}</Badge>
                   {hasUnsavedChanges && (
-                    <Badge color="orange" variant="light" size="sm">Unsaved edits pending</Badge>
+                    <Badge color="orange" variant="light" size="sm">{t("unsavedChanges")}</Badge>
                   )}
                 </Group>
                 <Title order={2} fw={900} style={{ letterSpacing: -0.5 }}>
-                  Account settings
+                  {t("title")}
                 </Title>
                 <Text size="xs" style={{ opacity: 0.85 }}>
-                  Configure your display details, privacy levels, and background active CCTV notification settings.
+                  {t("description")}
                 </Text>
               </Box>
 
@@ -283,7 +231,7 @@ export default function UserSettingsPage() {
                   <ThemeIcon size="xs" radius="xl" color={hasUnsavedChanges ? "orange" : "green"}>
                     {hasUnsavedChanges ? <IconAlertTriangle size={10} /> : <IconCheck size={10} />}
                   </ThemeIcon>
-                  <span>{hasUnsavedChanges ? "UNSAVED CHANGES" : "SYNCHRONIZED"}</span>
+                  <span>{hasUnsavedChanges ? t("unsavedChangesBadge") : t("synchronizedBadge")}</span>
                 </Group>
               </Badge>
             </Group>
@@ -294,7 +242,7 @@ export default function UserSettingsPage() {
             <Alert
               variant="filled"
               color={notification.type === "success" ? "green" : "red"}
-              title={notification.type === "success" ? "Changes Saved!" : "Validation Error"}
+              title={notification.type === "success" ? t("successSaveTitle") : t("errorValidationTitle")}
               withCloseButton={true}
               onClose={() => setNotification(null)}
               icon={notification.type === "success" ? <IconCircleCheck size={18} /> : <IconAlertTriangle size={18} />}
@@ -311,7 +259,7 @@ export default function UserSettingsPage() {
             <Grid.Col span={{ base: 12, md: 3 }}>
               <Paper withBorder radius="lg" p="md" style={{ background: cardBg, position: "sticky", top: 100 }}>
                 <Text fw={800} size="xs" c="dimmed" mb="md" style={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Preferences Navigation
+                  {t("navigationTitle")}
                 </Text>
                 
                 <Stack gap="xs">
@@ -394,7 +342,7 @@ export default function UserSettingsPage() {
                         size="md"
                         leftSection={<IconX size={18} />}
                       >
-                        Cancel
+                        {t("cancel")}
                       </Button>
 
                       <Button
@@ -408,11 +356,11 @@ export default function UserSettingsPage() {
                         style={{
                           boxShadow: hasUnsavedChanges 
                             ? "0 4px 14px rgba(47, 128, 237, 0.35)" 
-                            : "none",
+                             : "none",
                           transition: "all 0.3s ease"
                         }}
                       >
-                        {isLoading ? "Saving changes..." : "Save Config Details"}
+                        {isLoading ? t("savingButton") : t("saveButton")}
                       </Button>
                     </Group>
                   </Paper>
@@ -421,7 +369,7 @@ export default function UserSettingsPage() {
                   <Alert
                     variant="light"
                     color="blue"
-                    title="🔒 Verified Cloud Synchronization"
+                    title={t("verifiedSyncTitle")}
                     radius="lg"
                     icon={<IconInfoCircle size={18} />}
                     styles={{
@@ -432,7 +380,7 @@ export default function UserSettingsPage() {
                     }}
                   >
                     <Text size="xs" c="dimmed" style={{ lineHeight: 1.6 }}>
-                      Your preferences and credentials are encrypted during transmission and securely stored in Flega's central MongoDB database. Unsaved changes are monitored locally in real-time to prevent accidental navigation loss.
+                      {t("verifiedSyncDesc")}
                     </Text>
                   </Alert>
 

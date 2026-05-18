@@ -15,12 +15,14 @@ import {
 } from "@mantine/core";
 import { IconUser, IconCamera, IconMail, IconPhone, IconMapPin } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
+import { useTranslations } from "next-intl";
 
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
 const getTextColor = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
 export default function AccountTab({ user, setUser, setDirty, colorScheme, onSave }) {
+  const t = useTranslations("Profile");
   const fileInputRef = useRef(null);
   const [profileImage, setProfileImage] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -42,8 +44,8 @@ export default function AccountTab({ user, setUser, setDirty, colorScheme, onSav
     const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
     if (!token) {
       notifications.show({
-        title: "Authentication Required",
-        message: "Please login again to update your profile.",
+        title: t("verification"),
+        message: t("authReqDesc"),
         color: "yellow",
       });
       return;
@@ -87,14 +89,14 @@ export default function AccountTab({ user, setUser, setDirty, colorScheme, onSav
       setDirty(false);
 
       notifications.show({
-        title: "Success",
-        message: "Profile updated successfully",
+        title: t("verified"),
+        message: t("successSave"),
         color: "green",
       });
     } catch (error) {
       notifications.show({
-        title: "Error",
-        message: error.message || "Failed to update profile",
+        title: t("errorUpdate"),
+        message: error.message || t("errorUpdate"),
         color: "red",
       });
     } finally {
@@ -109,9 +111,9 @@ export default function AccountTab({ user, setUser, setDirty, colorScheme, onSav
         <Group justify="space-between" align="flex-start">
           <Box>
             <Text fw={500} size="md" mb={4} c={getTextColor(colorScheme, "black", "white")}>
-              Profile photo
+              {t("photoTitle")}
             </Text>
-            <Text size="xs" c="dimmed">Your photo helps others recognize you</Text>
+            <Text size="xs" c="dimmed">{t("photoDesc")}</Text>
           </Box>
           <Group gap="lg">
             <Avatar size={64} radius={64} src={profileImage || user?.profileImage || null} color="blue">
@@ -130,7 +132,7 @@ export default function AccountTab({ user, setUser, setDirty, colorScheme, onSav
               onClick={() => fileInputRef.current.click()}
               size="sm"
             >
-              Change
+              {t("change")}
             </Button>
           </Group>
         </Group>
@@ -139,44 +141,44 @@ export default function AccountTab({ user, setUser, setDirty, colorScheme, onSav
       {/* Personal Details */}
       <Card withBorder radius="md" padding="lg" bg={getBg(colorScheme, "white", "#2c2e33")}>
         <Text fw={500} size="md" mb="lg" c={getTextColor(colorScheme, "black", "white")}>
-          Personal details
+          {t("personalDetails")}
         </Text>
 
         <Stack gap="md">
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
-              label="First name"
+              label={t("firstName")}
               value={user?.firstName || ""}
               onChange={(e) => handleInputChange("firstName", e.target.value)}
             />
             <TextInput
-              label="Last name"
+              label={t("lastName")}
               value={user?.lastName || ""}
               onChange={(e) => handleInputChange("lastName", e.target.value)}
             />
           </SimpleGrid>
 
           <TextInput
-            label="Email address"
+            label={t("emailAddress")}
             value={user?.email || ""}
             disabled
-            description="Your email cannot be changed"
+            description={t("emailLocked")}
             leftSection={<IconMail size={16} />}
           />
 
           <TextInput
-            label="Phone number"
+            label={t("phone")}
             value={user?.phone || ""}
             onChange={(e) => handleInputChange("phone", e.target.value)}
-            placeholder="+251 XXX XXX XXX"
+            placeholder={t("phonePlaceholder")}
             leftSection={<IconPhone size={16} />}
           />
 
           <TextInput
-            label="Address"
+            label={t("address")}
             value={user?.address || ""}
             onChange={(e) => handleInputChange("address", e.target.value)}
-            placeholder="City, Ethiopia"
+            placeholder={t("addressPlaceholder")}
             leftSection={<IconMapPin size={16} />}
           />
         </Stack>
@@ -189,7 +191,7 @@ export default function AccountTab({ user, setUser, setDirty, colorScheme, onSav
         loading={saving}
         fullWidth
       >
-        Save Changes
+        {t("save")}
       </Button>
 
       {/* Sync Status */}
@@ -197,11 +199,11 @@ export default function AccountTab({ user, setUser, setDirty, colorScheme, onSav
         <Group justify="space-between">
           <Box>
             <Text fw={500} size="md" c={getTextColor(colorScheme, "black", "white")}>
-              Sync is on
+              {t("syncOn")}
             </Text>
-            <Text size="xs" c="dimmed">Your data is synced across devices</Text>
+            <Text size="xs" c="dimmed">{t("syncDesc")}</Text>
           </Box>
-          <Badge color="green" size="lg">Active</Badge>
+          <Badge color="green" size="lg">{t("activeAccount")}</Badge>
         </Group>
       </Card>
     </Stack>

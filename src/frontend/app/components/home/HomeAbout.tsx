@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Container, Title, Text, Grid, Paper, Box, Flex, useMantineColorScheme } from "@mantine/core";
 import { IconTarget, IconChartBar, IconGlobe } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslations } from "next-intl";
 
 interface AboutCardProps {
   icon: React.ReactNode;
@@ -117,6 +118,7 @@ function AboutCard({
 }
 
 export default function HomeAbout() {
+  const t = useTranslations("About");
   const { colorScheme } = useMantineColorScheme();
   const getBg = (light: string, dark: string) => (colorScheme === "dark" ? dark : light);
 
@@ -124,16 +126,16 @@ export default function HomeAbout() {
     <Box id="about" py={{ base: 80, md: 100 }} bg="transparent">
       <Container size="xl">
         <Title order={2} mb={{ base: 40, md: 60 }} ta="center" style={{ color: "#2f80ed" }} fw={900}>
-          Our Company
+          {t("title")}
         </Title>
         <Grid gutter="xl">
           {/* AIM CARD */}
           <AboutCard
             span={{ base: 12, md: 6 }}
             icon={<IconTarget size={24} color="white" />}
-            title="AIM"
-            shortText="Our mission to reunite people with their lost items"
-            longText="Our mission is to reunite people with their lost items through advanced, real-time tracking, community intelligence, and cutting-edge detection technology. We aim to decrease recovery times by up to 90% and provide immediate, automated, and empathetic support to case owners."
+            title={t("aimTitle")}
+            shortText={t("aimShort")}
+            longText={t("aimLong")}
             gradientNormal="linear-gradient(to right, #2f80ed, #1e56a0)"
             gradientHover="linear-gradient(to right, #ff4e50, #f9d423)"
           />
@@ -142,9 +144,9 @@ export default function HomeAbout() {
           <AboutCard
             span={{ base: 12, md: 6 }}
             icon={<IconChartBar size={24} color="white" />}
-            title="Vision"
-            shortText="Creating a world where nothing is ever truly lost"
-            longText="Creating a world where nothing is ever truly lost, and every community is connected to safeguard their members and belongings. We envision a seamless global public-private safety network powered by state-of-the-art AI case-matching engines."
+            title={t("visionTitle")}
+            shortText={t("visionShort")}
+            longText={t("visionLong")}
             gradientNormal="linear-gradient(to right, #2f80ed, #1e56a0)"
             gradientHover="linear-gradient(to right, #00c6ff, #0072ff)"
           />
@@ -155,9 +157,9 @@ export default function HomeAbout() {
             maxWidth={800}
             mx="auto"
             icon={<IconGlobe size={24} color="white" />}
-            title="Strategy"
-            shortText="Leveraging technology and community for faster recoveries"
-            longText="Leveraging state-of-the-art AI detection, secure cloud infrastructure, and instant notification bots (Telegram/Discord) for seamless public-private safety networks. We focus on low-barrier public access, high-efficiency machine learning analysis for plates and faces, and crowdsourced reporting incentives."
+            title={t("strategyTitle")}
+            shortText={t("strategyShort")}
+            longText={t("strategyLong")}
             gradientNormal="linear-gradient(to right, #2f80ed, #1e56a0)"
             gradientHover="linear-gradient(to right, #11998e, #38ef7d)"
           />

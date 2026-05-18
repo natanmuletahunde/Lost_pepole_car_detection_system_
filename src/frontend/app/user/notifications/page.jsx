@@ -51,12 +51,14 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { apiClient } from "../../lib/apiClient";
 import { notifications as toast } from "@mantine/notifications";
 import MainFooter from "../../components/MainFooter";
+import DashboardHeader from "../dashboard/DashboardHeader";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -150,6 +152,7 @@ export default function NotificationsPage() {
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
+  const t = useTranslations("Notifications");
 
   const [notifs, setNotifs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -221,8 +224,8 @@ export default function NotificationsPage() {
         }
       } catch (err) {
         toast.show({
-          title: "Error",
-          message: "Could not load notifications",
+          title: t("error"),
+          message: t("errorLoad"),
           color: "red",
           icon: <IconAlertCircle size={16} />,
         });
@@ -285,8 +288,8 @@ export default function NotificationsPage() {
     setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setMarkingAll(false);
     toast.show({
-      title: "Inbox Cleared",
-      message: "All notifications marked as read",
+      title: t("inboxCleared"),
+      message: t("allRead"),
       color: "green",
       icon: <IconSparkles size={16} />,
     });
@@ -303,14 +306,14 @@ export default function NotificationsPage() {
         setSelectedNotifId(null);
       }
       toast.show({
-        title: "Deleted",
-        message: "Notification removed from inbox",
+        title: t("deleted"),
+        message: t("removed"),
         color: "blue",
       });
     } catch (_) {
       toast.show({
-        title: "Error",
-        message: "Failed to delete notification",
+        title: t("error"),
+        message: t("errorDelete"),
         color: "red",
       });
     }
@@ -326,15 +329,15 @@ export default function NotificationsPage() {
       setNotifs([]);
       setSelectedNotifId(null);
       toast.show({
-        title: "Inbox Cleared",
-        message: "All notifications have been permanently removed",
+        title: t("inboxCleared"),
+        message: t("permRemoved"),
         color: "blue",
         icon: <IconSparkles size={16} />,
       });
     } catch (_) {
       toast.show({
-        title: "Error",
-        message: "Failed to clear notifications",
+        title: t("error"),
+        message: t("errorClear"),
         color: "red",
       });
     } finally {
@@ -345,7 +348,7 @@ export default function NotificationsPage() {
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("isAuthenticated");
-    router.push("/authentication/login");
+    router.push("/");
   };
 
   const unreadCount = notifs.filter((n) => !n.isRead).length;
@@ -411,82 +414,8 @@ export default function NotificationsPage() {
         }
       ` }} />
 
-      {/* ── Header ── */}
-      <Box
-        bg={headerBg}
-        py="xs"
-        style={{
-          borderBottom: `1px solid ${borderColor}`,
-          zIndex: 100,
-          backdropFilter: "blur(14px)",
-          boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.3)" : "0 4px 20px rgba(0,0,0,0.03)",
-        }}
-      >
-        <Container size="xl" fluid>
-          <Group justify="space-between">
-            <Group gap="md">
-              <Link href="/user/dashboard">
-                <Image
-                  src="/logo.jpg"
-                  alt="Logo"
-                  width={0}
-                  height={45}
-                  sizes="100vw"
-                  style={{ width: "auto", height: "45px", borderRadius: "8px" }}
-                />
-              </Link>
-              <Divider orientation="vertical" h={25} />
-              <Group gap="xs">
-                <IconMail size={20} color={theme.colors.blue[6]} />
-                <Title order={4} fw={800} style={{ letterSpacing: -0.3 }}>Inbox Hub</Title>
-                {unreadCount > 0 && (
-                  <Badge size="xs" color="red" variant="filled" className="pulse-dot">
-                    {unreadCount} Unread
-                  </Badge>
-                )}
-              </Group>
-            </Group>
-
-            <Group gap="lg">
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                size="lg"
-                component={Link}
-                href="/user/dashboard"
-                title="Dashboard"
-              >
-                <IconHome size={22} />
-              </ActionIcon>
-
-              <Menu shadow="lg" width={220} radius="md" transitionProps={{ transition: 'pop' }}>
-                <Menu.Target>
-                  <UnstyledButton style={{ padding: '4px 8px', borderRadius: '8px' }}>
-                    <Group gap="xs">
-                      <Avatar src={null} alt="User" color="blue" size="sm" radius="xl" fw={700} bg="linear-gradient(135deg, #4DABF7 0%, #228BE6 100%)">
-                        {username[0]?.toUpperCase()}
-                      </Avatar>
-                      <Text fw={700} size="sm" visibleFrom="xs">{username}</Text>
-                    </Group>
-                  </UnstyledButton>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  <Menu.Item leftSection={<IconUser size={16} />} component={Link} href="/user/profile">
-                    My Profile
-                  </Menu.Item>
-                  <Menu.Item leftSection={<IconBell size={16} />} component={Link} href="/user/alert">
-                    CCTV & Sightings Alerts
-                  </Menu.Item>
-                  <Menu.Divider />
-                  <Menu.Item color="red" leftSection={<IconLogout size={16} />} onClick={handleLogout}>
-                    Logout
-                  </Menu.Item>
-                </Menu.Dropdown>
-              </Menu>
-            </Group>
-          </Group>
-        </Container>
-      </Box>
+      {/* ── Reusable Unified Header ── */}
+      <DashboardHeader />
 
       {/* ── Main Layout (Email Split View) ── */}
       <Container size="xl" fluid p={0} style={{ flex: 1, display: "flex" }}>
@@ -502,7 +431,7 @@ export default function NotificationsPage() {
               <Box p="md" style={{ borderBottom: `1px solid ${borderColor}` }}>
                 <Stack gap="xs">
                   <TextInput
-                    placeholder="Search messages..."
+                    placeholder={t("search")}
                     leftSection={<IconSearch size={16} color={theme.colors.blue[6]} />}
                     radius="md"
                     value={searchQuery}
@@ -516,7 +445,7 @@ export default function NotificationsPage() {
                   />
                   <Group justify="space-between" align="center">
                     <Text size="xs" c="dimmed" fw={700}>
-                      {filtered.length} {filtered.length === 1 ? "Message" : "Messages"}
+                      {t("messages", { count: filtered.length })}
                     </Text>
                     <Group gap="xs">
                       {unreadCount > 0 && (
@@ -528,7 +457,7 @@ export default function NotificationsPage() {
                           onClick={handleMarkAllRead}
                           styles={{ root: { padding: "0 8px" } }}
                         >
-                          Mark all as read
+                          {t("markAllRead")}
                         </Button>
                       )}
                       {notifs.length > 0 && (
@@ -540,7 +469,7 @@ export default function NotificationsPage() {
                           onClick={handleClearAll}
                           styles={{ root: { padding: "0 8px" } }}
                         >
-                          Clear All
+                          {t("clearAll")}
                         </Button>
                       )}
                     </Group>
@@ -552,11 +481,11 @@ export default function NotificationsPage() {
               <Box px="md" py="xs" style={{ borderBottom: `1px solid ${borderColor}`, background: isDark ? "#1a1b1e" : "#F1F3F7" }}>
                 <Tabs value={activeTab} onChange={(val) => { setActiveTab(val); }} variant="unstyled">
                   <Tabs.List style={{ display: 'flex', gap: '4px', overflowX: 'auto', flexWrap: 'nowrap' }}>
-                    <Tabs.Tab value="all" className="premium-tab">All</Tabs.Tab>
-                    <Tabs.Tab value="unread" className="premium-tab">Unread</Tabs.Tab>
-                    <Tabs.Tab value="alert" className="premium-tab">Alerts</Tabs.Tab>
-                    <Tabs.Tab value="feedback" className="premium-tab">Feedback</Tabs.Tab>
-                    <Tabs.Tab value="system" className="premium-tab">System</Tabs.Tab>
+                    <Tabs.Tab value="all" className="premium-tab">{t("allTab")}</Tabs.Tab>
+                    <Tabs.Tab value="unread" className="premium-tab">{t("unreadTab")}</Tabs.Tab>
+                    <Tabs.Tab value="alert" className="premium-tab">{t("alertsTab")}</Tabs.Tab>
+                    <Tabs.Tab value="feedback" className="premium-tab">{t("feedbackTab")}</Tabs.Tab>
+                    <Tabs.Tab value="system" className="premium-tab">{t("systemTab")}</Tabs.Tab>
                   </Tabs.List>
                 </Tabs>
               </Box>
@@ -566,16 +495,16 @@ export default function NotificationsPage() {
                 {loading ? (
                   <Box py={50} ta="center">
                     <Loader size="md" color="blue" variant="dots" />
-                    <Text size="xs" c="dimmed" mt="xs">Updating Inbox Feed...</Text>
+                    <Text size="xs" c="dimmed" mt="xs">{t("updatingInbox")}</Text>
                   </Box>
                 ) : filtered.length === 0 ? (
                   <Box py={80} ta="center" px="xl">
                     <ThemeIcon size={55} radius="xl" color="gray" variant="light" mx="auto" mb="sm">
                       <IconInbox size={26} />
                     </ThemeIcon>
-                    <Text fw={700} size="sm">No Messages Found</Text>
+                    <Text fw={700} size="sm">{t("noMessages")}</Text>
                     <Text size="xs" c="dimmed" mt={4}>
-                      Your search or tab filters contain no incoming logs.
+                      {t("noMessagesDesc")}
                     </Text>
                   </Box>
                 ) : (
@@ -643,9 +572,7 @@ export default function NotificationsPage() {
             <Grid.Col span={{ base: 12, lg: 8 }} className="email-reader" style={{ background: cardBg }}>
               {selectedNotif ? (
                 <Box style={{ flex: 1, display: "flex", flexDirection: "column" }} className="animate-slide-in">
-                  
-                  {/* Reader Header Actions */}
-                  <Group justify="space-between" p="md" style={{ borderBottom: `1px solid ${borderColor}` }}>
+                       <Group justify="space-between" p="md" style={{ borderBottom: `1px solid ${borderColor}` }}>
                     <Group gap="sm">
                       {isMobile && (
                         <Button
@@ -655,7 +582,7 @@ export default function NotificationsPage() {
                           leftSection={<IconArrowLeft size={16} />}
                           onClick={() => setSelectedNotifId(null)}
                         >
-                          Back to Inbox
+                          {t("backInbox")}
                         </Button>
                       )}
                       
@@ -663,17 +590,17 @@ export default function NotificationsPage() {
                         {getTypeConfig(selectedNotif.type).label} Message
                       </Badge>
                     </Group>
-
+ 
                     <Group gap="xs">
                       {/* Status marker indicator */}
                       <Text size="xs" c="dimmed" fw={700}>
-                        Received via In-App Portal
+                        {t("receivedVia")}
                       </Text>
                       <Divider orientation="vertical" h={16} />
                       <ActionIcon 
                         variant="subtle" 
                         color="red" 
-                        title="Delete Notification"
+                        title={t("delNotif")}
                         onClick={() => handleDeleteNotif(selectedNotif._id)}
                       >
                         <IconTrash size={16} />
@@ -706,14 +633,14 @@ export default function NotificationsPage() {
                             <Text size="xs" c="dimmed">&lt;surveillance-system@lost-detect.app&gt;</Text>
                           </Group>
                           <Group gap={6} align="center">
-                            <Text size="xs" c="dimmed">To: Me ({username})</Text>
+                            <Text size="xs" c="dimmed">{t("toMe")} ({username})</Text>
                             <Text size="xs" c="dimmed">•</Text>
                             <Group gap={3} align="center">
                               <IconCalendar size={10} color={theme.colors.gray[5]} />
                               <Text size="xs" c="dimmed">
                                 {selectedNotif.createdAt ? new Date(selectedNotif.createdAt).toLocaleString(undefined, {
                                   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                                }) : "Unknown time"}
+                                }) : t("unknownTime")}
                               </Text>
                             </Group>
                           </Group>
@@ -762,9 +689,9 @@ export default function NotificationsPage() {
 
                       {/* Email Signature */}
                       <Box mt={40} style={{ borderTop: `1px solid ${borderColor}`, paddingTop: 20 }}>
-                        <Text size="xs" c="dimmed" fw={700}>Best Regards,</Text>
-                        <Text size="xs" fw={800} c="blue" mt={2}>Lost Person & Car AI Detection Team</Text>
-                        <Text size="10px" c="dimmed">Autonomous Face & Vehicle License plate matching engine. 24/7 CCTV vigilance.</Text>
+                        <Text size="xs" c="dimmed" fw={700}>{t("bestRegards")}</Text>
+                        <Text size="xs" fw={800} c="blue" mt={2}>{t("surveillanceTeam")}</Text>
+                        <Text size="10px" c="dimmed">{t("engineDesc")} 24/7 CCTV vigilance.</Text>
                       </Box>
 
                     </Box>
@@ -777,9 +704,9 @@ export default function NotificationsPage() {
                     <ThemeIcon size={80} radius="xl" color="blue" variant="light" style={{ background: isDark ? '#2C2E33' : '#F1F3F5' }}>
                       <IconInbox size={40} color={theme.colors.blue[6]} />
                     </ThemeIcon>
-                    <Title order={4} fw={800}>No Message Selected</Title>
+                    <Title order={4} fw={800}>{t("noNotifSelected")}</Title>
                     <Text size="xs" c="dimmed" style={{ maxWidth: 300, textAlign: "center" }}>
-                      Select a notification from the inbox panel on the left to view detailed information and associated match sightings.
+                      {t("noNotifDesc")}
                     </Text>
                   </Stack>
                 </Box>

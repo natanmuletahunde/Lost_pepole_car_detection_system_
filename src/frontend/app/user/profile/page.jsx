@@ -5,6 +5,7 @@ import { Box, Group, Title, ActionIcon, Flex, Container } from "@mantine/core";
 import { useMantineColorScheme } from "@mantine/core";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 // Import components
 import ProfileSidebar from "../../components/profile/ProfileSidebar";
@@ -20,6 +21,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5
 
 export default function ProfilePage() {
   const router = useRouter();
+  const t = useTranslations("Profile");
   const { colorScheme } = useMantineColorScheme();
   const [activeTab, setActiveTab] = useState("account");
   const [user, setUser] = useState(null);
@@ -130,7 +132,7 @@ export default function ProfilePage() {
     return (
       <Box bg={getBg(colorScheme, "#fff", "#1a1b1e")} style={{ minHeight: "100vh" }}>
         <Container size="lg" py={48}>
-          <div>Loading...</div>
+          <div>{t("saving")}</div>
         </Container>
       </Box>
     );
@@ -154,7 +156,7 @@ export default function ProfilePage() {
             <ActionIcon variant="subtle" onClick={() => router.back()} size="lg">
               <IconArrowLeft size={20} />
             </ActionIcon>
-            <Title order={4} fw={400}>Settings</Title>
+            <Title order={4} fw={400}>{t("title")}</Title>
           </Group>
         </Group>
       </Box>

@@ -4,6 +4,9 @@ const errorHandler = (err, req, res, next) => {
 
   console.error('Error:', err);
 
+  const statusCode = err.statusCode || res.statusCode || 500;
+  error.statusCode = statusCode === 200 ? 500 : statusCode;
+
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
     const message = `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`;

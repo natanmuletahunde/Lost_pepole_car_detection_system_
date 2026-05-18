@@ -95,6 +95,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import MainFooter from '../../components/MainFooter';
 import { useMediaQuery } from '@mantine/hooks';
+import { useTranslations } from 'next-intl';
 
 // API URLs
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
@@ -117,6 +118,7 @@ const CHART_COLORS = [
 ];
 
 export default function AnalyticsPage() {
+  const t = useTranslations("Analytics");
   const router = useRouter();
   const theme = useMantineTheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
@@ -302,8 +304,8 @@ export default function AnalyticsPage() {
       }}>
         <Flex direction="column" align="center" gap="md">
           <Loader size="xl" color="white" variant="dots" />
-          <Text c="white" size="lg" fw={600}>Loading analytics dashboard...</Text>
-          <Text c="white" size="sm" opacity={0.8}>Please wait while we prepare your insights</Text>
+          <Text c="white" size="lg" fw={600}>{t("loading")}</Text>
+          <Text c="white" size="sm" opacity={0.8}>{t("loadingWait")}</Text>
         </Flex>
       </Box>
     );
@@ -376,7 +378,7 @@ export default function AnalyticsPage() {
                     fw={600}
                     style={{ letterSpacing: '1px' }}
                   >
-                    Analytics Dashboard
+                    {t("title")}
                   </Text>
                 </Box>
               </Flex>
@@ -392,7 +394,7 @@ export default function AnalyticsPage() {
                 href="/reported-cases"
                 size="sm"
               >
-                Back to Cases
+                {t("backToCases")}
               </Button>
               
               {/* User Profile */}
@@ -439,23 +441,23 @@ export default function AnalyticsPage() {
           <Flex justify="space-between" align="center" mb="md" wrap="wrap" gap="md">
             <Box>
               <Title order={1} style={{ color: PRIMARY_DARK, fontWeight: 800 }}>
-                Analytics Dashboard
+                {t("title")}
               </Title>
               <Text c="dimmed" size="sm">
-                Insights and performance metrics for your missing persons & vehicles platform
+                {t("subtitle")}
               </Text>
             </Box>
             <Group gap="sm">
               <Select
-                placeholder="Time Range"
+                placeholder={t("timeRange")}
                 value={timeRange}
                 onChange={setTimeRange}
                 data={[
-                  { value: '7d', label: 'Last 7 days' },
-                  { value: '30d', label: 'Last 30 days' },
-                  { value: '90d', label: 'Last 90 days' },
-                  { value: '1y', label: 'Last year' },
-                  { value: 'all', label: 'All time' }
+                  { value: '7d', label: t("last7Days") },
+                  { value: '30d', label: t("last30Days") },
+                  { value: '90d', label: t("last90Days") },
+                  { value: '1y', label: t("lastYear") },
+                  { value: 'all', label: t("allTime") }
                 ]}
                 size="sm"
                 radius="md"
@@ -468,7 +470,7 @@ export default function AnalyticsPage() {
                 onClick={() => window.location.reload()}
                 size="sm"
               >
-                Refresh
+                {t("refresh")}
               </Button>
               <Button
                 color="blue"
@@ -479,7 +481,7 @@ export default function AnalyticsPage() {
                   background: PRIMARY_GRADIENT,
                 }}
               >
-                Export
+                {t("export")}
               </Button>
             </Group>
           </Flex>
@@ -496,7 +498,7 @@ export default function AnalyticsPage() {
                   fontWeight: activeTab === 'overview' ? 700 : 500,
                 }}
               >
-                Overview
+                {t("overview")}
               </Tabs.Tab>
               <Tabs.Tab 
                 value="performance" 
@@ -507,7 +509,7 @@ export default function AnalyticsPage() {
                   fontWeight: activeTab === 'performance' ? 700 : 500,
                 }}
               >
-                Performance
+                {t("performance")}
               </Tabs.Tab>
               <Tabs.Tab 
                 value="distribution" 
@@ -518,7 +520,7 @@ export default function AnalyticsPage() {
                   fontWeight: activeTab === 'distribution' ? 700 : 500,
                 }}
               >
-                Distribution
+                {t("distribution")}
               </Tabs.Tab>
               <Tabs.Tab 
                 value="community" 
@@ -529,7 +531,7 @@ export default function AnalyticsPage() {
                   fontWeight: activeTab === 'community' ? 700 : 500,
                 }}
               >
-                Community
+                {t("community")}
               </Tabs.Tab>
             </Tabs.List>
           </Tabs>
@@ -546,13 +548,13 @@ export default function AnalyticsPage() {
                     <IconTarget size={24} color="white" />
                   </Box>
                   <Box style={{ flex: 1 }}>
-                    <Text size="sm" c="dimmed">Total Cases</Text>
+                    <Text size="sm" c="dimmed">{t("totalCases")}</Text>
                     <Title order={2} style={{ color: PRIMARY_DARK }}>{formatNumber(analyticsData.overview.totalCases)}</Title>
                   </Box>
                 </Flex>
                 <Flex align="center" gap={4}>
                   <IconTrendingUp size={16} color="#27ae60" />
-                  <Text size="sm" c="dimmed">+12% from last month</Text>
+                  <Text size="sm" c="dimmed">{t("casesGrowth")}</Text>
                 </Flex>
               </Card>
 
@@ -562,13 +564,13 @@ export default function AnalyticsPage() {
                     <IconCheck size={24} color="white" />
                   </Box>
                   <Box style={{ flex: 1 }}>
-                    <Text size="sm" c="dimmed">Resolved Cases</Text>
+                    <Text size="sm" c="dimmed">{t("resolvedCases")}</Text>
                     <Title order={2} style={{ color: '#219653' }}>{formatNumber(analyticsData.overview.resolvedCases)}</Title>
                   </Box>
                 </Flex>
                 <Flex align="center" gap={4}>
                   <IconTrendingUp size={16} color="#27ae60" />
-                  <Text size="sm" c="dimmed">Success rate: {analyticsData.overview.successRate}%</Text>
+                  <Text size="sm" c="dimmed">{t("successRate", { rate: analyticsData.overview.successRate })}</Text>
                 </Flex>
               </Card>
 
@@ -578,13 +580,13 @@ export default function AnalyticsPage() {
                     <IconClockHour4 size={24} color="white" />
                   </Box>
                   <Box style={{ flex: 1 }}>
-                    <Text size="sm" c="dimmed">Avg Resolution Time</Text>
-                    <Title order={2} style={{ color: '#f2994a' }}>{analyticsData.overview.avgResolutionTime} days</Title>
+                    <Text size="sm" c="dimmed">{t("avgResolutionTime")}</Text>
+                    <Title order={2} style={{ color: '#f2994a' }}>{t("avgResolutionTimeVal", { days: analyticsData.overview.avgResolutionTime })}</Title>
                   </Box>
                 </Flex>
                 <Flex align="center" gap={4}>
                   <IconTrendingDown size={16} color="#eb5757" />
-                  <Text size="sm" c="dimmed">-2 days from last quarter</Text>
+                  <Text size="sm" c="dimmed">{t("avgResolutionGrowth")}</Text>
                 </Flex>
               </Card>
 
@@ -594,13 +596,13 @@ export default function AnalyticsPage() {
                     <IconUsers size={24} color="white" />
                   </Box>
                   <Box style={{ flex: 1 }}>
-                    <Text size="sm" c="dimmed">Active Cases</Text>
+                    <Text size="sm" c="dimmed">{t("activeCases")}</Text>
                     <Title order={2} style={{ color: '#9b51e0' }}>{formatNumber(analyticsData.overview.activeCases)}</Title>
                   </Box>
                 </Flex>
                 <Flex align="center" gap={4}>
                   <IconTrendingUp size={16} color="#27ae60" />
-                  <Text size="sm" c="dimmed">+8% from last week</Text>
+                  <Text size="sm" c="dimmed">{t("activeCasesGrowth")}</Text>
                 </Flex>
               </Card>
             </SimpleGrid>
@@ -611,17 +613,17 @@ export default function AnalyticsPage() {
                 <Card padding="lg" radius="lg" withBorder h="100%">
                   <Flex justify="space-between" align="center" mb="lg">
                     <Box>
-                      <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>Case Type Distribution</Title>
-                      <Text size="sm" c="dimmed">Breakdown by missing person vs vehicle</Text>
+                      <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>{t("caseTypeDistribution")}</Title>
+                      <Text size="sm" c="dimmed">{t("caseTypeDesc")}</Text>
                     </Box>
-                    <Badge color="blue" variant="light">Current Month</Badge>
+                    <Badge color="blue" variant="light">{t("currentMonth")}</Badge>
                   </Flex>
                   
                   <SimpleGrid cols={2} spacing="lg">
                     {analyticsData.overview.caseTypes.map((item, index) => (
                       <Box key={index}>
                         <Flex justify="space-between" align="center" mb="xs">
-                          <Text fw={600} style={{ color: PRIMARY_DARK }}>{item.type}</Text>
+                          <Text fw={600} style={{ color: PRIMARY_DARK }}>{item.type === 'Person' ? t("tablePersonCases") : t("tableVehicleCases")}</Text>
                           <Text fw={700}>{item.count} ({item.percentage}%)</Text>
                         </Flex>
                         <Progress 
@@ -639,14 +641,14 @@ export default function AnalyticsPage() {
                   
                   <SimpleGrid cols={2} spacing="md">
                     <Box>
-                      <Text size="sm" c="dimmed" mb={4}>Total Persons</Text>
+                      <Text size="sm" c="dimmed" mb={4}>{t("totalPersons")}</Text>
                       <Flex align="center" gap="xs">
                         <IconUser size={16} color={PRIMARY_COLOR} />
                         <Text fw={700} size="lg">{formatNumber(analyticsData.overview.caseTypes[0].count)}</Text>
                       </Flex>
                     </Box>
                     <Box>
-                      <Text size="sm" c="dimmed" mb={4}>Total Vehicles</Text>
+                      <Text size="sm" c="dimmed" mb={4}>{t("totalVehicles")}</Text>
                       <Flex align="center" gap="xs">
                         <IconCar size={16} color="#219653" />
                         <Text fw={700} size="lg">{formatNumber(analyticsData.overview.caseTypes[1].count)}</Text>
@@ -660,10 +662,10 @@ export default function AnalyticsPage() {
                 <Card padding="lg" radius="lg" withBorder h="100%">
                   <Flex justify="space-between" align="center" mb="lg">
                     <Box>
-                      <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>Top Regions</Title>
-                      <Text size="sm" c="dimmed">Cases reported by region</Text>
+                      <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>{t("topRegions")}</Title>
+                      <Text size="sm" c="dimmed">{t("topRegionsDesc")}</Text>
                     </Box>
-                    <Badge color="orange" variant="light">Hotspots</Badge>
+                    <Badge color="orange" variant="light">{t("hotspots")}</Badge>
                   </Flex>
                   
                   <Stack gap="md">
@@ -682,7 +684,7 @@ export default function AnalyticsPage() {
                             <Text fw={600} style={{ color: PRIMARY_DARK }}>{region.name}</Text>
                           </Group>
                           <Group gap="xs">
-                            <Text fw={700}>{region.count} cases</Text>
+                            <Text fw={700}>{t("casesCount", { count: region.count })}</Text>
                             <Badge 
                               color={region.change.startsWith('+') ? 'green' : 'red'} 
                               variant="light" 
@@ -709,8 +711,8 @@ export default function AnalyticsPage() {
             <Card padding="lg" radius="lg" withBorder>
               <Flex justify="space-between" align="center" mb="lg">
                 <Box>
-                  <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>Recent Activity</Title>
-                  <Text size="sm" c="dimmed">Latest updates from the platform</Text>
+                  <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>{t("recentActivity")}</Title>
+                  <Text size="sm" c="dimmed">{t("recentActivityDesc")}</Text>
                 </Box>
                 <Button
                   variant="light"
@@ -718,7 +720,7 @@ export default function AnalyticsPage() {
                   size="sm"
                   leftSection={<IconExternalLink size={14} />}
                 >
-                  View All
+                  {t("viewAll")}
                 </Button>
               </Flex>
               
@@ -799,11 +801,11 @@ export default function AnalyticsPage() {
                         <Text fw={900} size="xl" style={{ color: '#219653' }}>
                           {analyticsData.performance.resolutionRate}%
                         </Text>
-                        <Text size="xs" c="dimmed">Resolution Rate</Text>
+                        <Text size="xs" c="dimmed">{t("resolutionRate")}</Text>
                       </Box>
                     </Center>
                   </Box>
-                  <Text size="sm" ta="center" c="dimmed">Cases successfully resolved</Text>
+                  <Text size="sm" ta="center" c="dimmed">{t("casesSuccessfullyResolved")}</Text>
                 </Flex>
               </Card>
 
@@ -830,11 +832,11 @@ export default function AnalyticsPage() {
                         <Text fw={900} size="xl" style={{ color: '#f2994a' }}>
                           {analyticsData.performance.userSatisfaction}/5
                         </Text>
-                        <Text size="xs" c="dimmed">User Satisfaction</Text>
+                        <Text size="xs" c="dimmed">{t("userSatisfaction")}</Text>
                       </Box>
                     </Center>
                   </Box>
-                  <Text size="sm" ta="center" c="dimmed">Average user rating</Text>
+                  <Text size="sm" ta="center" c="dimmed">{t("avgUserRating")}</Text>
                 </Flex>
               </Card>
 
@@ -857,9 +859,9 @@ export default function AnalyticsPage() {
                     <Text fw={900} size="xl" style={{ color: PRIMARY_DARK }}>
                       {analyticsData.performance.avgResponseTime}h
                     </Text>
-                    <Text size="sm" c="dimmed">Avg Response Time</Text>
+                    <Text size="sm" c="dimmed">{t("avgResponseTime")}</Text>
                   </Box>
-                  <Text size="xs" ta="center" c="dimmed">Time to first response</Text>
+                  <Text size="xs" ta="center" c="dimmed">{t("timeToFirstResponse")}</Text>
                 </Flex>
               </Card>
 
@@ -886,11 +888,11 @@ export default function AnalyticsPage() {
                         <Text fw={900} size="xl" style={{ color: PRIMARY_COLOR }}>
                           {analyticsData.performance.efficiencyScore}%
                         </Text>
-                        <Text size="xs" c="dimmed">Efficiency Score</Text>
+                        <Text size="xs" c="dimmed">{t("efficiencyScore")}</Text>
                       </Box>
                     </Center>
                   </Box>
-                  <Text size="sm" ta="center" c="dimmed">Overall system efficiency</Text>
+                  <Text size="sm" ta="center" c="dimmed">{t("overallSystemEfficiency")}</Text>
                 </Flex>
               </Card>
             </SimpleGrid>
@@ -899,15 +901,15 @@ export default function AnalyticsPage() {
             <Card padding="lg" radius="lg" withBorder mb={40}>
               <Flex justify="space-between" align="center" mb="lg">
                 <Box>
-                  <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>Monthly Trends</Title>
-                  <Text size="sm" c="dimmed">Cases reported vs resolved over time</Text>
+                  <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>{t("monthlyTrends")}</Title>
+                  <Text size="sm" c="dimmed">{t("casesReportedVsResolved")}</Text>
                 </Box>
                 <Group gap="sm">
                   <Badge color="blue" variant="light" leftSection={<IconTrendingUp size={12} />}>
-                    +15% Growth
+                    {t("growthTrend")}
                   </Badge>
                   <Badge color="green" variant="light" leftSection={<IconCheck size={12} />}>
-                    Improving
+                    {t("improving")}
                   </Badge>
                 </Group>
               </Flex>
@@ -940,7 +942,7 @@ export default function AnalyticsPage() {
                           />
                         </Flex>
                         <Text size="xs" fw={600} style={{ color: PRIMARY_DARK }}>{month.month}</Text>
-                        <Text size="xs" c="dimmed">{month.cases} cases</Text>
+                        <Text size="xs" c="dimmed">{t("casesCount", { count: month.cases })}</Text>
                       </Flex>
                     </Box>
                   ))}
@@ -950,11 +952,11 @@ export default function AnalyticsPage() {
                 <Flex gap="lg" justify="center" mt="xl">
                   <Flex align="center" gap="xs">
                     <Box style={{ width: 12, height: 12, background: PRIMARY_GRADIENT, borderRadius: 2 }} />
-                    <Text size="sm">Cases Reported</Text>
+                    <Text size="sm">{t("casesReported")}</Text>
                   </Flex>
                   <Flex align="center" gap="xs">
                     <Box style={{ width: 12, height: 12, background: 'linear-gradient(135deg, #219653 0%, #27ae60 100%)', borderRadius: 2 }} />
-                    <Text size="sm">Cases Resolved</Text>
+                    <Text size="sm">{t("casesResolved")}</Text>
                   </Flex>
                 </Flex>
               </Box>
@@ -963,7 +965,7 @@ export default function AnalyticsPage() {
             {/* Performance Insights */}
             <Card padding="lg" radius="lg" withBorder>
               <Title order={3} size="h4" style={{ color: PRIMARY_DARK }} mb="lg">
-                Performance Insights
+                {t("performanceInsights")}
               </Title>
               
               <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
@@ -971,13 +973,12 @@ export default function AnalyticsPage() {
                   <Flex align="center" gap="md" mb="md">
                     <IconTrendingUp size={24} color="#219653" />
                     <Box>
-                      <Text fw={600} style={{ color: PRIMARY_DARK }}>Positive Trend</Text>
-                      <Text size="sm" c="dimmed">Resolution rate improving</Text>
+                      <Text fw={600} style={{ color: PRIMARY_DARK }}>{t("positiveTrend")}</Text>
+                      <Text size="sm" c="dimmed">{t("improving")}</Text>
                     </Box>
                   </Flex>
                   <Text size="sm">
-                    The resolution rate has improved by 8% over the last quarter, 
-                    indicating more effective case handling and community engagement.
+                    {t("positiveTrendDesc")}
                   </Text>
                 </Paper>
 
@@ -985,13 +986,12 @@ export default function AnalyticsPage() {
                   <Flex align="center" gap="md" mb="md">
                     <IconClock size={24} color="#f2994a" />
                     <Box>
-                      <Text fw={600} style={{ color: PRIMARY_DARK }}>Response Time</Text>
-                      <Text size="sm" c="dimmed">Faster initial response</Text>
+                      <Text fw={600} style={{ color: PRIMARY_DARK }}>{t("responseTime")}</Text>
+                      <Text size="sm" c="dimmed">{t("timeToFirstResponse")}</Text>
                     </Box>
                   </Flex>
                   <Text size="sm">
-                    Average response time has decreased by 1.2 hours, thanks to improved 
-                    alert systems and volunteer coordination.
+                    {t("responseTimeDesc")}
                   </Text>
                 </Paper>
 
@@ -999,13 +999,12 @@ export default function AnalyticsPage() {
                   <Flex align="center" gap="md" mb="md">
                     <IconUsers size={24} color={PRIMARY_COLOR} />
                     <Box>
-                      <Text fw={600} style={{ color: PRIMARY_DARK }}>Community Growth</Text>
-                      <Text size="sm" c="dimmed">More volunteers joining</Text>
+                      <Text fw={600} style={{ color: PRIMARY_DARK }}>{t("communityGrowth")}</Text>
+                      <Text size="sm" c="dimmed">{t("community")}</Text>
                     </Box>
                   </Flex>
                   <Text size="sm">
-                    45 new volunteers joined this month, increasing community coverage 
-                    by 15% across major regions.
+                    {t("communityGrowthDesc")}
                   </Text>
                 </Paper>
 
@@ -1013,13 +1012,12 @@ export default function AnalyticsPage() {
                   <Flex align="center" gap="md" mb="md">
                     <IconMap size={24} color="#9b51e0" />
                     <Box>
-                      <Text fw={600} style={{ color: PRIMARY_DARK }}>Regional Coverage</Text>
-                      <Text size="sm" c="dimmed">Expanding reach</Text>
+                      <Text fw={600} style={{ color: PRIMARY_DARK }}>{t("regionalCoverage")}</Text>
+                      <Text size="sm" c="dimmed">{t("tableRegion")}</Text>
                     </Box>
                   </Flex>
                   <Text size="sm">
-                    Platform coverage has expanded to 3 new regions, increasing 
-                    total coverage to 85% of the country.
+                    {t("regionalCoverageDesc")}
                   </Text>
                 </Paper>
               </SimpleGrid>
@@ -1035,7 +1033,7 @@ export default function AnalyticsPage() {
               <Grid.Col span={{ base: 12, lg: 4 }}>
                 <Card padding="lg" radius="lg" withBorder h="100%">
                   <Title order={3} size="h4" style={{ color: PRIMARY_DARK }} mb="lg">
-                    By Status
+                    {t("byStatus")}
                   </Title>
                   
                   <Stack gap="md">
@@ -1051,7 +1049,7 @@ export default function AnalyticsPage() {
                                 background: item.color
                               }}
                             />
-                            <Text fw={600} style={{ color: PRIMARY_DARK }}>{item.status}</Text>
+                            <Text fw={600} style={{ color: PRIMARY_DARK }}>{item.status === 'Active' ? t("activeCases") : item.status === 'Resolved' ? t("resolvedCases") : item.status}</Text>
                           </Group>
                           <Text fw={700}>{item.count}</Text>
                         </Flex>
@@ -1070,7 +1068,7 @@ export default function AnalyticsPage() {
               <Grid.Col span={{ base: 12, lg: 4 }}>
                 <Card padding="lg" radius="lg" withBorder h="100%">
                   <Title order={3} size="h4" style={{ color: PRIMARY_DARK }} mb="lg">
-                    By Priority
+                    {t("byPriority")}
                   </Title>
                   
                   <Stack gap="md">
@@ -1105,7 +1103,7 @@ export default function AnalyticsPage() {
               <Grid.Col span={{ base: 12, lg: 4 }}>
                 <Card padding="lg" radius="lg" withBorder h="100%">
                   <Title order={3} size="h4" style={{ color: PRIMARY_DARK }} mb="lg">
-                    By Region
+                    {t("byRegion")}
                   </Title>
                   
                   <Stack gap="md">
@@ -1145,11 +1143,11 @@ export default function AnalyticsPage() {
             <Card padding="lg" radius="lg" withBorder>
               <Flex justify="space-between" align="center" mb="lg">
                 <Box>
-                  <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>Detailed Distribution</Title>
-                  <Text size="sm" c="dimmed">Complete breakdown of all cases</Text>
+                  <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>{t("detailedDistribution")}</Title>
+                  <Text size="sm" c="dimmed">{t("detailedDistributionDesc")}</Text>
                 </Box>
                 <Select
-                  placeholder="Filter by..."
+                  placeholder={t("filterBy")}
                   data={['All Cases', 'Active Only', 'Resolved Only', 'High Priority']}
                   size="sm"
                   style={{ minWidth: 150 }}
@@ -1159,12 +1157,12 @@ export default function AnalyticsPage() {
               <Table highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Region</Table.Th>
-                    <Table.Th>Person Cases</Table.Th>
-                    <Table.Th>Vehicle Cases</Table.Th>
-                    <Table.Th>Total</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Success Rate</Table.Th>
+                    <Table.Th>{t("tableRegion")}</Table.Th>
+                    <Table.Th>{t("tablePersonCases")}</Table.Th>
+                    <Table.Th>{t("tableVehicleCases")}</Table.Th>
+                    <Table.Th>{t("tableTotal")}</Table.Th>
+                    <Table.Th>{t("tableStatus")}</Table.Th>
+                    <Table.Th>{t("tableSuccessRate")}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -1243,10 +1241,10 @@ export default function AnalyticsPage() {
                   </Box>
                   <Box ta="center">
                     <Title order={2} style={{ color: PRIMARY_DARK }}>1,245</Title>
-                    <Text size="sm" c="dimmed">Active Volunteers</Text>
+                    <Text size="sm" c="dimmed">{t("activeVolunteers")}</Text>
                   </Box>
                   <Badge color="green" variant="light" leftSection={<IconTrendingUp size={12} />}>
-                    +12% this month
+                    {t("volunteersGrowth")}
                   </Badge>
                 </Flex>
               </Card>
@@ -1268,10 +1266,10 @@ export default function AnalyticsPage() {
                   </Box>
                   <Box ta="center">
                     <Title order={2} style={{ color: '#219653' }}>289</Title>
-                    <Text size="sm" c="dimmed">Successful Matches</Text>
+                    <Text size="sm" c="dimmed">{t("successfulMatches")}</Text>
                   </Box>
                   <Badge color="blue" variant="light" leftSection={<IconCheck size={12} />}>
-                    92% success rate
+                    {t("successRate", { rate: "92" })}
                   </Badge>
                 </Flex>
               </Card>
@@ -1293,10 +1291,10 @@ export default function AnalyticsPage() {
                   </Box>
                   <Box ta="center">
                     <Title order={2} style={{ color: '#9b51e0' }}>5,678</Title>
-                    <Text size="sm" c="dimmed">Community Messages</Text>
+                    <Text size="sm" c="dimmed">{t("communityMessages")}</Text>
                   </Box>
                   <Badge color="grape" variant="light" leftSection={<IconTrendingUp size={12} />}>
-                    +23% engagement
+                    {t("messagesGrowth")}
                   </Badge>
                 </Flex>
               </Card>
@@ -1306,8 +1304,8 @@ export default function AnalyticsPage() {
             <Card padding="lg" radius="lg" withBorder mb={40}>
               <Flex justify="space-between" align="center" mb="lg">
                 <Box>
-                  <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>Top Community Helpers</Title>
-                  <Text size="sm" c="dimmed">Most active and successful volunteers</Text>
+                  <Title order={3} size="h4" style={{ color: PRIMARY_DARK }}>{t("topCommunityHelpers")}</Title>
+                  <Text size="sm" c="dimmed">{t("topCommunityHelpersDesc")}</Text>
                 </Box>
                 <Button
                   variant="light"
@@ -1315,7 +1313,7 @@ export default function AnalyticsPage() {
                   size="sm"
                   leftSection={<IconAward size={14} />}
                 >
-                  View Rankings
+                  {t("viewRankings")}
                 </Button>
               </Flex>
 
@@ -1362,13 +1360,13 @@ export default function AnalyticsPage() {
                           <Text fw={900} size="xl" style={{ color: PRIMARY_DARK }}>
                             {performer.casesHelped}
                           </Text>
-                          <Text size="xs" c="dimmed">Cases Helped</Text>
+                          <Text size="xs" c="dimmed">{t("casesHelped")}</Text>
                         </Box>
                         <Box ta="center">
                           <Text fw={900} size="xl" style={{ color: '#219653' }}>
                             {performer.successRate}
                           </Text>
-                          <Text size="xs" c="dimmed">Success Rate</Text>
+                          <Text size="xs" c="dimmed">{t("tableSuccessRate")}</Text>
                         </Box>
                         <Button
                           variant="light"
@@ -1376,7 +1374,7 @@ export default function AnalyticsPage() {
                           size="xs"
                           leftSection={<IconMessageCircle size={12} />}
                         >
-                          Contact
+                          {t("contact")}
                         </Button>
                       </Flex>
                     </Flex>
@@ -1388,9 +1386,9 @@ export default function AnalyticsPage() {
             {/* Community Activity */}
             <Card padding="lg" radius="lg" withBorder>
               <Title order={3} size="h4" style={{ color: PRIMARY_DARK }} mb="lg">
-                Community Activity Map
+                {t("communityActivityMap")}
               </Title>
-              
+
               <Box
                 style={{
                   height: 300,
@@ -1409,16 +1407,16 @@ export default function AnalyticsPage() {
                   <Center style={{ height: '100%' }}>
                     <Flex direction="column" align="center" gap="md">
                       <IconMap size={64} color={PRIMARY_COLOR} opacity={0.5} />
-                      <Text style={{ color: PRIMARY_DARK, fontWeight: 600 }}>Community Activity Visualization</Text>
+                      <Text style={{ color: PRIMARY_DARK, fontWeight: 600 }}>{t("communityActivityMap")}</Text>
                       <Text size="sm" c="dimmed" ta="center">
-                        Shows active volunteers and recent cases by location
+                        {t("communityActivityMapDesc")}
                       </Text>
                       <Button
                         variant="light"
                         color="blue"
                         leftSection={<IconExternalLink size={14} />}
                       >
-                        Open Interactive Map
+                        {t("openInteractiveMap")}
                       </Button>
                     </Flex>
                   </Center>
@@ -1447,19 +1445,19 @@ export default function AnalyticsPage() {
               <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md" mt="lg">
                 <Box ta="center">
                   <Text fw={700} size="lg" style={{ color: PRIMARY_DARK }}>12</Text>
-                  <Text size="sm" c="dimmed">Active Now</Text>
+                  <Text size="sm" c="dimmed">{t("activeNow")}</Text>
                 </Box>
                 <Box ta="center">
                   <Text fw={700} size="lg" style={{ color: PRIMARY_DARK }}>89</Text>
-                  <Text size="sm" c="dimmed">Online Today</Text>
+                  <Text size="sm" c="dimmed">{t("onlineToday")}</Text>
                 </Box>
                 <Box ta="center">
                   <Text fw={700} size="lg" style={{ color: PRIMARY_DARK }}>24</Text>
-                  <Text size="sm" c="dimmed">New This Week</Text>
+                  <Text size="sm" c="dimmed">{t("newThisWeek")}</Text>
                 </Box>
                 <Box ta="center">
                   <Text fw={700} size="lg" style={{ color: PRIMARY_DARK }}>1,245</Text>
-                  <Text size="sm" c="dimmed">Total Volunteers</Text>
+                  <Text size="sm" c="dimmed">{t("totalVolunteers")}</Text>
                 </Box>
               </SimpleGrid>
             </Card>
@@ -1470,21 +1468,21 @@ export default function AnalyticsPage() {
         <Card padding="lg" radius="lg" withBorder mt={40} style={{ background: CARD_BG }}>
           <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
             <Box>
-              <Text size="xs" c="dimmed" mb={2}>Data Updated</Text>
+              <Text size="xs" c="dimmed" mb={2}>{t("dataUpdated")}</Text>
               <Text fw={700} style={{ color: PRIMARY_DARK }}>
                 {new Date().toLocaleDateString()}
               </Text>
             </Box>
             <Box>
-              <Text size="xs" c="dimmed" mb={2}>Processing Time</Text>
-              <Text fw={700} style={{ color: PRIMARY_DARK }}>Real-time</Text>
+              <Text size="xs" c="dimmed" mb={2}>{t("processingTime")}</Text>
+              <Text fw={700} style={{ color: PRIMARY_DARK }}>{t("realTime")}</Text>
             </Box>
             <Box>
-              <Text size="xs" c="dimmed" mb={2}>Data Accuracy</Text>
+              <Text size="xs" c="dimmed" mb={2}>{t("dataAccuracy")}</Text>
               <Text fw={700} style={{ color: PRIMARY_DARK }}>99.8%</Text>
             </Box>
             <Box>
-              <Text size="xs" c="dimmed" mb={2}>Report Generated</Text>
+              <Text size="xs" c="dimmed" mb={2}>{t("reportGenerated")}</Text>
               <Text fw={700} style={{ color: PRIMARY_DARK }}>
                 {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Text>
@@ -1497,17 +1495,17 @@ export default function AnalyticsPage() {
       <Modal
         opened={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
-        title="Export Analytics Data"
+        title={t("exportAnalyticsData")}
         radius="lg"
         centered
         size="md"
       >
         <Stack gap="lg">
-          <Text>Select format and data range for export:</Text>
+          <Text>{t("exportModalDesc")}</Text>
           
           <Select
-            label="Export Format"
-            placeholder="Select format"
+            label={t("exportFormat")}
+            placeholder={t("selectFormat")}
             data={[
               { value: 'csv', label: 'CSV (Excel compatible)' },
               { value: 'pdf', label: 'PDF Report' },
@@ -1517,25 +1515,25 @@ export default function AnalyticsPage() {
           />
           
           <Select
-            label="Data Range"
-            placeholder="Select time range"
+            label={t("timeRange")}
+            placeholder={t("timeRange")}
             data={[
-              { value: '7d', label: 'Last 7 days' },
-              { value: '30d', label: 'Last 30 days' },
-              { value: '90d', label: 'Last 90 days' },
-              { value: '1y', label: 'Last year' },
-              { value: 'all', label: 'All time data' }
+              { value: '7d', label: t("last7Days") },
+              { value: '30d', label: t("last30Days") },
+              { value: '90d', label: t("last90Days") },
+              { value: '1y', label: t("lastYear") },
+              { value: 'all', label: t("allTime") }
             ]}
             defaultValue={timeRange}
           />
           
           <Select
-            label="Data Type"
-            placeholder="Select data to include"
+            label={t("dataType")}
+            placeholder={t("selectDataType")}
             data={[
-              { value: 'overview', label: 'Overview Metrics' },
-              { value: 'detailed', label: 'Detailed Analytics' },
-              { value: 'all', label: 'All Data' }
+              { value: 'overview', label: t("overview") },
+              { value: 'detailed', label: t("detailedDistribution") },
+              { value: 'all', label: t("allTime") }
             ]}
             defaultValue="overview"
           />
@@ -1546,7 +1544,7 @@ export default function AnalyticsPage() {
               color="gray"
               onClick={() => setExportModalOpen(false)}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               color="blue"
@@ -1554,7 +1552,7 @@ export default function AnalyticsPage() {
               onClick={() => handleExportData('csv')}
               style={{ background: PRIMARY_GRADIENT }}
             >
-              Export Now
+              {t("exportNow")}
             </Button>
           </Flex>
         </Stack>

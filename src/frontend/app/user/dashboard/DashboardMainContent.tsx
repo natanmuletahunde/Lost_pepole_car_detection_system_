@@ -54,6 +54,7 @@ import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useMediaQuery } from "@mantine/hooks";
+import { useTranslations } from "next-intl";
 
 const LocationPicker = dynamic(() => import("../../components/LocationPicker"), {
   ssr: false,
@@ -96,6 +97,7 @@ export default function DashboardMainContent({
   getStatusColor,
   getPriorityColor,
 }: DashboardMainContentProps) {
+  const t = useTranslations("Dashboard");
   const isMobile = useMediaQuery("(max-width: 768px)");
   const getBg = (light: string, dark: string) =>
     colorScheme === "dark" ? dark : light;
@@ -130,7 +132,7 @@ export default function DashboardMainContent({
             fontSize: 18,
           }}
         >
-          Report Missing
+          {t("reportMissing")}
         </Button>
         <Button
           component={Link}
@@ -143,7 +145,7 @@ export default function DashboardMainContent({
           color="blue"
           style={{ height: 80, fontSize: 18, borderWidth: 2 }}
         >
-          Report Sighting
+          {t("reportSighting")}
         </Button>
         <Button
           component={Link}
@@ -161,7 +163,7 @@ export default function DashboardMainContent({
             border: "none",
           }}
         >
-          Register GPS Device
+          {t("registerGpsDevice")}
         </Button>
       </SimpleGrid>
 
@@ -175,7 +177,7 @@ export default function DashboardMainContent({
         >
           <Group justify="space-between" mb="md">
             <Title order={3} style={{ color: "#2f80ed" }}>
-              Your Dashboard Stats
+              {t("statsTitle")}
             </Title>
             <Button
               variant="subtle"
@@ -184,34 +186,34 @@ export default function DashboardMainContent({
               rightSection={<IconRefresh size={16} />}
               onClick={() => window.location.reload()}
             >
-              Refresh
+              {t("refresh")}
             </Button>
           </Group>
           <SimpleGrid cols={{ base: 2, sm: 2, md: 4 }} spacing="lg">
             {[
               {
-                label: "Reports Filed",
+                label: t("reportsFiled"),
                 value: userReports.length,
                 color: "blue",
                 icon: <IconFileReport />,
                 trend: `+${userReports.length}`,
               },
               {
-                label: "Items Found",
+                label: t("itemsFound"),
                 value: userReports.filter((r) => r.status === "Resolved").length,
                 color: "green",
                 icon: <IconCheck />,
                 trend: "+0",
               },
               {
-                label: "Active Searches",
+                label: t("activeSearches"),
                 value: userReports.filter((r) => r.status === "Active").length,
                 color: "orange",
                 icon: <IconSearch />,
                 trend: "+0",
               },
               {
-                label: "Community Help",
+                label: t("communityHelp"),
                 value: 27,
                 color: "grape",
                 icon: <IconUsers />,
@@ -257,7 +259,7 @@ export default function DashboardMainContent({
           <Paper mb="xl" p={{ base: "md", md: "lg" }} withBorder radius="lg">
             <Flex align="center" gap="sm" mb="lg">
               <IconMap size={24} color="#2f80ed" />
-              <Title order={3}>Nearby Missing Items</Title>
+              <Title order={3}>{t("nearbyMissingItems")}</Title>
             </Flex>
             <Box style={{ height: 400, borderRadius: "12px", overflow: "hidden" }}>
               <LocationPicker
@@ -293,7 +295,7 @@ export default function DashboardMainContent({
               <Group justify="space-between" mb="lg">
                 <Flex align="center" gap="sm">
                   <IconFileReport size={24} color="#2f80ed" />
-                  <Title order={3}>Your Recent Reports</Title>
+                  <Title order={3}>{t("recentReports")}</Title>
                 </Flex>
               </Group>
               <ScrollArea>
@@ -306,17 +308,34 @@ export default function DashboardMainContent({
                 >
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Case ID</Table.Th>
-                      <Table.Th>Type</Table.Th>
-                      <Table.Th>Status</Table.Th>
-                      <Table.Th>Actions</Table.Th>
+                      <Table.Th>{t("caseId")}</Table.Th>
+                      <Table.Th>{t("type")}</Table.Th>
+                      <Table.Th>{t("status")}</Table.Th>
+                      <Table.Th>{t("actions")}</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {userReports.slice(0, 5).map((caseItem) => (
+                    {userReports.slice(0, 5).map((caseItem) => {
+                      const imgSrc =
+                        caseItem.type === "Vehicle"
+                          ? getImageUrl(caseItem.imagePreview)
+                          : getImageUrl(caseItem.images?.[0]);
+                      return (
                       <Table.Tr key={caseItem.id}>
                         <Table.Td>
-                          <Text fw={600}>{caseItem.caseId || `#${caseItem.id}`}</Text>
+                          <Group gap="xs">
+                            <Avatar
+                              src={imgSrc || undefined}
+                              size="sm"
+                              radius="sm"
+                              color="blue"
+                            >
+                              {!imgSrc && (
+                                caseItem.type === "Vehicle" ? <IconCar size={14} /> : <IconUserPerson size={14} />
+                              )}
+                            </Avatar>
+                            <Text fw={600}>{caseItem.caseId || `#${caseItem.id}`}</Text>
+                          </Group>
                         </Table.Td>
                         <Table.Td>
                           <Group gap="xs">
@@ -325,7 +344,7 @@ export default function DashboardMainContent({
                             ) : (
                               <IconUserPerson size={16} />
                             )}
-                            <Text>{caseItem.type}</Text>
+                            <Text>{caseItem.type === "Vehicle" ? t("typeVehicle", {defaultValue: "Vehicle"}) : t("typePerson", {defaultValue: "Person"})}</Text>
                           </Group>
                         </Table.Td>
                         <Table.Td>
@@ -339,18 +358,19 @@ export default function DashboardMainContent({
                         </Table.Td>
                         <Table.Td>
                           <Button component={Link} href={getUserRoute(`/case/${caseItem.id}`)} size="xs" variant="light">
-                            View
+                            {t("view")}
                           </Button>
                         </Table.Td>
                       </Table.Tr>
-                    ))}
+                      );
+                    })}
                   </Table.Tbody>
                 </Table>
               </ScrollArea>
               {userReports.length > 5 && (
                 <Center mt="md">
                   <Button variant="subtle" component={Link} href={getUserRoute("/reported-cases")}>
-                    View All Cases
+                    {t("viewAllCases")}
                   </Button>
                 </Center>
               )}
@@ -361,7 +381,7 @@ export default function DashboardMainContent({
           <Paper p={{ base: "md", md: "lg" }} withBorder radius="lg">
             <Flex align="center" gap="sm" mb="lg">
               <IconGps size={24} color="#2f80ed" />
-              <Title order={3}>GPS Smart Belt Tracking</Title>
+              <Title order={3}>{t("gpsSmartBeltTracking")}</Title>
             </Flex>
             <GpsTracker />
           </Paper>
@@ -375,8 +395,8 @@ export default function DashboardMainContent({
                 {user ? `${user.firstName?.charAt(0)}${user.lastName?.charAt(0)}`.toUpperCase() : "U"}
               </Avatar>
               <Box>
-                <Title order={4}>{user ? `${user.firstName} ${user.lastName}` : "User Profile"}</Title>
-                <Text size="sm" c="dimmed">Verified Account</Text>
+                <Title order={4}>{user ? `${user.firstName} ${user.lastName}` : t("userProfile")}</Title>
+                <Text size="sm" c="dimmed">{t("verifiedAccount")}</Text>
               </Box>
             </Flex>
           </Paper>
@@ -386,16 +406,16 @@ export default function DashboardMainContent({
             <Flex align="center" justify="space-between" mb="md">
               <Flex align="center" gap="sm">
                 <IconBell size={20} color="#2f80ed" />
-                <Title order={4}>Notifications</Title>
+                <Title order={4}>{t("notifications")}</Title>
               </Flex>
-              <Badge color="red" variant="filled">2 New</Badge>
+              <Badge color="red" variant="filled">{t("newCount", {count: 2})}</Badge>
             </Flex>
             <Stack gap="sm">
               <Alert color="blue" variant="light" p="sm">
-                <Text size="sm">New sighting match for your report!</Text>
+                <Text size="sm">{t("sightingMatchMsg")}</Text>
               </Alert>
               <Alert color="gray" variant="light" p="sm">
-                <Text size="sm">GPS battery is running low (15%).</Text>
+                <Text size="sm">{t("gpsBatteryLowMsg")}</Text>
               </Alert>
             </Stack>
           </Paper>
@@ -404,22 +424,33 @@ export default function DashboardMainContent({
           <Paper mb="xl" p="md" withBorder radius="lg">
             <Flex align="center" gap="sm" mb="md">
               <IconMessageCircle size={20} color="#2f80ed" />
-              <Title order={4}>Recent Sightings</Title>
+              <Title order={4}>{t("recentSightings")}</Title>
             </Flex>
             {recentSightings.length === 0 ? (
               <Text c="dimmed" ta="center" py="xl">
-                No recent sightings
+                {t("noRecentSightings")}
               </Text>
             ) : (
               <Stack gap="sm">
-                {recentSightings.map((sighting) => (
+                {recentSightings.map((sighting) => {
+                  const sightingImg =
+                    sighting.type === "Vehicle"
+                      ? getImageUrl(sighting.imagePreview)
+                      : getImageUrl(sighting.images?.[0] ?? sighting.image);
+                  return (
                   <Card key={sighting.id} withBorder p="sm" radius="md">
                     <Group gap="sm" align="flex-start">
-                      <Avatar color="blue" radius="xl">
-                        {sighting.type === "Person" ? (
-                          <IconUserPerson size={16} />
-                        ) : (
-                          <IconCar size={16} />
+                      <Avatar
+                        src={sightingImg || undefined}
+                        color="blue"
+                        radius="xl"
+                      >
+                        {!sightingImg && (
+                          sighting.type === "Person" ? (
+                            <IconUserPerson size={16} />
+                          ) : (
+                            <IconCar size={16} />
+                          )
                         )}
                       </Avatar>
                       <Box style={{ flex: 1 }}>
@@ -434,7 +465,8 @@ export default function DashboardMainContent({
                       </Box>
                     </Group>
                   </Card>
-                ))}
+                  );
+                })}
               </Stack>
             )}
           </Paper>
@@ -443,19 +475,19 @@ export default function DashboardMainContent({
           <Paper mb="xl" p="md" withBorder radius="lg">
             <Flex align="center" gap="sm" mb="md">
               <IconChartBar size={20} color="#2f80ed" />
-              <Title order={4}>Analytics & Activity</Title>
+              <Title order={4}>{t("analyticsActivity")}</Title>
             </Flex>
             <Center h={100} bg={getBg("gray.0", "dark.6")} style={{ borderRadius: 8 }}>
-              <Text c="dimmed" size="sm">[ Activity Chart Placeholder ]</Text>
+              <Text c="dimmed" size="sm">{t("activityChartPlaceholder")}</Text>
             </Center>
           </Paper>
 
           <Paper p="md" withBorder radius="lg" bg={getBg("green.0", "dark.6")}>
             <Flex align="center" gap="sm" mb="xs">
               <IconShieldCheck size={20} color="green" />
-              <Title order={4}>Security & Trust</Title>
+              <Title order={4}>{t("securityTrust")}</Title>
             </Flex>
-            <Text size="sm" c="dimmed">Your account is fully verified. Trust score: High (98%).</Text>
+            <Text size="sm" c="dimmed">{t("securityTrustMsg")}</Text>
           </Paper>
         </Grid.Col>
       </Grid>

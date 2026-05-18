@@ -1,15 +1,18 @@
 import { SimpleGrid, Paper, ThemeIcon, Text } from "@mantine/core";
 import { IconUsers, IconHeartHandshake, IconCamera, IconClock } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 
 const PRIMARY_COLOR = "#0034D1";
 const PRIMARY_GRADIENT = `linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #0066ff 100%)`;
 
 export default function StatsCards() {
+  const t = useTranslations("HowItWorks");
+  
   const stats = [
-    { value: "500+", label: "Active Cases", icon: IconUsers },
-    { value: "150+", label: "Successful Reunions", icon: IconHeartHandshake },
-    { value: "24/7", label: "Camera Monitoring", icon: IconCamera },
-    { value: "24 hrs", label: "System Active", icon: IconClock },
+    { value: "500+", label: t("activeCases"), icon: IconUsers },
+    { value: "150+", label: t("successfulReunions"), icon: IconHeartHandshake },
+    { value: "24/7", label: t("cameraMonitoring"), icon: IconCamera },
+    { value: "24 hrs", label: t("systemActive"), icon: IconClock },
   ];
 
   return (

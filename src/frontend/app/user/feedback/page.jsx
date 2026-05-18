@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import {
   Box,
   Container,
@@ -51,6 +52,7 @@ import { useState, useEffect } from "react";
 import { apiClient } from "../../lib/apiClient";
 import { notifications as toast } from "@mantine/notifications";
 import MainFooter from "../../components/MainFooter";
+import DashboardHeader from "../dashboard/DashboardHeader";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -100,6 +102,7 @@ const styleTag = (
 );
 
 export default function UserFeedbackPage() {
+  const t = useTranslations("Feedback");
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
@@ -232,7 +235,7 @@ export default function UserFeedbackPage() {
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("isAuthenticated");
-    router.push("/authentication/login");
+    router.push("/");
   };
 
   return (
@@ -240,77 +243,8 @@ export default function UserFeedbackPage() {
       
       {styleTag}
 
-      {/* ── Header ── */}
-      <Box
-        bg={headerBg}
-        py="xs"
-        style={{
-          borderBottom: `1px solid ${borderColor}`,
-          zIndex: 100,
-          backdropFilter: "blur(14px)",
-          boxShadow: isDark ? "0 4px 20px rgba(0,0,0,0.3)" : "0 4px 20px rgba(0,0,0,0.03)",
-        }}
-      >
-        <Container size="xl">
-          <Group justify="space-between">
-            <Group gap="md">
-              <Link href="/user/dashboard">
-                <Image
-                  src="/logo.jpg"
-                  alt="Logo"
-                  width={0}
-                  height={45}
-                  sizes="100vw"
-                  style={{ width: "auto", height: "45px", borderRadius: "8px" }}
-                />
-              </Link>
-              <Divider orientation="vertical" h={25} />
-              <Group gap="xs">
-                <IconMessage size={20} color={theme.colors.blue[6]} />
-                <Title order={4} fw={800} style={{ letterSpacing: -0.3 }}>Feedback Portal</Title>
-              </Group>
-            </Group>
-
-            <Group gap="lg">
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                size="lg"
-                component={Link}
-                href="/user/dashboard"
-                title="Go to Dashboard"
-              >
-                <IconHome size={22} />
-              </ActionIcon>
-
-              <Menu shadow="lg" width={220} radius="md" transitionProps={{ transition: 'pop' }}>
-                <Menu.Target>
-                  <UnstyledButton style={{ padding: '4px 8px', borderRadius: '8px' }}>
-                    <Group gap="xs">
-                      <Avatar src={null} alt="User" color="blue" size="sm" radius="xl" fw={700} bg="linear-gradient(135deg, #4DABF7 0%, #228BE6 100%)">
-                        {username[0]?.toUpperCase()}
-                      </Avatar>
-                      <Text fw={700} size="sm" visibleFrom="xs">{username}</Text>
-                    </Group>
-                  </UnstyledButton>
-                </Menu.Target>
-                <Menu.Dropdown>
-                  <Menu.Item leftSection={<IconUser size={16} />} component={Link} href="/user/profile">
-                    My Profile
-                  </Menu.Item>
-                  <Menu.Item leftSection={<IconBell size={16} />} component={Link} href="/user/alert">
-                    System Alerts
-                  </Menu.Item>
-                  <Menu.Divider />
-                  <Menu.Item color="red" leftSection={<IconLogout size={16} />} onClick={handleLogout}>
-                    Logout
-                  </Menu.Item>
-                </Menu.Dropdown>
-              </Menu>
-            </Group>
-          </Group>
-        </Container>
-      </Box>
+      {/* ── Reusable Unified Header ── */}
+      <DashboardHeader />
 
       {/* ── Main Portal Body ── */}
       <Container size="lg" py={40} style={{ flex: 1 }}>
@@ -319,10 +253,10 @@ export default function UserFeedbackPage() {
           {/* Welcome Banner */}
           <Box>
             <Title order={2} fw={900} style={{ letterSpacing: -0.5 }} mb={4}>
-              Share Your Thoughts
+              {t("title")}
             </Title>
             <Text c="dimmed" size="sm">
-              We continually refine our AI surveillance engine. Submit bug reports, feature requests, or general review ratings.
+              {t("subtitle")}
             </Text>
           </Box>
 
@@ -331,10 +265,10 @@ export default function UserFeedbackPage() {
             <Tabs value={activeTab} onChange={setActiveTab} variant="unstyled">
               <Tabs.List style={{ display: 'flex', gap: '8px' }}>
                 <Tabs.Tab value="form" className="premium-tab">
-                  Write Feedback Review
+                  {t("writeFeedback")}
                 </Tabs.Tab>
                 <Tabs.Tab value="history" className="premium-tab">
-                  My Feedback & Admin Replies
+                  {t("myFeedback")}
                 </Tabs.Tab>
               </Tabs.List>
             </Tabs>
@@ -353,12 +287,20 @@ export default function UserFeedbackPage() {
                       {/* Step 1: Select Category */}
                       <Box>
                         <Text fw={800} size="sm" mb="xs" c={isDark ? "white" : "dark"}>
-                          Select Category
+                          {t("selectCategory")}
                         </Text>
                         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                           {feedbackTypes.map((item) => {
                             const CompIcon = item.icon;
                             const isSelected = selectedType === item.value;
+                            const label = item.value === "general" ? t("generalThoughts") :
+                                          item.value === "bug" ? t("bugReport") :
+                                          item.value === "feature" ? t("featureRequest") :
+                                          t("complaint");
+                            const desc = item.value === "general" ? t("generalThoughtsDesc") :
+                                         item.value === "bug" ? t("bugReportDesc") :
+                                         item.value === "feature" ? t("featureRequestDesc") :
+                                         t("complaintDesc");
                             return (
                               <Paper
                                 key={item.value}
@@ -380,8 +322,8 @@ export default function UserFeedbackPage() {
                                     <CompIcon size={16} />
                                   </ThemeIcon>
                                   <Box style={{ minWidth: 0 }}>
-                                    <Text fw={750} size="xs" truncate>{item.label}</Text>
-                                    <Text size="10px" c="dimmed" truncate>{item.desc}</Text>
+                                    <Text fw={750} size="xs" truncate>{label}</Text>
+                                    <Text size="10px" c="dimmed" truncate>{desc}</Text>
                                   </Box>
                                 </Group>
                               </Paper>
@@ -394,8 +336,8 @@ export default function UserFeedbackPage() {
                       <Paper p="md" radius="md" withBorder style={{ background: getBg(colorScheme, "#F8F9FD", "#1a1b1e") }}>
                         <Group justify="space-between" align="center">
                           <Box>
-                            <Text fw={800} size="sm">Overall Rating</Text>
-                            <Text size="xs" c="dimmed">Rate your experience using the portal</Text>
+                            <Text fw={800} size="sm">{t("overallRating")}</Text>
+                            <Text size="xs" c="dimmed">{t("overallRatingDesc")}</Text>
                           </Box>
                           <Stack gap={2} align="center">
                             <Rating
@@ -405,7 +347,7 @@ export default function UserFeedbackPage() {
                               color="yellow"
                             />
                             <Text size="xs" fw={700} c="dimmed">
-                              {ratingVal === 5 ? "Excellent!" : ratingVal === 4 ? "Good" : ratingVal === 3 ? "Average" : ratingVal === 2 ? "Poor" : "Very Poor"}
+                              {ratingVal === 5 ? t("excellent") : ratingVal === 4 ? t("good") : ratingVal === 3 ? t("average") : ratingVal === 2 ? t("poor") : t("veryPoor")}
                             </Text>
                           </Stack>
                         </Group>
@@ -413,13 +355,13 @@ export default function UserFeedbackPage() {
 
                       {/* Step 3: Priority selection */}
                       <Select
-                        label="Priority Level"
-                        description="Let us know how urgent this review is"
+                        label={t("priorityLevel")}
+                        description={t("priorityDesc")}
                         data={[
-                          { value: "low", label: "Low (General feedback)" },
-                          { value: "medium", label: "Medium (Review in 1-2 days)" },
-                          { value: "high", label: "High (Review today)" },
-                          { value: "urgent", label: "Urgent (System issue)" },
+                          { value: "low", label: t("priorityLow") },
+                          { value: "medium", label: t("priorityMedium") },
+                          { value: "high", label: t("priorityHigh") },
+                          { value: "urgent", label: t("priorityUrgent") },
                         ]}
                         value={priority}
                         onChange={setPriority}
@@ -428,8 +370,8 @@ export default function UserFeedbackPage() {
 
                       {/* Step 4: Subject */}
                       <TextInput
-                        label="Subject Line"
-                        placeholder="Brief summary of your feedback..."
+                        label={t("subjectLine")}
+                        placeholder={t("subjectPlaceholder")}
                         radius="md"
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
@@ -438,8 +380,8 @@ export default function UserFeedbackPage() {
 
                       {/* Step 5: Details message */}
                       <Textarea
-                        label="Details Message"
-                        placeholder="Please elaborate on your feedback, feature request, or complaint here..."
+                        label={t("detailsMessage")}
+                        placeholder={t("detailsPlaceholder")}
                         minRows={5}
                         radius="md"
                         value={message}
@@ -460,7 +402,7 @@ export default function UserFeedbackPage() {
                         style={{ boxShadow: "0 4px 14px rgba(34, 139, 230, 0.3)" }}
                         className="hover-lift"
                       >
-                        {submitting ? "Submitting Review..." : "Submit Feedback"}
+                        {submitting ? t("submittingReview") : t("submitFeedback")}
                       </Button>
 
                     </Stack>
@@ -478,29 +420,29 @@ export default function UserFeedbackPage() {
                     <ThemeIcon size="xl" radius="md" color="white" variant="white" mb="md">
                       <IconStarFilled size={22} color="#FD7E14" />
                     </ThemeIcon>
-                    <Title order={3} fw={900} mb="xs">Help Us Secure the Community</Title>
+                    <Title order={3} fw={900} mb="xs">{t("helpSecure")}</Title>
                     <Text size="sm" mb="md" style={{ opacity: 0.9, lineHeight: 1.6 }}>
-                      Your reviews, bug reports, and ratings directly help our developer team stabilize CCTV license plate readers and face identification modules.
+                      {t("helpSecureDesc")}
                     </Text>
                     <Text size="xs" style={{ opacity: 0.7 }}>
-                      Admin officers respond in-app within a few hours. Check the "My Feedback" tab regularly.
+                      {t("helpSecureFooter")}
                     </Text>
                   </Paper>
 
                   <Paper withBorder radius="lg" p="xl" style={{ background: cardBg }}>
-                    <Title order={4} fw={800} mb="md">Feedback Guidelines</Title>
+                    <Title order={4} fw={800} mb="md">{t("guidelines")}</Title>
                     <Stack gap="sm">
                       <Group gap="xs" wrap="nowrap" align="flex-start">
                         <ThemeIcon size="xs" radius="xl" color="green"><IconCheck size={10} /></ThemeIcon>
-                        <Text size="xs" c="dimmed">Be specific about camera sighting issues.</Text>
+                        <Text size="xs" c="dimmed">{t("guideline1")}</Text>
                       </Group>
                       <Group gap="xs" wrap="nowrap" align="flex-start">
                         <ThemeIcon size="xs" radius="xl" color="green"><IconCheck size={10} /></ThemeIcon>
-                        <Text size="xs" c="dimmed">File complaints for subscription payment delays.</Text>
+                        <Text size="xs" c="dimmed">{t("guideline2")}</Text>
                       </Group>
                       <Group gap="xs" wrap="nowrap" align="flex-start">
                         <ThemeIcon size="xs" radius="xl" color="green"><IconCheck size={10} /></ThemeIcon>
-                        <Text size="xs" c="dimmed">Suggest map UI features or coordinate tweaks.</Text>
+                        <Text size="xs" c="dimmed">{t("guideline3")}</Text>
                       </Group>
                     </Stack>
                   </Paper>
@@ -515,16 +457,16 @@ export default function UserFeedbackPage() {
               {loadingHistory ? (
                 <Box py={100} ta="center">
                   <Loader size="xl" color="blue" variant="bars" />
-                  <Text size="sm" c="dimmed" mt="md" fw={600}>Loading your past submissions...</Text>
+                  <Text size="sm" c="dimmed" mt="md" fw={600}>{t("loadingHistory")}</Text>
                 </Box>
               ) : myFeedback.length === 0 ? (
                 <Paper p={60} withBorder radius="lg" style={{ background: cardBg, textAlign: "center", borderStyle: 'dashed' }}>
                   <ThemeIcon size={70} radius="xl" color="gray" variant="light" mx="auto" mb="sm">
                     <IconInbox size={35} />
                   </ThemeIcon>
-                  <Title order={4} fw={800}>No Submissions Found</Title>
+                  <Title order={4} fw={800}>{t("noSubmissions")}</Title>
                   <Text size="sm" c="dimmed" mt={4} style={{ maxWidth: 350, margin: "8px auto 0" }}>
-                    You have not submitted feedback reviews yet. Toggle to the first tab to send your first message.
+                    {t("noSubmissionsDesc")}
                   </Text>
                 </Paper>
               ) : (
@@ -533,6 +475,10 @@ export default function UserFeedbackPage() {
                     const typeCfg = feedbackTypes.find(t => t.value === item.type) || feedbackTypes[0];
                     const isResolved = item.status === "resolved" || item.status === "closed";
                     const hasReply = !!item.response?.text;
+                    const displayPriority = item.priority === 'urgent' ? t("urgentPriority") :
+                                            item.priority === 'high' ? t("highPriority") :
+                                            item.priority === 'medium' ? t("mediumPriority") :
+                                            t("lowPriority");
 
                     return (
                       <Paper key={item._id} withBorder radius="lg" p="lg" style={{ background: cardBg }} className="hover-lift">
@@ -543,7 +489,7 @@ export default function UserFeedbackPage() {
                                 {item.type}
                               </Badge>
                               <Badge color={item.priority === 'urgent' ? 'red' : item.priority === 'high' ? 'orange' : 'gray'} variant="filled" size="xs">
-                                {item.priority} priority
+                                {displayPriority}
                               </Badge>
                               <Text size="xs" c="dimmed">•</Text>
                               <Text size="xs" c="dimmed">{new Date(item.createdAt).toLocaleDateString()}</Text>
@@ -556,7 +502,7 @@ export default function UserFeedbackPage() {
                             {/* Sighting rating stars */}
                             <Group gap={4} mb="md" align="center">
                               <Rating value={item.rating || 5} readOnly size="sm" />
-                              <Text size="xs" fw={700} c="dimmed">( {item.rating || 5} Stars )</Text>
+                              <Text size="xs" fw={700} c="dimmed">{t("stars", { stars: item.rating || 5 })}</Text>
                             </Group>
 
                             <Text size="sm" c={isDark ? "gray.4" : "gray.8"} style={{ lineHeight: 1.6 }}>
@@ -581,7 +527,7 @@ export default function UserFeedbackPage() {
                                     {isResolved ? <IconCheck size={10} /> : <IconClock size={10} />}
                                   </ThemeIcon>
                                   <Text size="xs" fw={800} style={{ textTransform: "uppercase" }} color={isResolved ? "green" : "orange"}>
-                                    Status: {item.status}
+                                    {t("statusLabel", { status: item.status })}
                                   </Text>
                                 </Group>
                               </Paper>
@@ -596,21 +542,21 @@ export default function UserFeedbackPage() {
                                     <ThemeIcon size="sm" radius="xl" color="blue">
                                       <IconUserCheck size={12} />
                                     </ThemeIcon>
-                                    <Text size="xs" fw={800}>Admin Officer Reply:</Text>
+                                    <Text size="xs" fw={800}>{t("adminReply")}</Text>
                                   </Group>
                                   <Text size="xs" c={isDark ? "gray.3" : "gray.8"} style={{ lineHeight: 1.5, fontStyle: "italic" }}>
                                     "{item.response.text}"
                                   </Text>
                                   {item.response.respondedAt && (
                                     <Text size="9px" c="dimmed" mt={4} ta="right">
-                                      Replied: {new Date(item.response.respondedAt).toLocaleDateString()}
+                                      {t("repliedDate", { date: new Date(item.response.respondedAt).toLocaleDateString() })}
                                     </Text>
                                   )}
                                 </Paper>
                               ) : (
                                 <Paper p="md" radius="md" withBorder style={{ background: getBg(colorScheme, "#F8F9FD", "#1A1B1E"), borderStyle: "dashed" }} ta="center">
                                   <Text size="xs" c="dimmed" fs="italic">
-                                    Awaiting Admin review. A notification will arrive when responded.
+                                    {t("awaitingReview")}
                                   </Text>
                                 </Paper>
                               )}

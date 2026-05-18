@@ -14,6 +14,7 @@ import { useMediaQuery } from "@mantine/hooks";
 import DashboardHeader from "./DashboardHeader";
 import DashboardMainContent from "./DashboardMainContent";
 import { apiClient } from "../../lib/apiClient";
+import { useTranslations } from "next-intl";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 const MISSING_PERSONS_API = `${API_BASE_URL}/missing-persons`;
@@ -24,18 +25,19 @@ const MY_SIGHTINGS_API = `${API_BASE_URL}/sightings/my-sightings`;
 const MY_NOTIFICATIONS_API = `${API_BASE_URL}/notifications/my-notifications`;
 
 export default function Dashboard() {
+  const t = useTranslations("Analytics"); // Can use the Analytics loading key
   const router = useRouter();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
 
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [missingPersons, setMissingPersons] = useState([]);
-  const [missingVehicles, setMissingVehicles] = useState([]);
-  const [userReports, setUserReports] = useState([]);
-  const [recentSightings, setRecentSightings] = useState([]);
-  const [notifications, setNotifications] = useState([]);
+  const [missingPersons, setMissingPersons] = useState<any[]>([]);
+  const [missingVehicles, setMissingVehicles] = useState<any[]>([]);
+  const [userReports, setUserReports] = useState<any[]>([]);
+  const [recentSightings, setRecentSightings] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [dataLoading, setDataLoading] = useState(false);
 
@@ -46,11 +48,11 @@ export default function Dashboard() {
   };
 
   // ---------- Helper functions ----------
-  const getUserInitials = (firstName, lastName) => {
+  const getUserInitials = (firstName: any, lastName: any) => {
     return `${firstName?.charAt(0) || ""}${lastName?.charAt(0) || ""}`.toUpperCase();
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: any) => {
     switch (status?.toLowerCase()) {
       case "active":
         return "blue";
@@ -63,7 +65,7 @@ export default function Dashboard() {
     }
   };
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority: any) => {
     switch (priority?.toLowerCase()) {
       case "high":
         return "red";
@@ -76,7 +78,7 @@ export default function Dashboard() {
     }
   };
 
-  const getUserRoute = (path) => {
+  const getUserRoute = (path: any) => {
     if (!user) return path;
     if (path === "/login") return "/authentication/login";
     if (path === "/signup") return "/authentication/signup";
@@ -113,7 +115,7 @@ export default function Dashboard() {
 
     checkAuth();
 
-    const handleStorageChange = (e) => {
+    const handleStorageChange = (e: any) => {
       if (e.key === "currentUser") {
         checkAuth();
       }
@@ -225,7 +227,7 @@ export default function Dashboard() {
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
     setUser(null);
-    router.push("/authentication/login");
+    router.push("/");
   };
 
   // Show loader while checking authentication
@@ -246,7 +248,7 @@ export default function Dashboard() {
           }}
         >
           <Loader size="xl" color="#2f80ed" />
-          <Text mt="md">Loading your dashboard...</Text>
+          <Text mt="md">{t("loading", {defaultValue: "Loading your dashboard..."})}</Text>
         </Box>
       </Center>
     );
@@ -261,7 +263,7 @@ export default function Dashboard() {
         user={user}
         notifications={notifications}
         unreadCount={unreadCount}
-        colorScheme={colorScheme}
+        colorScheme={colorScheme as any}
         toggleColorScheme={toggleColorScheme}
         onLogout={handleLogout}
         getUserInitials={getUserInitials}
@@ -275,7 +277,7 @@ export default function Dashboard() {
         userReports={userReports}
         recentSightings={recentSightings}
         dataLoading={dataLoading}
-        colorScheme={colorScheme}
+        colorScheme={colorScheme as any}
         getUserRoute={getUserRoute}
         getStatusColor={getStatusColor}
         getPriorityColor={getPriorityColor}

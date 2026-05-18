@@ -2,46 +2,48 @@
 import { Box, Container, Title, Text, SimpleGrid, Paper, ThemeIcon, useMantineColorScheme } from "@mantine/core";
 import { IconFaceId, IconCar, IconMapPin, IconBellRinging, IconUsers, IconShieldCheck } from "@tabler/icons-react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 
 export default function HomeFeatures() {
+  const t = useTranslations("Features");
   const { colorScheme } = useMantineColorScheme();
   const getBg = (light: string, dark: string) => (colorScheme === "dark" ? dark : light);
 
   const features = [
     {
       icon: IconFaceId,
-      title: "AI Face Detection",
-      description: "Advanced facial recognition algorithms to quickly identify and match missing persons from community uploads.",
+      title: t("faceTitle"),
+      description: t("faceDesc"),
       color: "blue",
     },
     {
       icon: IconCar,
-      title: "Vehicle Recognition",
-      description: "Automated license plate and vehicle model detection to locate stolen or missing cars efficiently.",
+      title: t("carTitle"),
+      description: t("carDesc"),
       color: "teal",
     },
     {
       icon: IconMapPin,
-      title: "Live GPS Tracking",
-      description: "Real-time location tracking for registered smart belts, ensuring constant safety monitoring.",
+      title: t("gpsTitle"),
+      description: t("gpsDesc"),
       color: "green",
     },
     {
       icon: IconBellRinging,
-      title: "Real-time Notifications",
-      description: "Instant alerts sent to nearby community members and authorities when a new case is reported.",
+      title: t("bellTitle"),
+      description: t("bellDesc"),
       color: "orange",
     },
     {
       icon: IconUsers,
-      title: "Community Sightings",
-      description: "A collaborative platform where users can report sightings to help resolve active cases faster.",
+      title: t("usersTitle"),
+      description: t("usersDesc"),
       color: "grape",
     },
     {
       icon: IconShieldCheck,
-      title: "Smart Emergency Alerts",
-      description: "Automated verification and prioritized routing of emergency SOS signals for immediate response.",
+      title: t("shieldTitle"),
+      description: t("shieldDesc"),
       color: "red",
     },
   ];
@@ -50,10 +52,10 @@ export default function HomeFeatures() {
     <Box id="features" py={{ base: 60, md: 100 }} bg="transparent">
       <Container size="xl">
         <Title order={2} ta="center" fw={900} mb="sm" style={{ color: "#2f80ed" }}>
-          Platform Features
+          {t("title")}
         </Title>
         <Text c="dimmed" ta="center" maw={600} mx="auto" mb={50}>
-          Our system leverages cutting-edge technology and community engagement to provide the most effective recovery platform.
+          {t("subtitle")}
         </Text>
 
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
