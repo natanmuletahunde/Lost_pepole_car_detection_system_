@@ -12,6 +12,7 @@ export const languages = [
   { value: "fr", label: "🇫🇷 French" },
   { value: "de", label: "🇩🇪 German" },
   { value: "zh", label: "🇨🇳 Chinese" },
+  { value: "am", label: "🇪🇹 Amharic" },
 ];
 
 export const timezones = [

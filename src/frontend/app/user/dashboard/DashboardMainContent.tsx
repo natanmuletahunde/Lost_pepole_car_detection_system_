@@ -313,10 +313,27 @@ export default function DashboardMainContent({
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {userReports.slice(0, 5).map((caseItem) => (
+                    {userReports.slice(0, 5).map((caseItem) => {
+                      const imgSrc =
+                        caseItem.type === "Vehicle"
+                          ? getImageUrl(caseItem.imagePreview)
+                          : getImageUrl(caseItem.images?.[0]);
+                      return (
                       <Table.Tr key={caseItem.id}>
                         <Table.Td>
-                          <Text fw={600}>{caseItem.caseId || `#${caseItem.id}`}</Text>
+                          <Group gap="xs">
+                            <Avatar
+                              src={imgSrc || undefined}
+                              size="sm"
+                              radius="sm"
+                              color="blue"
+                            >
+                              {!imgSrc && (
+                                caseItem.type === "Vehicle" ? <IconCar size={14} /> : <IconUserPerson size={14} />
+                              )}
+                            </Avatar>
+                            <Text fw={600}>{caseItem.caseId || `#${caseItem.id}`}</Text>
+                          </Group>
                         </Table.Td>
                         <Table.Td>
                           <Group gap="xs">
@@ -343,7 +360,8 @@ export default function DashboardMainContent({
                           </Button>
                         </Table.Td>
                       </Table.Tr>
-                    ))}
+                      );
+                    })}
                   </Table.Tbody>
                 </Table>
               </ScrollArea>
@@ -412,14 +430,25 @@ export default function DashboardMainContent({
               </Text>
             ) : (
               <Stack gap="sm">
-                {recentSightings.map((sighting) => (
+                {recentSightings.map((sighting) => {
+                  const sightingImg =
+                    sighting.type === "Vehicle"
+                      ? getImageUrl(sighting.imagePreview)
+                      : getImageUrl(sighting.images?.[0] ?? sighting.image);
+                  return (
                   <Card key={sighting.id} withBorder p="sm" radius="md">
                     <Group gap="sm" align="flex-start">
-                      <Avatar color="blue" radius="xl">
-                        {sighting.type === "Person" ? (
-                          <IconUserPerson size={16} />
-                        ) : (
-                          <IconCar size={16} />
+                      <Avatar
+                        src={sightingImg || undefined}
+                        color="blue"
+                        radius="xl"
+                      >
+                        {!sightingImg && (
+                          sighting.type === "Person" ? (
+                            <IconUserPerson size={16} />
+                          ) : (
+                            <IconCar size={16} />
+                          )
                         )}
                       </Avatar>
                       <Box style={{ flex: 1 }}>
@@ -434,7 +463,8 @@ export default function DashboardMainContent({
                       </Box>
                     </Group>
                   </Card>
-                ))}
+                  );
+                })}
               </Stack>
             )}
           </Paper>

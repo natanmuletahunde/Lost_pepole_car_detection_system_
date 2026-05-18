@@ -217,7 +217,7 @@ export default function AlertPage() {
               : vehicle.reportDate
                 ? new Date(vehicle.reportDate).toLocaleDateString()
                 : "Unknown",
-            imageUrl: getImageUrl(vehicle.imagePreview) || "/ebs.jpg",
+            imageUrl: getImageUrl(vehicle.imagePreview) || getImageUrl(vehicle.images?.[0]) || "/ebs.jpg",
             details:
               vehicle.vehicleDescription ||
               `${vehicle.color || ""} ${vehicle.brand || ""}`.trim(),
@@ -255,7 +255,7 @@ export default function AlertPage() {
             },
 
             features: vehicle.features || [],
-            additionalImages: vehicle.images || [],
+            additionalImages: (vehicle.images || []).map(img => getImageUrl(img) || img),
 
             cctvInfo: vehicle.cctvInfo || { confidence: "N/A" },
 
@@ -326,7 +326,7 @@ export default function AlertPage() {
             },
 
             features: person.features || [],
-            additionalImages: person.images || [],
+            additionalImages: (person.images || []).map(img => getImageUrl(img) || img),
 
             // NEW: stats including total detections
             stats: {
@@ -1096,6 +1096,12 @@ export default function AlertPage() {
                   style={{ objectFit: "cover" }}
                   sizes="100vw"
                   priority
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      selectedAlert.type === "person"
+                        ? "/surveillance-man.jpg"
+                        : "/ebs.jpg";
+                  }}
                 />
               </Box>
 

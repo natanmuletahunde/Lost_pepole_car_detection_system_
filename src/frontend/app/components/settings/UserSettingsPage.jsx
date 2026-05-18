@@ -96,6 +96,20 @@ export default function UserSettingsPage() {
     } catch (_) {}
   }, []);
 
+  // Synchronize language change from floating button
+  useEffect(() => {
+    const handleLangChange = (event) => {
+      const newLang = event.detail;
+      if (newLang && formData.language !== newLang) {
+        handleChange("language", newLang);
+      }
+    };
+    window.addEventListener("appLanguageChanged", handleLangChange);
+    return () => {
+      window.removeEventListener("appLanguageChanged", handleLangChange);
+    };
+  }, [formData.language, handleChange]);
+
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("isAuthenticated");
