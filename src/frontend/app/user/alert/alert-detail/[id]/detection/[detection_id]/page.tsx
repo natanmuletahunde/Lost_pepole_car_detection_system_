@@ -1453,6 +1453,8 @@ export default function SingleDetectionDetailPage() {
         </Group>
       </Container>
 
+      
+
       <MainFooter />
     </Box>
   );

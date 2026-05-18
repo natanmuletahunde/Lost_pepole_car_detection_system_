@@ -188,3 +188,23 @@ exports.updateMissingPerson = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// ==============================
+// RESOLVE CASE (reporter confirms found)
+// ==============================
+exports.resolveMissingPerson = async (req, res) => {
+  try {
+    const person = await MissingPerson.findById(req.params.id);
+    if (!person) {
+      return res.status(404).json({ success: false, message: 'Person not found' });
+    }
+
+    person.status = 'Resolved';
+    person.lastUpdated = new Date();
+    await person.save();
+
+    res.json({ success: true, message: 'Case marked as resolved', data: person });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
