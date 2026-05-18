@@ -5,6 +5,7 @@ import '@mantine/notifications/styles.css';
 import '@mantine/dates/styles.css';
 import Providers from './providers'; // adjust the path if needed
 import DarkModeFloatingButton from './components/DarkModeFloatingButton'; // adjust path
+import LanguageFloatingButton from './components/LanguageFloatingButton';
 
 export const metadata = {
   title: 'Auth UI',
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
         <Providers>
           {children}
           <DarkModeFloatingButton />
+          <LanguageFloatingButton />
         </Providers>
       </body>
     </html>

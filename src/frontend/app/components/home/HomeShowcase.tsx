@@ -10,10 +10,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5
 const API_ROOT = API_BASE_URL.replace(/\/api\/v1\/?$/, '') || 'http://localhost:5000';
 
 function getImageUrl(item: any) {
-  if (item.imagePreview) return item.imagePreview;
+  if (item.imagePreview) {
+    const path = item.imagePreview;
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
+    return `${API_ROOT}${path.startsWith('/') ? path : `/${path}`}`;
+  }
   if (Array.isArray(item.images) && item.images[0]) {
     const path = item.images[0];
-    if (path.startsWith('http')) return path;
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
     return `${API_ROOT}${path.startsWith('/') ? path : `/${path}`}`;
   }
   return null;
