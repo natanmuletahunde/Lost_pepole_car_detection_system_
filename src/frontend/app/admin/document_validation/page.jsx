@@ -35,7 +35,10 @@ import {
   IconFileCheck,
   IconChevronLeft,
   IconChevronRight,
+  IconSettings,
+  IconBell
 } from "@tabler/icons-react";
+import Link from "next/link";
 import { adminFetchPaginatedList, adminFetch, uploadUrl } from "@/app/lib/adminApi";
 
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
@@ -265,13 +268,28 @@ export default function DocumentValidationPage() {
             placeholder="Search..."
             leftSection={<IconSearch size={16} />}
             radius="md"
-            w={320}
+            w={200}
             value={search}
-            onChange={(e) => setSearch(e.currentTarget.value)}
+            onChange={(e) => setSearch(e.target.value)}
+            styles={{ input: { backgroundColor: 'transparent', height: '30px' } }}
           />
+          <Tooltip label="Settings">
+            <Link href="/admin/settings" passHref style={{ textDecoration: 'none' }}>
+              <ActionIcon variant="subtle" color="blue" size="lg">
+                <IconSettings size={22} />
+              </ActionIcon>
+            </Link>
+          </Tooltip>
+          <Tooltip label="Notifications">
+            <Link href="/admin/notification" passHref style={{ textDecoration: 'none' }}>
+              <ActionIcon variant="subtle" color="red" size="lg">
+                <IconBell size={22} />
+              </ActionIcon>
+            </Link>
+          </Tooltip>
           <Tooltip label="Refresh">
-            <ActionIcon variant="subtle" color="gray" size="lg" onClick={fetchDocs}>
-              <IconRefresh size={22} />
+            <ActionIcon variant="subtle" color="blue" size="lg" onClick={fetchDocs}>
+              <IconDownload size={22} />
             </ActionIcon>
           </Tooltip>
         </Group>

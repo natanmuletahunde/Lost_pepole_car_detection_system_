@@ -9,6 +9,7 @@ import {
 } from "@mantine/core";
 import { IconHistory, IconSearch, IconDownload, IconEye, IconTrash, IconDotsVertical, IconSettings, IconBell, IconRefresh } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
+import Link from "next/link";
 
 const getBg = (colorScheme, light, dark) => (colorScheme === "dark" ? dark : light);
 
@@ -161,9 +162,19 @@ export default function ActivitiesPage() {
           <Text size="sm" c="dimmed">Track all admin actions</Text>
         </Box>
         <Group bg={headerBg} p={8} style={{ borderRadius: "30px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
-          <Tooltip label="Settings"><ActionIcon variant="subtle" color="gray" size="lg"><IconSettings size={22} /></ActionIcon></Tooltip>
-          <Tooltip label="Notifications"><ActionIcon variant="subtle" color="gray" size="lg"><IconBell size={22} /></ActionIcon></Tooltip>
-          <Tooltip label="Refresh"><ActionIcon variant="subtle" color="gray" size="lg"><IconRefresh size={22} /></ActionIcon></Tooltip>
+          <Tooltip label="Settings">
+            <Link href="/admin/settings" passHref style={{ textDecoration: 'none' }}>
+              <ActionIcon variant="subtle" color="blue" size="lg"><IconSettings size={22} /></ActionIcon>
+            </Link>
+          </Tooltip>
+          <Tooltip label="Notifications">
+            <Link href="/admin/notification" passHref style={{ textDecoration: 'none' }}>
+              <ActionIcon variant="subtle" color="red" size="lg"><IconBell size={22} /></ActionIcon>
+            </Link>
+          </Tooltip>
+          <Tooltip label="Refresh">
+            <ActionIcon variant="subtle" color="blue" size="lg" onClick={() => window.location.reload()}><IconDownload size={22} /></ActionIcon>
+          </Tooltip>
         </Group>
       </Group>
 

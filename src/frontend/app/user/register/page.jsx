@@ -460,6 +460,15 @@ export default function UnifiedRegisterPage() {
         setCurrentUser(updatedUser);
       }
 
+      // Mock save for admin dashboard to bypass backend changes
+      try {
+        const existingCases = JSON.parse(localStorage.getItem('admin_mock_cases') || '[]');
+        existingCases.push({ ...reportData, type: regType, id: Date.now() });
+        localStorage.setItem('admin_mock_cases', JSON.stringify(existingCases));
+      } catch (e) {
+        console.error("Failed to save mock case", e);
+      }
+
       notifications.show({
         title: t("reportSubmittedTitle"),
         message: t("reportSubmittedMsg"),

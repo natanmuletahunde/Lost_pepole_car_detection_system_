@@ -45,6 +45,7 @@ import {
   IconCircleCheck,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { adminFetch } from "@/app/lib/adminApi";
 
 // Helper functions
@@ -255,17 +256,21 @@ export default function UserListPage() {
         </Group>
         <Group bg={headerBg} p={8} style={{ borderRadius: "30px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
           <Tooltip label="Settings">
-            <ActionIcon variant="subtle" color="gray" size="lg">
-              <IconSettings size={22} />
-            </ActionIcon>
+            <Link href="/admin/settings" passHref style={{ textDecoration: 'none' }}>
+              <ActionIcon variant="subtle" color="blue" size="lg">
+                <IconSettings size={22} />
+              </ActionIcon>
+            </Link>
           </Tooltip>
           <Tooltip label="Notifications">
-            <ActionIcon variant="subtle" color="gray" size="lg">
-              <IconBell size={22} />
-            </ActionIcon>
+            <Link href="/admin/notification" passHref style={{ textDecoration: 'none' }}>
+              <ActionIcon variant="subtle" color="red" size="lg">
+                <IconBell size={22} />
+              </ActionIcon>
+            </Link>
           </Tooltip>
           <Tooltip label="Refresh">
-            <ActionIcon variant="subtle" color="gray" size="lg" onClick={() => setLoadTick((t) => t + 1)}>
+            <ActionIcon variant="subtle" color="blue" size="lg" onClick={() => window.location.reload()}>
               <IconRefresh size={22} />
             </ActionIcon>
           </Tooltip>

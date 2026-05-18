@@ -116,10 +116,16 @@ export default function CarsPage() {
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing="lg">
           {missingVehicles.map((vehicle) => {
+<<<<<<< HEAD
+            return (
+              <Card
+                key={vehicle.id}
+=======
             const vehicleId = vehicle._id || vehicle.id;
             return (
               <Card
                 key={vehicleId}
+>>>>>>> c8e67e378a0a722560a7fddf717e6ab07ae85602
                 radius="md"
                 p={0}
                 withBorder
@@ -168,7 +174,11 @@ export default function CarsPage() {
                   <Button
                     component={Link}
                     href={`/user/report-sighting?type=Vehicle&caseId=${
+<<<<<<< HEAD
+                      vehicle.caseId || vehicle.id
+=======
                       vehicleId
+>>>>>>> c8e67e378a0a722560a7fddf717e6ab07ae85602
                     }&plateNumber=${encodeURIComponent(
                       vehicle.plateNumber || ""
                     )}&brand=${encodeURIComponent(
