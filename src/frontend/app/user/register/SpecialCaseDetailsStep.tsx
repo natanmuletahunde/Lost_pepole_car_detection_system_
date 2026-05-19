@@ -10,6 +10,7 @@ import {
   IconX, IconPhoto, IconInfoCircle
 } from '@tabler/icons-react';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 
 export const SpecialCaseDetailsStep = ({
   formValues,
@@ -31,21 +32,34 @@ export const SpecialCaseDetailsStep = ({
   PRIMARY_DARK,
   getBg,
   gradientIconBox
-}) => {
-  const handleImageUpload = (files) => {
+}: any) => {
+  const t = useTranslations("Register");
+  const tCommon = useTranslations("Common");
+
+  const handleImageUpload = (event: any) => {
+    const files = event.target.files;
     if (!files || files.length === 0) return;
-    const newImages = Array.from(files).map(file => ({
+    const newImages = Array.from(files).map((file: any) => ({
       file,
       preview: URL.createObjectURL(file)
     }));
-    setSpecialImages(prev => [...prev, ...newImages]);
+    setSpecialImages((prev: any[]) => [...prev, ...newImages]);
+    event.target.value = '';
   };
 
-  const removeImage = (indexToRemove) => {
-    setSpecialImages(prev => {
+  const removeImage = (indexToRemove: number) => {
+    setSpecialImages((prev: any[]) => {
       URL.revokeObjectURL(prev[indexToRemove].preview);
       return prev.filter((_, idx) => idx !== indexToRemove);
     });
+  };
+
+  const handleFileChange = (field: string, file: File | null) => {
+    if (field === 'doctorReport') {
+      setDoctorReport(file);
+    } else if (field === 'criminalRecord') {
+      setCriminalRecord(file);
+    }
   };
 
   return (
@@ -61,18 +75,18 @@ export const SpecialCaseDetailsStep = ({
       <Flex align="center" gap="md" mb="lg">
         <Box style={gradientIconBox}><IconAlertTriangle size={24} /></Box>
         <Box>
-          <Title order={4} style={{ color: PRIMARY_DARK }}>Special Case Information</Title>
-          <Text c="dimmed" size="sm">Provide details about the person with special circumstances</Text>
+          <Title order={4} style={{ color: PRIMARY_DARK }}>{t("stepSpecialDetails")}</Title>
+          <Text c="dimmed" size="sm">{t("personsPhotosDesc")}</Text>
         </Box>
       </Flex>
 
       <Select
         name="specialCategory"
-        label={<Text fw={600} size="sm">Special Category <Text span c={PRIMARY_COLOR}>*</Text></Text>}
-        placeholder="Select the category"
+        label={<Text fw={600} size="sm">{t("specialCategoryLabel")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+        placeholder={t("specialCategoryPlaceholder")}
         data={[
-          { value: 'mentally-ill', label: 'Mentally Ill' },
-          { value: 'criminal', label: 'Criminal Background' }
+          { value: 'mentally-ill', label: t("mentallyIll") },
+          { value: 'criminal', label: t("criminal") }
         ]}
         radius="md"
         value={specialCategory}
@@ -86,20 +100,20 @@ export const SpecialCaseDetailsStep = ({
           <Flex align="center" gap="md" mb="md">
             <Box style={{ background: PRIMARY_GRADIENT, padding: '8px', borderRadius: '8px', color: 'white' }}><IconFileDescription size={20} /></Box>
             <Box>
-              <Title order={5} style={{ color: PRIMARY_DARK }}>Doctor's Report <Text span c={PRIMARY_COLOR}>*</Text></Title>
-              <Text c="dimmed" size="sm">Upload a medical report or documentation</Text>
+              <Title order={5} style={{ color: PRIMARY_DARK }}>{t("doctorReportTitle")} <Text span c={PRIMARY_COLOR}>*</Text></Title>
+              <Text c="dimmed" size="sm">{t("doctorReportDesc")}</Text>
             </Box>
           </Flex>
           <FileInput
             name="doctorReport"
-            placeholder="Choose file..."
+            placeholder={t("filePlaceholder")}
             accept="image/*,application/pdf"
-            onChange={setDoctorReport}
+            onChange={(file) => handleFileChange('doctorReport', file)}
             value={doctorReport}
             radius="md"
             clearable
             leftSection={<IconUpload size={16} color={PRIMARY_COLOR} />}
-            description="Accepted formats: JPG, PNG, PDF (max 10MB)"
+            description={t("fileFormats")}
             variant="filled"
           />
         </Card>
@@ -110,20 +124,20 @@ export const SpecialCaseDetailsStep = ({
           <Flex align="center" gap="md" mb="md">
             <Box style={{ background: PRIMARY_GRADIENT, padding: '8px', borderRadius: '8px', color: 'white' }}><IconFileDescription size={20} /></Box>
             <Box>
-              <Title order={5} style={{ color: PRIMARY_DARK }}>Arrest Warrant / Criminal Record <Text span c={PRIMARY_COLOR}>*</Text></Title>
-              <Text c="dimmed" size="sm">Upload official documentation</Text>
+              <Title order={5} style={{ color: PRIMARY_DARK }}>{t("arrestWarrantTitle")} <Text span c={PRIMARY_COLOR}>*</Text></Title>
+              <Text c="dimmed" size="sm">{t("arrestWarrantDesc")}</Text>
             </Box>
           </Flex>
           <FileInput
             name="criminalRecord"
-            placeholder="Choose file..."
+            placeholder={t("filePlaceholder")}
             accept="image/*,application/pdf"
-            onChange={setCriminalRecord}
+            onChange={(file) => handleFileChange('criminalRecord', file)}
             value={criminalRecord}
             radius="md"
             clearable
             leftSection={<IconUpload size={16} color={PRIMARY_COLOR} />}
-            description="Accepted formats: JPG, PNG, PDF (max 10MB)"
+            description={t("fileFormats")}
             variant="filled"
           />
         </Card>
@@ -132,8 +146,8 @@ export const SpecialCaseDetailsStep = ({
       <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mb="lg">
         <TextInput
           name="firstName"
-          label={<Text fw={600} size="sm">First name <Text span c={PRIMARY_COLOR}>*</Text></Text>}
-          placeholder="Enter first name"
+          label={<Text fw={600} size="sm">{t("firstName")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          placeholder={t("firstName")}
           radius="md"
           variant="filled"
           value={formValues.firstName}
@@ -141,8 +155,8 @@ export const SpecialCaseDetailsStep = ({
         />
         <TextInput
           name="middleName"
-          label={<Text fw={600} size="sm">Middle name</Text>}
-          placeholder="Enter middle name"
+          label={<Text fw={600} size="sm">{t("middleName")}</Text>}
+          placeholder={t("middleName")}
           radius="md"
           variant="filled"
           value={formValues.middleName}
@@ -150,8 +164,8 @@ export const SpecialCaseDetailsStep = ({
         />
         <TextInput
           name="lastName"
-          label={<Text fw={600} size="sm">Last name <Text span c={PRIMARY_COLOR}>*</Text></Text>}
-          placeholder="Enter last name"
+          label={<Text fw={600} size="sm">{t("lastName")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          placeholder={t("lastName")}
           radius="md"
           variant="filled"
           value={formValues.lastName}
@@ -162,8 +176,12 @@ export const SpecialCaseDetailsStep = ({
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md" mb="lg">
         <Select
           name="gender"
-          label={<Text fw={600} size="sm">Gender <Text span c={PRIMARY_COLOR}>*</Text></Text>}
-          data={['Male', 'Female', 'Other']}
+          label={<Text fw={600} size="sm">{t("gender")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          data={[
+            { value: 'Male', label: t("male") || 'Male' },
+            { value: 'Female', label: t("female") || 'Female' },
+            { value: 'Other', label: t("other") || 'Other' }
+          ]}
           radius="md"
           variant="filled"
           value={formValues.gender}
@@ -171,8 +189,8 @@ export const SpecialCaseDetailsStep = ({
         />
         <NumberInput
           name="age"
-          label={<Text fw={600} size="sm">Age <Text span c={PRIMARY_COLOR}>*</Text></Text>}
-          placeholder="Enter age"
+          label={<Text fw={600} size="sm">{t("age")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          placeholder={t("age")}
           radius="md"
           min={0}
           variant="filled"
@@ -181,8 +199,8 @@ export const SpecialCaseDetailsStep = ({
         />
         <NumberInput
           name="height"
-          label={<Text fw={600} size="sm">Height (cm)</Text>}
-          placeholder="Height in cm"
+          label={<Text fw={600} size="sm">{t("height")}</Text>}
+          placeholder={t("height")}
           radius="md"
           min={0}
           variant="filled"
@@ -191,8 +209,8 @@ export const SpecialCaseDetailsStep = ({
         />
         <NumberInput
           name="weight"
-          label={<Text fw={600} size="sm">Weight (kg)</Text>}
-          placeholder="Weight in kg"
+          label={<Text fw={600} size="sm">{t("weight")}</Text>}
+          placeholder={t("weight")}
           radius="md"
           min={0}
           variant="filled"
@@ -203,8 +221,8 @@ export const SpecialCaseDetailsStep = ({
 
       <Textarea
         name="description"
-        label={<Text fw={600} size="sm">Additional Description</Text>}
-        placeholder="Add any distinguishing features, clothing description, last seen with, medical conditions, etc."
+        label={<Text fw={600} size="sm">{t("description")}</Text>}
+        placeholder={t("descriptionPlaceholder")}
         minRows={4}
         radius="md"
         mb="lg"
@@ -221,33 +239,33 @@ export const SpecialCaseDetailsStep = ({
         bg={getBg(colorScheme, 'white', theme.colors.dark[7])}
         style={{ borderStyle: 'dashed', borderColor: PRIMARY_LIGHT, borderWidth: 2, transition: 'all 0.2s' }}
       >
-        <FileInput
-          label={<Text fw={600} size="sm">Person's Photos</Text>}
-          description="Upload clear photos of the person (at least 2 recommended)"
+        <Text fw={600} size="sm" mb="xs">{t("personsPhotosLabel")}</Text>
+        <Text size="sm" c="dimmed" mb="md">{t("personsPhotosDesc")}</Text>
+        
+        <input
+          type="file"
           accept="image/jpeg,image/png,image/webp"
           multiple
-          leftSection={<IconPhoto size={16} />}
           onChange={handleImageUpload}
-          radius="md"
-          variant="filled"
+          style={{ marginBottom: '16px', display: 'block' }}
         />
 
         {specialImages.length === 0 && (
           <Alert icon={<IconInfoCircle size={16} />} color="blue" variant="light" mt="md" radius="md">
-            <Text size="sm">Please upload clear photos of the person. Minimum 2 images are recommended.</Text>
+            <Text size="sm">{t("specialPhotosAdvice")}</Text>
           </Alert>
         )}
 
         {specialImages.length > 0 && (
           <Box mt="lg">
             <Flex justify="space-between" align="center" mb="sm">
-              <Text size="sm" fw={600} c={PRIMARY_DARK}>Uploaded Images ({specialImages.length})</Text>
-              <Badge color="blue" variant="light" size="sm">{specialImages.length} / Unlimited</Badge>
+              <Text size="sm" fw={600} c={PRIMARY_DARK}>{t("uploadedImages")} ({specialImages.length})</Text>
+              <Badge color="blue" variant="light" size="sm">{t("unlimited")}</Badge>
             </Flex>
             <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="sm">
-              {specialImages.map((img, idx) => (
-                <Box key={idx} style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: `2px solid ${PRIMARY_LIGHT}`, aspectRatio: '1/1' }}>
-                  <Image src={img.preview} alt={`Preview ${idx + 1}`} fill style={{ objectFit: 'cover' }} />
+              {specialImages.map((img: any, idx: number) => (
+                <Box key={idx} style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: `2px solid ${PRIMARY_LIGHT}`, aspectRatio: '1/1', backgroundColor: '#f0f0f0' }}>
+                  <img src={img.preview} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <ActionIcon
                     color="red"
                     variant="filled"
@@ -261,7 +279,7 @@ export const SpecialCaseDetailsStep = ({
                 </Box>
               ))}
             </SimpleGrid>
-            <Text size="xs" c="dimmed" mt="sm" ta="center">Click the upload button to add more images • Click ✗ to remove</Text>
+            <Text size="xs" c="dimmed" mt="sm" ta="center">{t("addMorePhotosAdvice")}</Text>
           </Box>
         )}
       </Card>

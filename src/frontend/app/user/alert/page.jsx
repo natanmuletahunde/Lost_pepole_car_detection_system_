@@ -55,6 +55,7 @@ import {
   IconBattery,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import MainFooter from "../../components/MainFooter";
 import Link from "next/link";
 import Image from "next/image";
@@ -80,6 +81,7 @@ const getBorderColor = (colorScheme, light, dark) =>
 
 export default function AlertPage() {
   const router = useRouter();
+  const t = useTranslations("Alerts");
   const scrollRef = useRef(null);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -163,7 +165,7 @@ export default function AlertPage() {
       const userData = localStorage.getItem('currentUser');
 
       if (!isAuthenticated || !userData || isAuthenticated !== 'true') {
-        notifications.show({ title: 'Login Required', message: 'Please login to view alerts', color: 'yellow', icon: <IconAlertCircle size={20} /> });
+        notifications.show({ title: t("loginReq"), message: t("loginReqDesc"), color: 'yellow', icon: <IconAlertCircle size={20} /> });
         router.push('/authentication/login');
         return;
       }
@@ -218,7 +220,7 @@ export default function AlertPage() {
               : vehicle.reportDate
                 ? new Date(vehicle.reportDate).toLocaleDateString()
                 : "Unknown",
-            imageUrl: getImageUrl(vehicle.imagePreview) || "/ebs.jpg",
+            imageUrl: getImageUrl(vehicle.imagePreview) || getImageUrl(vehicle.images?.[0]) || "/ebs.jpg",
             details:
               vehicle.vehicleDescription ||
               `${vehicle.color || ""} ${vehicle.brand || ""}`.trim(),
@@ -256,7 +258,7 @@ export default function AlertPage() {
             },
 
             features: vehicle.features || [],
-            additionalImages: vehicle.images || [],
+            additionalImages: (vehicle.images || []).map(img => getImageUrl(img) || img),
 
             cctvInfo: vehicle.cctvInfo || { confidence: "N/A" },
 
@@ -327,7 +329,7 @@ export default function AlertPage() {
             },
 
             features: person.features || [],
-            additionalImages: person.images || [],
+            additionalImages: (person.images || []).map(img => getImageUrl(img) || img),
 
             // NEW: stats including total detections
             stats: {
@@ -358,8 +360,8 @@ export default function AlertPage() {
       } catch (error) {
         console.error("Error fetching alerts:", error);
         notifications.show({
-          title: "Error",
-          message: "Failed to load alerts from database",
+          title: t("error"),
+          message: t("errorLoad"),
           color: "red",
           icon: <IconAlertCircle size={16} />,
         });
@@ -390,11 +392,11 @@ export default function AlertPage() {
 
   // Helper function to calculate duration
   const calculateDuration = (reportDate) => {
-    if (!reportDate) return "Unknown";
+    if (!reportDate) return t("unknown");
     const days = Math.floor(
       (new Date() - new Date(reportDate)) / (1000 * 60 * 60 * 24),
     );
-    return `${days} day${days !== 1 ? "s" : ""}`;
+    return `${days} ${days !== 1 ? "days" : "day"}`;
   };
 
   // Search functionality
@@ -526,16 +528,16 @@ export default function AlertPage() {
       });
 
       notifications.show({
-        title: "Alert Deleted",
-        message: `Alert "${alertCode}" has been successfully deleted${deleteSightingsToo ? " along with its associated sightings" : ""}.`,
+        title: t("deletedTitle"),
+        message: deleteSightingsToo ? t("deletedWithSightingsMsg") : t("deletedMsg"),
         color: "red",
         icon: <IconTrash size={16} />,
       });
     } catch (error) {
       console.error("Error deleting alert:", error);
       notifications.show({
-        title: "Error",
-        message: "Failed to delete alert from database",
+        title: t("error"),
+        message: t("errorDelete"),
         color: "red",
         icon: <IconAlertCircle size={16} />,
       });
@@ -586,25 +588,24 @@ export default function AlertPage() {
       <Modal
         opened={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
-        title="Confirm Delete"
+        title={t("confirmDeleteTitle")}
         centered
       >
         <Stack>
           <Text>
-            Are you sure you want to delete alert "{deleteAlertInfo?.alertCode}
-            "?
+            {t("confirmDeleteMsg", { code: deleteAlertInfo?.alertCode })}
           </Text>
           <Checkbox
-            label="Also delete all associated sightings"
+            label={t("deleteSightingsToo")}
             checked={deleteSightingsToo}
             onChange={(e) => setDeleteSightingsToo(e.currentTarget.checked)}
           />
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={() => setDeleteModalOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button color="red" onClick={confirmDelete}>
-              Delete
+              {t("delete")}
             </Button>
           </Group>
         </Stack>
@@ -616,11 +617,14 @@ export default function AlertPage() {
           <Group>
             <IconAlertCircle size={24} color={theme.colors.blue[6]} />
             <div>
-              <Text fw={600}>Alert Notifications</Text>
+              <Text fw={600}>{t("alertNotifications")}</Text>
               <Text size="sm" c="dimmed">
                 {loading
-                  ? "Loading..."
-                  : `You have ${filteredAlerts.filter((a) => a.status === "active").length} active alerts ${searchQuery && `matching "${searchQuery}"`}`}
+                  ? t("loadingAlerts")
+                  : t("activeAlertsCount", {
+                      count: filteredAlerts.filter((a) => a.status === "active").length,
+                      search: searchQuery ? `(${searchQuery})` : ""
+                    })}
               </Text>
             </div>
           </Group>
@@ -637,13 +641,13 @@ export default function AlertPage() {
           >
             <Stack align="center" gap="md">
               <Loader size="xl" color="blue" />
-              <Text>Loading alerts from database...</Text>
+              <Text>{t("loadingAlerts")}</Text>
             </Stack>
           </Box>
         ) : (
           <>
             <Title order={2} style={{ textAlign: "center", marginBottom: 20 }}>
-              Reported Cases ({filteredAlerts.length} found)
+              {t("reportedCasesHeader", { count: filteredAlerts.length })}
             </Title>
 
             <Box style={{ position: "relative", marginBottom: 40 }}>
@@ -769,13 +773,13 @@ export default function AlertPage() {
                                 leftSection={<IconEdit size={16} />}
                                 onClick={() => {
                                   notifications.show({
-                                    title: "Edit Alert",
-                                    message: `Edit functionality for ${alert.code} would open here`,
+                                    title: t("editAlert"),
+                                    message: t("editDesc", { code: alert.code }),
                                     color: "blue",
                                   });
                                 }}
                               >
-                                Edit
+                                {t("edit")}
                               </Menu.Item>
                               <Menu.Divider />
                               <Menu.Item
@@ -785,7 +789,7 @@ export default function AlertPage() {
                                   handleDeleteAlert(alert.id, alert.code)
                                 }
                               >
-                                Delete
+                                {t("delete")}
                               </Menu.Item>
                             </Menu.Dropdown>
                           </Menu>
@@ -812,7 +816,7 @@ export default function AlertPage() {
                             color={alert.status === "active" ? "red" : "green"}
                             variant="light"
                           >
-                            {alert.status === "active" ? "ACTIVE" : "RESOLVED"}
+                            {alert.status === "active" ? t("active") : t("resolved")}
                           </Badge>
                           <Text fw={700} size="lg" c="blue.6">
                             {alert.code}
@@ -853,8 +857,11 @@ export default function AlertPage() {
                               c={alert.status === "active" ? "red" : "green"}
                             >
                               {alert.status === "active"
-                                ? `${alert.stats?.totalDetections || 0} sighting${alert.stats?.totalDetections !== 1 ? "s" : ""}`
-                                : "Case resolved"}
+                                ? t("sightingCount", {
+                                    count: alert.stats?.totalDetections || 0,
+                                    pluralSuffix: alert.stats?.totalDetections !== 1 ? "s" : ""
+                                  })
+                                : t("caseResolved")}
                             </Text>
                           </Group>
                         </Stack>
@@ -867,7 +874,7 @@ export default function AlertPage() {
                           rightSection={<IconChevronRight size={16} />}
                           onClick={() => handleViewDetail(alert)}
                         >
-                          View Detail
+                          {t("viewDetail")}
                         </Button>
                       </Box>
                     </Card>
@@ -903,7 +910,7 @@ export default function AlertPage() {
                     {stats.total}
                   </Text>
                   <Text size="sm" c="dimmed">
-                    Total Alerts
+                    {t("totalAlerts")}
                   </Text>
                 </Stack>
                 <Stack align="center" gap={0}>
@@ -911,7 +918,7 @@ export default function AlertPage() {
                     {stats.resolved}
                   </Text>
                   <Text size="sm" c="dimmed">
-                    Resolved
+                    {t("resolvedStats")}
                   </Text>
                 </Stack>
                 <Stack align="center" gap={0}>
@@ -919,7 +926,7 @@ export default function AlertPage() {
                     {stats.active}
                   </Text>
                   <Text size="sm" c="dimmed">
-                    Active
+                    {t("activeStats")}
                   </Text>
                 </Stack>
               </SimpleGrid>
@@ -1001,6 +1008,12 @@ export default function AlertPage() {
                   style={{ objectFit: "cover" }}
                   sizes="100vw"
                   priority
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      selectedAlert.type === "person"
+                        ? "/surveillance-man.jpg"
+                        : "/ebs.jpg";
+                  }}
                 />
               </Box>
 
@@ -1012,8 +1025,8 @@ export default function AlertPage() {
                     color={selectedAlert.status === "active" ? "red" : "green"}
                   >
                     {selectedAlert.status === "active"
-                      ? "ACTIVE ALERT"
-                      : "RESOLVED"}
+                      ? t("activeAlertBadge")
+                      : t("resolved")}
                   </Badge>
                   <Text fw={800} size="2rem" c="blue.6">
                     {selectedAlert.code}
@@ -1039,7 +1052,7 @@ export default function AlertPage() {
                   <Group mb="md">
                     <IconInfoCircle size={24} />
                     <Text fw={700} size="xl">
-                      Full Description
+                      {t("fullDesc")}
                     </Text>
                   </Group>
                   <Paper p="xl" withBorder radius="md" bg={grayLightBg}>
@@ -1057,7 +1070,7 @@ export default function AlertPage() {
                   selectedAlert.features.length > 0 && (
                     <Box mb="xl">
                       <Text fw={700} size="xl" mb="lg">
-                        Features
+                        {t("features")}
                       </Text>
                       <SimpleGrid cols={3} spacing="lg">
                         {selectedAlert.features.map((feature, index) => (
@@ -1076,8 +1089,8 @@ export default function AlertPage() {
                     <Box mb="xl">
                       <Text fw={700} size="xl" mb="lg">
                         {selectedAlert.type === "person"
-                          ? "Personal Details"
-                          : "Technical Specifications"}
+                          ? t("personalDetails")
+                          : t("techSpecs")}
                       </Text>
                       <Paper p="xl" withBorder radius="md" bg={grayLightBg}>
                         <SimpleGrid cols={2} spacing="lg">
@@ -1105,7 +1118,7 @@ export default function AlertPage() {
                     <Group mb="md">
                       <IconMapPinFilled size={24} color="blue" />
                       <Text fw={700} size="lg">
-                        Last Known Location
+                        {t("lastKnownLocation")}
                       </Text>
                     </Group>
                     <Text size="md">{selectedAlert.lastSeen}</Text>
@@ -1117,27 +1130,25 @@ export default function AlertPage() {
                     <Group mb="md">
                       <IconCalendar size={24} color="blue" />
                       <Text fw={700} size="lg">
-                        Report Timeline
+                        {t("reportTimeline")}
                       </Text>
                     </Group>
                     <Text size="md">
-                      Reported:{" "}
-                      {selectedAlert.reportDate
-                        ? new Date(
-                            selectedAlert.reportDate,
-                          ).toLocaleDateString()
-                        : "Unknown"}
+                      {t("timelineReported", {
+                        date: selectedAlert.reportDate
+                          ? new Date(selectedAlert.reportDate).toLocaleDateString()
+                          : t("unknown")
+                      })}
                     </Text>
                     <Text size="md" mt="sm">
-                      Duration: {selectedAlert.duration}
+                      {t("timelineDuration", { duration: selectedAlert.duration })}
                     </Text>
                     <Text size="sm" c="dimmed" mt="sm">
-                      Last Updated:{" "}
-                      {selectedAlert.reportDate
-                        ? new Date(
-                            selectedAlert.reportDate,
-                          ).toLocaleDateString()
-                        : "Today"}
+                      {t("timelineLastUpdated", {
+                        date: selectedAlert.reportDate
+                          ? new Date(selectedAlert.reportDate).toLocaleDateString()
+                          : t("unknown")
+                      })}
                     </Text>
                   </Paper>
                 </SimpleGrid>
@@ -1153,8 +1164,7 @@ export default function AlertPage() {
                       bg={grayLightBg}
                     >
                       <Text fw={700} size="xl" mb="lg">
-                        Sighting History (
-                        {selectedAlert.detectionHistory.length})
+                        {t("sightingHistory", { count: selectedAlert.detectionHistory.length })}
                       </Text>
                       <Stack gap="md">
                         {selectedAlert.detectionHistory.map((sighting, idx) => (
@@ -1207,14 +1217,14 @@ export default function AlertPage() {
                 {selectedAlert.contactInfo && (
                   <Paper p="xl" withBorder radius="md" bg={blueLightBg} mb="xl">
                     <Text fw={700} size="xl" mb="lg">
-                      Contact Information
+                      {t("contactInfo")}
                     </Text>
                     <Stack gap="xl">
                       <Box>
                         <Group mb="sm">
                           <IconUser size={22} />
                           <Text fw={600} size="lg">
-                            Reported By
+                            {t("reportedBy")}
                           </Text>
                         </Group>
                         <Text size="md">{selectedAlert.contactInfo.name}</Text>
@@ -1226,7 +1236,7 @@ export default function AlertPage() {
                         <Group mb="sm">
                           <IconPhone size={22} />
                           <Text fw={600} size="lg">
-                            Contact Number
+                            {t("contactNumber")}
                           </Text>
                         </Group>
                         <Text size="md">{selectedAlert.contactInfo.phone}</Text>
@@ -1235,7 +1245,7 @@ export default function AlertPage() {
                         <Group mb="sm">
                           <IconMail size={22} />
                           <Text fw={600} size="lg">
-                            Email Address
+                            {t("emailAddress")}
                           </Text>
                         </Group>
                         <Text size="md">{selectedAlert.contactInfo.email}</Text>
@@ -1249,7 +1259,7 @@ export default function AlertPage() {
                   selectedAlert.additionalImages.length > 0 && (
                     <Box mb="xl">
                       <Text fw={700} size="xl" mb="lg">
-                        Additional Evidence
+                        {t("evidence")}
                       </Text>
                       <Group gap="lg">
                         {selectedAlert.additionalImages
@@ -1283,12 +1293,12 @@ export default function AlertPage() {
                 {selectedAlert.stats && (
                   <Paper p="xl" withBorder radius="md" mb="xl" bg={grayLightBg}>
                     <Text fw={700} size="xl" mb="lg">
-                      Detection Statistics
+                      {t("statsTitle")}
                     </Text>
                     <SimpleGrid cols={3} spacing="lg">
                       <Box ta="center">
                         <Text size="sm" c="dimmed" mb="xs">
-                          Total Sightings
+                          {t("statsTotalSightings")}
                         </Text>
                         <Title order={2}>
                           {selectedAlert.stats.totalDetections || 0}
@@ -1296,7 +1306,7 @@ export default function AlertPage() {
                       </Box>
                       <Box ta="center">
                         <Text size="sm" c="dimmed" mb="xs">
-                          Active Duration
+                          {t("statsActiveDuration")}
                         </Text>
                         <Title order={2}>
                           {selectedAlert.duration || "N/A"}
@@ -1304,7 +1314,7 @@ export default function AlertPage() {
                       </Box>
                       <Box ta="center">
                         <Text size="sm" c="dimmed" mb="xs">
-                          CCTV Confidence
+                          {t("statsCctvConfidence")}
                         </Text>
                         <Title order={2}>
                           {selectedAlert.cctvInfo?.confidence || "N/A"}
@@ -1334,7 +1344,7 @@ export default function AlertPage() {
                   onClick={handleCloseDetail}
                   radius="md"
                 >
-                  Close Details
+                  {t("closeDetails")}
                 </Button>
                 <Group>
                   <Button
@@ -1344,14 +1354,14 @@ export default function AlertPage() {
                     leftSection={<IconBell size={20} />}
                     onClick={() => {
                       notifications.show({
-                        title: "Notifications Sent",
-                        message: `Updates will be sent for alert ${selectedAlert.code}`,
+                        title: t("notifySent"),
+                        message: t("notifySentMsg", { code: selectedAlert.code }),
                         color: "blue",
                       });
                     }}
                     radius="md"
                   >
-                    Notify Me
+                    {t("notifyMe")}
                   </Button>
                   <Button
                     size="lg"
@@ -1359,15 +1369,15 @@ export default function AlertPage() {
                     leftSection={<IconCheck size={20} />}
                     onClick={() => {
                       notifications.show({
-                        title: "Marked as Reviewed",
-                        message: `Alert ${selectedAlert.code} has been reviewed`,
+                        title: t("reviewedTitle"),
+                        message: t("reviewedMsg", { code: selectedAlert.code }),
                         color: "green",
                       });
                       handleCloseDetail();
                     }}
                     radius="md"
                   >
-                    Mark as Reviewed
+                    {t("markReviewed")}
                   </Button>
                 </Group>
               </Group>

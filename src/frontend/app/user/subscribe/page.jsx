@@ -112,7 +112,7 @@ export default function SubscriptionPage() {
     checkAuth();
   }, [router]);
 
-  const plans = [
+  const defaultPlans = [
     {
       id: "monthly",
       name: "Monthly",
@@ -174,6 +174,29 @@ export default function SubscriptionPage() {
       hoverColor: `linear-gradient(135deg, #1C1C84 0%, #4D72FF 100%)`,
     },
   ];
+
+  const [plans, setPlans] = useState(defaultPlans);
+
+  useEffect(() => {
+    const savedPlans = localStorage.getItem('subscription_plans');
+    if (savedPlans) {
+      try {
+        const parsed = JSON.parse(savedPlans);
+        const mappedPlans = parsed.map(plan => ({
+          ...plan,
+          price: plan.price === 0 ? "Custom" : plan.price,
+          period: plan.interval || "month",
+          features: plan.features.map(f => typeof f === 'string' ? { text: f, included: true } : f)
+        })).filter(p => p.status === 'Active');
+        
+        if (mappedPlans.length > 0) {
+          setPlans(mappedPlans);
+        }
+      } catch (e) {
+        console.error('Failed to parse plans from local storage', e);
+      }
+    }
+  }, []);
 
   // Calculate max card height based on content
   useEffect(() => {

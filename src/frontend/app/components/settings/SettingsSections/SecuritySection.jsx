@@ -18,9 +18,11 @@ import { IconShieldLock, IconInfoCircle, IconKey, IconAlertTriangle, IconTrash }
 import { GRADIENT_WARNING } from "../utils/constants";
 import { usePasswordStrength } from "../hooks/usePasswordStrength";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 export const SecuritySection = (props) => {
   const { formData, handleChange, errors, handleDeleteAccount, router } = props;
+  const t = useTranslations("Settings");
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [visibleCurrent, { toggle: toggleCurrent }] = useDisclosure(false);
@@ -54,31 +56,30 @@ export const SecuritySection = (props) => {
               WebkitTextFillColor: "transparent",
             }}
           >
-            Security Settings
+            {t("securityCredentials")}
           </Title>
           <Text size="sm" c="dimmed">
-            Manage your password and account security
+            {t("securitySubtitle")}
           </Text>
         </div>
       </Group>
 
       <Alert
         icon={<IconInfoCircle size={16} />}
-        title="Security Tip"
+        title={t("securityTipTitle")}
         color="blue"
         radius="md"
         mb="lg"
         variant="light"
       >
-        Use a strong password with at least 8 characters, including numbers and special
-        characters.
+        {t("securityTip")}
       </Alert>
 
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, md: 4 }}>
           <PasswordInput
-            label="Current password"
-            placeholder="••••••••"
+            label={t("currentPassword")}
+            placeholder={t("currentPasswordPlaceholder")}
             value={formData.currentPassword}
             onChange={(event) => handleChange("currentPassword", event.target.value)}
             error={errors.currentPassword}
@@ -91,8 +92,8 @@ export const SecuritySection = (props) => {
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 4 }}>
           <PasswordInput
-            label="New password"
-            placeholder="••••••••"
+            label={t("newPassword")}
+            placeholder={t("newPasswordPlaceholder")}
             value={formData.newPassword}
             onChange={(event) => handleChange("newPassword", event.target.value)}
             error={errors.newPassword}
@@ -105,7 +106,7 @@ export const SecuritySection = (props) => {
             <Box mt="xs">
               <Group justify="space-between" mb={5}>
                 <Text size="xs" c="dimmed">
-                  Password strength
+                  {t("passwordStrength")}
                 </Text>
                 <Text size="xs" fw={600} c={getColor()}>
                   {getLabel()}
@@ -124,8 +125,8 @@ export const SecuritySection = (props) => {
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 4 }}>
           <PasswordInput
-            label="Confirm new password"
-            placeholder="••••••••"
+            label={t("confirmPassword")}
+            placeholder={t("confirmPasswordPlaceholder")}
             value={formData.confirmPassword}
             onChange={(event) => handleChange("confirmPassword", event.target.value)}
             error={errors.confirmPassword}
@@ -138,12 +139,12 @@ export const SecuritySection = (props) => {
       </Grid>
 
       {/* Danger Zone */}
-      <Divider my="xl" label={<Text fw={600} size="sm" c="red">Danger Zone</Text>} labelPosition="center" />
+      <Divider my="xl" label={<Text fw={600} size="sm" c="red">{t("dangerZone")}</Text>} labelPosition="center" />
       
       <Group justify="space-between" align="center" p="md" style={{ border: "1px solid rgba(250, 82, 82, 0.2)", borderRadius: "12px", background: "rgba(250, 82, 82, 0.03)" }}>
         <Box>
-          <Text fw={700} c="red" mb={4}>Delete Account</Text>
-          <Text size="sm" c="dimmed">Permanently delete your account and all associated data. This action cannot be undone.</Text>
+          <Text fw={700} c="red" mb={4}>{t("deleteAccount")}</Text>
+          <Text size="sm" c="dimmed">{t("deleteAccountDesc")}</Text>
         </Box>
         <Button 
           color="red" 
@@ -151,7 +152,7 @@ export const SecuritySection = (props) => {
           leftSection={<IconTrash size={16} />}
           onClick={openDeleteModal}
         >
-          Delete Account
+          {t("deleteAccount")}
         </Button>
       </Group>
 
@@ -159,15 +160,15 @@ export const SecuritySection = (props) => {
       <Modal 
         opened={deleteModalOpened} 
         onClose={closeDeleteModal} 
-        title={<Group gap="xs"><IconAlertTriangle color="red" /><Text fw={700} c="red">Confirm Deletion</Text></Group>}
+        title={<Group gap="xs"><IconAlertTriangle color="red" /><Text fw={700} c="red">{t("deleteConfirmTitle")}</Text></Group>}
         centered
         overlayProps={{ blur: 3 }}
       >
         <Text size="sm" mb="xl">
-          Are you absolutely sure you want to delete your account? This action is irreversible and all your data, including reports and settings, will be permanently removed.
+          {t("deleteConfirmMsg")}
         </Text>
         <Group justify="flex-end">
-          <Button variant="default" onClick={closeDeleteModal} disabled={isDeleting}>Cancel</Button>
+          <Button variant="default" onClick={closeDeleteModal} disabled={isDeleting}>{t("cancel")}</Button>
           <Button 
             color="red" 
             loading={isDeleting}
@@ -181,7 +182,7 @@ export const SecuritySection = (props) => {
               }
             }}
           >
-            Yes, delete my account
+            {t("deleteConfirmButton")}
           </Button>
         </Group>
       </Modal>

@@ -35,7 +35,7 @@ export const apiClient = async (url: string, options: RequestInit = {}) => {
 
   if (response.status === 401) {
     if (isRefreshing) {
-      return new Promise((resolve, reject) => {
+      return new Promise<string | null>((resolve, reject) => {
         failedQueue.push({ resolve, reject });
       }).then((t) => request(t));
     }

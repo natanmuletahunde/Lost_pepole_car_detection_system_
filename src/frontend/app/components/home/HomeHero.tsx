@@ -14,12 +14,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useMediaQuery } from "@mantine/hooks";
+import { useTranslations } from "next-intl";
 
 export default function HomeHero({
   isAuthenticated,
 }: {
   isAuthenticated?: boolean;
 }) {
+  const t = useTranslations("Hero");
   const isMobile = useMediaQuery("(max-width: 768px)");
   const { colorScheme } = useMantineColorScheme();
   const isDark = colorScheme === "dark";
@@ -134,7 +136,7 @@ export default function HomeHero({
                 textTransform: "uppercase",
               }}
             >
-              AI Powered Recovery Platform
+              {t("badge")}
             </Box>
 
             {/* TITLE */}
@@ -146,21 +148,19 @@ export default function HomeHero({
               mt="xl"
               style={{ lineHeight: 1.05 }}
             >
-              If you{" "}
+              {t("title1")}{" "}
               <Text component="span" c="cyan.3" inherit>
-                lost it
+                {t("lost")}
               </Text>
-              ,<br />
-              we will{" "}
+              {t("title2")}{" "}
               <Text component="span" c="teal.3" inherit>
-                find it
+                {t("find")}
               </Text>
             </Title>
 
             {/* SUBTITLE */}
             <Text size="xl" c="gray.3" mt="md" maw={600}>
-              Smart AI-powered system that helps recover lost items faster using
-              real-time alerts and tracking.
+              {t("subtitle")}
             </Text>
 
             {/* BUTTONS */}
@@ -186,7 +186,7 @@ export default function HomeHero({
                     fontWeight: 700,
                   }}
                 >
-                  {isAuthenticated ? "Register Case" : "Get Started"}
+                  {isAuthenticated ? t("registerCase") : t("getStarted")}
                 </Button>
               </motion.div>
 
@@ -208,7 +208,7 @@ export default function HomeHero({
                     fontWeight: 700,
                   }}
                 >
-                  How it works
+                  {t("howItWorks")}
                 </Button>
               </motion.div>
             </Group>

@@ -85,7 +85,7 @@ const extractArray = (payload: any) => {
 };
 
 // ---------- Helper Functions ----------
-const determineVehicleType = (vehicle) => {
+const determineVehicleType = (vehicle: any) => {
   if (vehicle.type) return vehicle.type;
   if (vehicle.brand?.toLowerCase().includes('motor') || vehicle.model?.toLowerCase().includes('motor')) return 'motorcycle';
   if (vehicle.brand?.toLowerCase().includes('truck') || vehicle.model?.toLowerCase().includes('truck')) return 'truck';
@@ -93,20 +93,20 @@ const determineVehicleType = (vehicle) => {
   return 'car';
 };
 
-const calculateDuration = (reportDate) => {
+const calculateDuration = (reportDate: any) => {
   if (!reportDate) return 'Unknown';
   const days = Math.floor((new Date().getTime() - new Date(reportDate).getTime()) / (1000 * 60 * 60 * 24));
   return `${days} day${days !== 1 ? 's' : ''}`;
 };
 
-const getImageUrl = (path) => {
+const getImageUrl = (path: any) => {
   if (!path) return null;
   if (path.startsWith("http") || path.startsWith("data:")) return path;
   const baseUrl = API_BASE_URL.replace("/api/v1", "");
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
-const getVehicleIcon = (type, size = 24) => {
+const getVehicleIcon = (type: any, size = 24) => {
   switch (type) {
     case 'motorcycle': return <IconBike size={size} />;
     case 'truck': return <IconTruck size={size} />;
@@ -117,7 +117,7 @@ const getVehicleIcon = (type, size = 24) => {
 };
 
 // Transform a raw vehicle/person into the base alert object
-const transformAlert = (item, type) => {
+const transformAlert = (item: any, type: any) => {
   return {
     id: item._id || item.id,
     code: item.caseId || `CASE-${item._id || item.id}`,
@@ -145,27 +145,27 @@ const transformAlert = (item, type) => {
   };
 };
 
-const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
-const getTextColor = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
+const getBg = (colorScheme: any, light: any, dark: any) => (colorScheme === 'dark' ? dark : light);
+const getTextColor = (colorScheme: any, light: any, dark: any) => (colorScheme === 'dark' ? dark : light);
 
 export default function AlertDetailPage() {
   const router = useRouter();
   const params = useParams();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
-  const [alertData, setAlertData] = useState(null);
-  const [detectionHistory, setDetectionHistory] = useState([]);
+  const [alertData, setAlertData] = useState<any>(null);
+  const [detectionHistory, setDetectionHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
   const [activePage, setActivePage] = useState(1);
-  const [selectedDetection, setSelectedDetection] = useState(null);
-  const mapRef = useRef(null);
-  const leafletMap = useRef(null);
-  const markersRef = useRef([]);
+  const [selectedDetection, setSelectedDetection] = useState<any>(null);
+  const mapRef = useRef<any>(null);
+  const leafletMap = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const itemsPerPage = 10;
 
   // Current user state for logging
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Confirmation modal state
   const [foundModalOpen, setFoundModalOpen] = useState(false);
@@ -198,7 +198,7 @@ export default function AlertDetailPage() {
   }, []);
 
   // Logging function
-  const createActionLog = async (action, details = {}) => {
+  const createActionLog = async (action: any, details: any = {}) => {
     try {
       if (!currentUser) return;
       let ip = 'unknown';
@@ -271,7 +271,7 @@ export default function AlertDetailPage() {
         }
 
         // 3. Transform sightings into detection objects
-        const detections = sightings.map((s, idx) => ({
+        const detections = sightings.map((s: any, idx: number) => ({
           id: s._id || s.id,
           name: s.type === 'Person' ? s.name : s.plateNumber || `Sighting ${idx + 1}`,
           location: s.location?.address || s.location || 'Unknown',
@@ -298,7 +298,7 @@ export default function AlertDetailPage() {
           sightingCount: detections.length,
         });
 
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching data:', err);
         setError(err.message);
       } finally {
@@ -320,7 +320,7 @@ export default function AlertDetailPage() {
       const L = (await import('leaflet')).default;
       
       // Fix Leaflet default icon paths dynamically using CDN to bypass Next.js Turbopack image loader issues
-      delete L.Icon.Default.prototype._getIconUrl;
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -461,7 +461,7 @@ export default function AlertDetailPage() {
   );
   const totalPages = Math.ceil(detectionHistory.length / itemsPerPage);
 
-  const handleDetectionClick = (detection) => {
+  const handleDetectionClick = (detection: any) => {
     setSelectedDetection(detection);
     createActionLog('detection_selected', {
       detectionId: detection.id,
@@ -470,13 +470,13 @@ export default function AlertDetailPage() {
     });
   };
 
-  const handleRowClick = (detection, e) => {
+  const handleRowClick = (detection: any, e: any) => {
     if (!e.target.closest(".arrow-button")) {
       handleDetectionClick(detection);
     }
   };
 
-  const handleArrowClick = (detection, e) => {
+  const handleArrowClick = (detection: any, e: any) => {
     e.stopPropagation();
     createActionLog('detection_detail_navigate', {
       detectionId: detection.id,

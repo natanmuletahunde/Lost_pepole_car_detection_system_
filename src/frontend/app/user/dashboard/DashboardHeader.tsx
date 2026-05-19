@@ -41,6 +41,7 @@ import { useMediaQuery } from "@mantine/hooks";
 import { useMantineColorScheme } from "@mantine/core";
 import { apiClient } from "../../lib/apiClient";
 import { IconInfoCircle } from "@tabler/icons-react";
+import { useTranslations } from "next-intl";
 
 interface DashboardHeaderProps {
   user?: any;
@@ -64,6 +65,8 @@ export default function DashboardHeader({
   getUserRoute: propGetUserRoute,
   showGoToDashboard: propShowGoToDashboard,
 }: DashboardHeaderProps) {
+  const t = useTranslations("Navbar");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const pathname = usePathname() || "";
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -351,7 +354,7 @@ export default function DashboardHeader({
 
           {/* Search bar with Enter search matching */}
           <TextInput
-            placeholder="Search matching words on page (Press Enter)..."
+            placeholder={tCommon("searchPlaceholder")}
             leftSection={<IconSearch size={18} stroke={1.5} />}
             style={{ flex: 1, maxWidth: isMobile ? "180px" : "320px" }}
             radius="xl"
@@ -401,13 +404,13 @@ export default function DashboardHeader({
                   }
                 }}
               >
-                Go to Dashboard
+                {t("goToDashboard")}
               </Button>
             )}
 
             {/* 2. Home Icon - ONLY shown when NOT on home page */}
             {!isHome && (
-              <Tooltip label="Home" withArrow position="bottom" zIndex={5000} offset={12}>
+              <Tooltip label={t("home")} withArrow position="bottom" zIndex={5000} offset={12}>
                 <ActionIcon
                   className="lpc-nav-btn"
                   component={Link}
@@ -420,7 +423,7 @@ export default function DashboardHeader({
 
             {/* 3. Dashboard Icon - ONLY shown when logged in AND NOT on dashboard AND NOT on home page */}
             {user && !isDashboard && !isHome && (
-              <Tooltip label="Dashboard" withArrow position="bottom" zIndex={5000} offset={12}>
+              <Tooltip label={t("dashboard")} withArrow position="bottom" zIndex={5000} offset={12}>
                 <ActionIcon
                   className="lpc-nav-btn"
                   component={Link}
@@ -434,7 +437,7 @@ export default function DashboardHeader({
             {/* About Page */}
 {!isAbout && (
   <Tooltip
-    label="About Platform"
+    label={t("about")}
     withArrow
     position="bottom"
     zIndex={5000}
@@ -453,7 +456,7 @@ export default function DashboardHeader({
 
             {/* 5. CCTV & Sightings Alerts (Bell Icon) - Always accessible for logged-in users */}
             {user && !isAlerts &&  (
-              <Tooltip label="CCTV & Sightings Alerts" withArrow position="bottom" zIndex={5000} offset={12}>
+              <Tooltip label={t("alerts")} withArrow position="bottom" zIndex={5000} offset={12}>
                 <Indicator
                   inline
                   label={unreadCount}
@@ -475,7 +478,7 @@ export default function DashboardHeader({
 
             {/* 6. Notifications Hub / Inbox (Mail Icon) - Always accessible for logged-in users */}
             {user && !isNotifications && (
-              <Tooltip label="Inbox / Notifications" withArrow position="bottom" zIndex={5000} offset={12}>
+              <Tooltip label={t("inbox")} withArrow position="bottom" zIndex={5000} offset={12}>
                 <Indicator
                   inline
                   label={unreadCount}
@@ -496,7 +499,7 @@ export default function DashboardHeader({
             )}
 
             {/* 7. Theme Toggle Icon */}
-            <Tooltip label={colorScheme === "dark" ? "Light Mode" : "Dark Mode"} withArrow position="bottom" zIndex={5000} offset={12}>
+            <Tooltip label={colorScheme === "dark" ? t("lightMode") : t("darkMode")} withArrow position="bottom" zIndex={5000} offset={12}>
               <ActionIcon
                 className="lpc-nav-btn"
                 onClick={toggleColorScheme}
@@ -593,7 +596,7 @@ export default function DashboardHeader({
                       leftSection={<IconUser size={16} />}
                       size="sm"
                     >
-                      View Profile
+                      {t("viewProfile")}
                     </Button>
                   </Box>
                   <Stack gap={4}>
@@ -602,49 +605,49 @@ export default function DashboardHeader({
                       component={Link}
                       href="/user/profile"
                     >
-                      My Profile
+                      {t("myProfile")}
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconFileReport size={18} />}
                       component={Link}
                       href="/user/reported-cases"
                     >
-                      Reported Cases
+                      {t("reportedCases")}
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconBell size={18} />}
                       component={Link}
                       href="/user/notifications"
                     >
-                      Notifications
+                      {t("notifications")}
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconAlertCircle size={18} />}
                       component={Link}
                       href="/user/alert"
                     >
-                      My Alerts
+                      {t("myAlerts")}
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconHistory size={18} />}
                       component={Link}
                       href="/user/history"
                     >
-                      Search History
+                      {t("searchHistory")}
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconSettings size={18} />}
                       component={Link}
                       href="/user/settings"
                     >
-                      Account Settings
+                      {t("accountSettings")}
                     </Menu.Item>
                     <Menu.Item
                       leftSection={<IconMessage size={18} />}
                       component={Link}
                       href="/user/feedback"
                     >
-                      Give Feedback
+                      {t("giveFeedback")}
                     </Menu.Item>
                   </Stack>
                   <Menu.Divider />
@@ -653,7 +656,7 @@ export default function DashboardHeader({
                     leftSection={<IconLogout size={18} />}
                     onClick={handleLogout}
                   >
-                    Logout
+                    {t("logout")}
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
@@ -668,7 +671,7 @@ export default function DashboardHeader({
                   radius="xl"
                   size={isMobile ? "xs" : "sm"}
                 >
-                  {isMobile ? "Login" : "Sign In"}
+                  {isMobile ? t("login") : t("signIn")}
                 </Button>
                 <Button
                   color="blue"
@@ -678,7 +681,7 @@ export default function DashboardHeader({
                   radius="xl"
                   size={isMobile ? "xs" : "sm"}
                 >
-                  {isMobile ? "Join" : "Sign Up"}
+                  {isMobile ? t("join") : t("signUp")}
                 </Button>
               </Group>
             )}

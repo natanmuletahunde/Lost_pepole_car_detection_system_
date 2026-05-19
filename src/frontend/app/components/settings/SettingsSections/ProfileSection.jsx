@@ -22,9 +22,11 @@ import {
   IconCamera,
 } from "@tabler/icons-react";
 import { GRADIENT_PRIMARY } from "../utils/constants";
+import { useTranslations } from "next-intl";
 
 export const ProfileSection = (props) => {
   const { formData, handleChange, errors } = props;
+  const t = useTranslations("Settings");
 
   return (
     <Card
@@ -53,10 +55,10 @@ export const ProfileSection = (props) => {
               WebkitTextFillColor: "transparent",
             }}
           >
-            Profile Information
+            {t("profileInfo")}
           </Title>
           <Text size="sm" c="dimmed">
-            Update your personal details and profile picture
+            {t("profileInfoSubtitle")}
           </Text>
         </div>
       </Group>
@@ -89,7 +91,7 @@ export const ProfileSection = (props) => {
                   <IconUser size={80} />
                 )}
               </Avatar>
-              <Tooltip label="Change photo" position="bottom" withArrow={true}>
+              <Tooltip label={t("changePhoto")} position="bottom" withArrow={true}>
                 <ActionIcon
                   component="label"
                   size="lg"
@@ -116,18 +118,18 @@ export const ProfileSection = (props) => {
               </Tooltip>
             </Box>
             <Text size="sm" c="dimmed">
-              Click camera icon to update
+              {t("clickCameraToUpdate")}
             </Text>
             <Badge color="blue" variant="light" size="lg">
-              Active Account
+              {t("activeAccount")}
             </Badge>
           </Stack>
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 8 }}>
           <Stack gap="md">
             <TextInput
-              label={<Text fw={600}>Display name</Text>}
-              placeholder="Enter your name"
+              label={<Text fw={600}>{t("displayName")}</Text>}
+              placeholder={t("displayNamePlaceholder")}
               value={formData.displayName}
               onChange={(event) =>
                 handleChange("displayName", event.target.value)
@@ -147,8 +149,8 @@ export const ProfileSection = (props) => {
               }}
             />
             <TextInput
-              label={<Text fw={600}>Email address</Text>}
-              placeholder="you@example.com"
+              label={<Text fw={600}>{t("emailAddress")}</Text>}
+              placeholder={t("emailPlaceholder")}
               type="email"
               value={formData.email}
               onChange={(event) => handleChange("email", event.target.value)}
@@ -158,21 +160,21 @@ export const ProfileSection = (props) => {
               size="md"
               radius="md"
             />
-            <Divider label="Account Verification" labelPosition="center" />
+            <Divider label={t("accountVerification")} labelPosition="center" />
             <Group>
               <Badge
                 color="green"
                 variant="light"
                 leftSection={<IconCheck size={12} />}
               >
-                Email Verified
+                {t("emailVerified")}
               </Badge>
               <Badge
                 color="yellow"
                 variant="light"
                 leftSection={<IconAlertTriangle size={12} />}
               >
-                Phone Pending
+                {t("phonePending")}
               </Badge>
             </Group>
           </Stack>

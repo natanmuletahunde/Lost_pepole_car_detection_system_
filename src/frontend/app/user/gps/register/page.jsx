@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -69,6 +70,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3
 const GPS_DEVICES_API = `${API_BASE_URL}/gpsDevices`;
 
 export default function RegisterBeltPage() {
+  const t = useTranslations("GPSRegister");
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
@@ -148,8 +150,8 @@ export default function RegisterBeltPage() {
   const handleSubmit = async () => {
     if (!form.name || !form.serialNumber) {
       notifications.show({
-        title: "Missing Fields",
-        message: "Device name and serial number are required",
+        title: t("missingFields"),
+        message: t("missingFieldsDesc"),
         color: "yellow",
         icon: <IconAlertCircle size={16} />,
       });
@@ -195,16 +197,16 @@ export default function RegisterBeltPage() {
       });
 
       notifications.show({
-        title: "Success",
-        message: `${form.name} has been registered with initial location${enableGeofence ? " and geofence" : ""}.`,
+        title: t("success"),
+        message: t("registeredSuccess", { name: form.name, extra: enableGeofence ? " and geofence" : "" }),
         color: "green",
         icon: <IconCheck size={16} />,
       });
       router.push("/gps-tracking");
     } catch (error) {
       notifications.show({
-        title: "Error",
-        message: "Could not register device",
+        title: t("error"),
+        message: t("registerError"),
         color: "red",
         icon: <IconAlertCircle size={16} />,
       });
@@ -298,55 +300,55 @@ export default function RegisterBeltPage() {
           onClick={() => router.push("/gps-tracking")}
           mb="lg"
         >
-          Back to GPS Tracking
+          {t("backToGps")}
         </Button>
 
         <Paper withBorder radius="lg" p="xl" shadow="sm">
           <Group gap="sm" mb="lg">
             <IconDeviceMobile size={32} color="#2f80ed" />
-            <Title order={2}>Register New Smart Belt</Title>
+            <Title order={2}>{t("registerBelt")}</Title>
           </Group>
           <Text c="dimmed" mb="xl">
-            Fill in the details to add a new GPS tracking device to the system. You can optionally set its initial location and a geofence.
+            {t("registerDesc")}
           </Text>
 
           <Stack gap="md">
             <TextInput
-              label="Device Name"
-              placeholder="e.g., Belt for Patient A"
+              label={t("deviceName")}
+              placeholder={t("deviceNamePlaceholder")}
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
               radius="md"
             />
             <TextInput
-              label="Serial Number"
-              placeholder="Unique hardware ID"
+              label={t("serialNumber")}
+              placeholder={t("serialNumberPlaceholder")}
               value={form.serialNumber}
               onChange={(e) => setForm({ ...form, serialNumber: e.target.value })}
               required
               radius="md"
             />
             <TextInput
-              label="Assigned To (optional)"
-              placeholder="Person name or case ID"
+              label={t("assignedTo")}
+              placeholder={t("assignedToPlaceholder")}
               value={form.assignedTo}
               onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
               radius="md"
             />
             <Select
-              label="Initial Status"
+              label={t("initialStatus")}
               data={[
-                { value: "active", label: "Active" },
-                { value: "inactive", label: "Inactive" },
-                { value: "low_battery", label: "Low Battery" },
+                { value: "active", label: t("active") },
+                { value: "inactive", label: t("inactive") },
+                { value: "low_battery", label: t("lowBattery") },
               ]}
               value={form.status}
               onChange={(value) => setForm({ ...form, status: value })}
               radius="md"
             />
             <NumberInput
-              label="Initial Battery (%)"
+              label={t("initialBattery")}
               min={0}
               max={100}
               value={form.battery}
@@ -354,7 +356,7 @@ export default function RegisterBeltPage() {
               radius="md"
             />
 
-            <Divider label="Location & Geofence" labelPosition="center" my="md" />
+            <Divider label={t("locationGeofence")} labelPosition="center" my="md" />
 
             {/* Map picker for initial location */}
             <Card withBorder radius="md" padding={0} style={{ overflow: "hidden" }}>
@@ -363,19 +365,19 @@ export default function RegisterBeltPage() {
 
             {selectedLocation && (
               <Alert icon={<IconMapPin size={16} />} color="blue" variant="light">
-                Selected location: {selectedLocation.address || `${selectedLocation.lat}, ${selectedLocation.lng}`}
+                {t("selectedLocation", { address: selectedLocation.address || `${selectedLocation.lat}, ${selectedLocation.lng}` })}
               </Alert>
             )}
 
             <Checkbox
-              label="Set a geofence at this location"
+              label={t("setGeofence")}
               checked={enableGeofence}
               onChange={(e) => setEnableGeofence(e.currentTarget.checked)}
               disabled={!selectedLocation}
             />
             {enableGeofence && selectedLocation && (
               <NumberInput
-                label="Geofence radius (meters)"
+                label={t("geofenceRadius")}
                 min={10}
                 max={5000}
                 value={geofenceRadius}
@@ -387,10 +389,10 @@ export default function RegisterBeltPage() {
 
             <Group justify="flex-end" mt="lg">
               <Button variant="default" onClick={() => router.push("/gps-tracking")}>
-                Cancel
+                {t("cancel")}
               </Button>
               <Button onClick={handleSubmit} loading={submitting} color="blue">
-                Register Device
+                {t("registerDevice")}
               </Button>
             </Group>
           </Stack>

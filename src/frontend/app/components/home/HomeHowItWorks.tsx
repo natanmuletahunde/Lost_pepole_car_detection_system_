@@ -2,40 +2,42 @@
 import { Box, Container, Title, Text, SimpleGrid, Paper, ThemeIcon, useMantineColorScheme } from "@mantine/core";
 import { IconReport, IconBrain, IconUsers, IconMapPin, IconHeartHandshake } from "@tabler/icons-react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 
 export default function HomeHowItWorks() {
+  const t = useTranslations("HowItWorks");
   const { colorScheme } = useMantineColorScheme();
   const getBg = (light: string, dark: string) => (colorScheme === "dark" ? dark : light);
 
   const steps = [
     {
       icon: IconReport,
-      title: "1. Report Case",
-      description: "Submit details and photos of the missing person or vehicle to our platform.",
+      title: t("step1Title"),
+      description: t("step1Desc"),
       color: "blue",
     },
     {
       icon: IconBrain,
-      title: "2. AI Analyzes Data",
-      description: "Our AI systems process the uploaded data and begin scanning active reports and databases.",
+      title: t("step2Title"),
+      description: t("step2Desc"),
       color: "violet",
     },
     {
       icon: IconUsers,
-      title: "3. Community Sightings",
-      description: "Alerts are sent to nearby users, who can report real-time sightings directly through the app.",
+      title: t("step3Title"),
+      description: t("step3Desc"),
       color: "grape",
     },
     {
       icon: IconMapPin,
-      title: "4. GPS Tracking",
-      description: "Live updates and potential location matches are plotted on the interactive map for monitoring.",
+      title: t("step4Title"),
+      description: t("step4Desc"),
       color: "orange",
     },
     {
       icon: IconHeartHandshake,
-      title: "5. Recovery Process",
-      description: "Once verified, authorities are notified, ensuring a safe and swift recovery process.",
+      title: t("step5Title"),
+      description: t("step5Desc"),
       color: "green",
     },
   ];
@@ -44,10 +46,10 @@ export default function HomeHowItWorks() {
     <Box id="how-it-works" py={{ base: 60, md: 100 }} bg={getBg("white", "#1A1B1E")}>
       <Container size="xl">
         <Title order={2} ta="center" fw={900} mb="sm" style={{ color: "#2f80ed" }}>
-          How It Works
+          {t("title")}
         </Title>
         <Text c="dimmed" ta="center" maw={600} mx="auto" mb={50}>
-          A seamless, step-by-step process designed to bring your loved ones and valuables back home.
+          {t("subtitle")}
         </Text>
 
         <SimpleGrid cols={{ base: 1, sm: 2, md: 5 }} spacing="md">

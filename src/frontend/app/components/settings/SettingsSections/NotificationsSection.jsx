@@ -9,9 +9,11 @@ import {
 } from "@mantine/core";
 import { IconBellRinging } from "@tabler/icons-react";
 import { GRADIENT_SUCCESS } from "../utils/constants";
+import { useTranslations } from "next-intl";
 
 export const NotificationsSection = (props) => {
   const { formData, handleChange } = props;
+  const t = useTranslations("Settings");
   
   return (
     <Card
@@ -36,18 +38,18 @@ export const NotificationsSection = (props) => {
               WebkitTextFillColor: "transparent",
             }}
           >
-            Notifications
+            {t("alertNotifications")}
           </Title>
           <Text size="sm" c="dimmed">
-            Choose how we contact you
+            {t("notificationsSubtitle")}
           </Text>
         </div>
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
         <Switch
-          label="Email notifications"
-          description="Receive updates via email"
+          label={t("emailNotifications")}
+          description={t("emailNotificationsDesc")}
           checked={formData.emailNotifications}
           onChange={(event) => handleChange("emailNotifications", event.currentTarget.checked)}
           size="lg"
@@ -58,22 +60,22 @@ export const NotificationsSection = (props) => {
           }}
         />
         <Switch
-          label="Push notifications"
-          description="Receive browser push notifications"
+          label={t("pushNotifications")}
+          description={t("pushNotificationsDesc")}
           checked={formData.pushNotifications}
           onChange={(event) => handleChange("pushNotifications", event.currentTarget.checked)}
           size="lg"
         />
         <Switch
-          label="Marketing emails"
-          description="Receive newsletters and promotions"
+          label={t("marketingEmails")}
+          description={t("marketingEmailsDesc")}
           checked={formData.marketingEmails}
           onChange={(event) => handleChange("marketingEmails", event.currentTarget.checked)}
           size="lg"
         />
         <Switch
-          label="SMS alerts"
-          description="Get text messages for urgent updates"
+          label={t("smsAlerts")}
+          description={t("smsAlertsDesc")}
           checked={false}
           onChange={() => {}}
           size="lg"

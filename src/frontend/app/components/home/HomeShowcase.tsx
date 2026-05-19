@@ -46,7 +46,11 @@ const useAuth = () => {
 };
 
 function getImageUrl(item: any) {
-  if (item.imagePreview) return item.imagePreview;
+  if (item.imagePreview) {
+    const path = item.imagePreview;
+    if (path.startsWith('http') || path.startsWith('data:')) return path;
+    return `${API_ROOT}${path.startsWith('/') ? path : `/${path}`}`;
+  }
   if (Array.isArray(item.images) && item.images[0]) {
     const path = item.images[0];
     if (path.startsWith("http")) return path;
@@ -56,6 +60,8 @@ function getImageUrl(item: any) {
 }
 
 export default function HomeShowcase() {
+  const t = useTranslations("Showcase");
+  const tCommon = useTranslations("Common");
   const { colorScheme } = useMantineColorScheme();
   const router = useRouter();
   const { isLoggedIn } = useAuth();
@@ -97,7 +103,10 @@ export default function HomeShowcase() {
       }
     };
 
-    fetchMissingData();
+    const timer = setTimeout(() => {
+      fetchMissingData();
+    }, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleReportSighting = (url: string) => {
@@ -291,7 +300,7 @@ export default function HomeShowcase() {
         <Box mb={60}>
           <Flex align="center" gap="sm" mb="lg" justify="center">
             <IconUserPerson size={24} color="#2f80ed" />
-            <Title order={3}>Have you seen this person?</Title>
+            <Title order={3}>{t("personTitle")}</Title>
           </Flex>
           {dataLoading ? (
             <Center py="xl">
@@ -315,7 +324,7 @@ export default function HomeShowcase() {
         <Box>
           <Flex align="center" gap="sm" mb="lg" justify="center">
             <IconCar size={24} color="#2f80ed" />
-            <Title order={3}>Have you seen this car?</Title>
+            <Title order={3}>{t("carTitle")}</Title>
           </Flex>
           {dataLoading ? (
             <Center py="xl">

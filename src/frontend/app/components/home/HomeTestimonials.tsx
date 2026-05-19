@@ -3,8 +3,12 @@ import { Box, Container, Title, Text, Paper, Group, Avatar, useMantineColorSchem
 import { IconStarFilled, IconQuote } from "@tabler/icons-react";
 import { Carousel } from "@mantine/carousel";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
+
+const CustomCarousel = Carousel as any;
 
 export default function HomeTestimonials() {
+  const t = useTranslations("Testimonials");
   const { colorScheme } = useMantineColorScheme();
   const getBg = (light: string, dark: string) => (colorScheme === "dark" ? dark : light);
 
@@ -12,38 +16,38 @@ export default function HomeTestimonials() {
     {
       id: 1,
       name: "Sara Johnson",
-      role: "Found Car in 24 Hours",
+      role: t("role1"),
       avatarColor: "blue",
-      quote: "I found my car within 24 hours of posting here. The AI detection is incredible!",
+      quote: t("quote1"),
       rating: 5,
-      date: "2 weeks ago",
+      date: t("date1"),
     },
     {
       id: 2,
       name: "Kebede M.",
-      role: "Found Missing Brother",
+      role: t("role2"),
       avatarColor: "green",
-      quote: "The alert system is so fast. Thank you for helping me find my brother.",
+      quote: t("quote2"),
       rating: 5,
-      date: "1 month ago",
+      date: t("date2"),
     },
     {
       id: 3,
       name: "Michael Chen",
-      role: "Recovered Family Heirloom",
+      role: t("role3"),
       avatarColor: "orange",
-      quote: "I thought I lost my grandmother's necklace forever. Community found it in 48 hours.",
+      quote: t("quote3"),
       rating: 5,
-      date: "3 weeks ago",
+      date: t("date3"),
     },
     {
       id: 4,
       name: "Amina Hassan",
-      role: "Found Stolen Phone",
+      role: t("role4"),
       avatarColor: "pink",
-      quote: "My phone was stolen. Using location tracking, police recovered it same day.",
+      quote: t("quote4"),
       rating: 5,
-      date: "1 week ago",
+      date: t("date4"),
     },
   ];
 
@@ -57,17 +61,16 @@ export default function HomeTestimonials() {
           viewport={{ once: true }}
         >
           <Title order={2} fw={800} mb={5} ta="center" style={{ color: "#2f80ed" }}>
-            Real Stories, Real Results
+            {t("title")}
           </Title>
           <Text size="sm" c="dimmed" mb={40} maw={600} mx="auto" ta="center">
-            Hear from families and individuals who have successfully recovered
-            their loved ones and vehicles through our advanced detection system
+            {t("subtitle")}
           </Text>
         </motion.div>
 
-        <Carousel slideSize={{ base: "100%", sm: "50%", md: "33.333%" }} slideGap="lg" align="start" loop withIndicators speed={300}>
+        <CustomCarousel slideSize={{ base: "100%", sm: "50%", md: "33.333%" }} slideGap="lg" align="start" loop withIndicators speed={300}>
           {testimonials.map((review) => (
-            <Carousel.Slide key={review.id}>
+            <CustomCarousel.Slide key={review.id}>
               <Paper p={{ base: "lg", md: "xl" }} radius="lg" withBorder shadow="sm" h="100%" bg={getBg("white", "#2C2E33")}>
                 <Box mb="md">
                   <Group gap={2} mb="xs">
@@ -91,9 +94,9 @@ export default function HomeTestimonials() {
                   </Box>
                 </Group>
               </Paper>
-            </Carousel.Slide>
+            </CustomCarousel.Slide>
           ))}
-        </Carousel>
+        </CustomCarousel>
       </Container>
     </Box>
   );

@@ -10,9 +10,11 @@ import {
 } from "@mantine/core";
 import { IconShield, IconEye } from "@tabler/icons-react";
 import { GRADIENT_SECONDARY } from "../utils/constants";
+import { useTranslations } from "next-intl";
 
 export const PrivacySection = (props) => {
   const { formData, handleChange } = props;
+  const t = useTranslations("Settings");
   
   return (
     <Card
@@ -37,10 +39,10 @@ export const PrivacySection = (props) => {
               WebkitTextFillColor: "transparent",
             }}
           >
-            Privacy
+            {t("privacyAnalytics")}
           </Title>
           <Text size="sm" c="dimmed">
-            Control your data visibility
+            {t("privacySubtitle")}
           </Text>
         </div>
       </Group>
@@ -48,11 +50,11 @@ export const PrivacySection = (props) => {
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, sm: 6 }}>
           <Select
-            label="Profile visibility"
+            label={t("profileVisibility")}
             data={[
-              { value: "public", label: "🌍 Public - Anyone can see" },
-              { value: "private", label: "🔒 Private - Only you" },
-              { value: "friends", label: "👥 Friends only" },
+              { value: "public", label: t("publicOption") },
+              { value: "private", label: t("privateOption") },
+              { value: "friends", label: t("friendsOption") },
             ]}
             value={formData.profileVisibility}
             onChange={(value) => handleChange("profileVisibility", value)}
@@ -63,15 +65,15 @@ export const PrivacySection = (props) => {
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 6 }}>
           <Switch
-            label="Show email on profile"
-            description="Display your email address publicly"
+            label={t("showEmail")}
+            description={t("showEmailDesc")}
             checked={formData.showEmail}
             onChange={(event) => handleChange("showEmail", event.currentTarget.checked)}
             mt="md"
           />
           <Switch
-            label="Allow data collection"
-            description="Help us improve by sharing anonymous usage data"
+            label={t("allowDataCollection")}
+            description={t("allowDataCollectionDesc")}
             checked={formData.allowDataCollection}
             onChange={(event) => handleChange("allowDataCollection", event.currentTarget.checked)}
             mt="md"

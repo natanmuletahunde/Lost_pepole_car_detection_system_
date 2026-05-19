@@ -43,7 +43,7 @@ export default function RecordDetailPage() {
 
     try {
       setLoading(true);
-      const payload = await adminFetch(`/admin/cases/${type}/${id}`);
+      const payload: any = await adminFetch(`/admin/cases/${type}/${id}`);
       const c = payload.case as Record<string, unknown>;
       const isPerson = type === 'person';
       const title = isPerson

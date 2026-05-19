@@ -323,10 +323,17 @@ export default function FeedbackManagementPage() {
         </Box>
         <Group bg={headerBg} p={8} style={{ borderRadius: '30px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
           <Tooltip label="Settings">
-            <ActionIcon variant="subtle" color="gray"><IconSettings size={20} /></ActionIcon>
+            <Link href="/admin/settings" passHref style={{ textDecoration: 'none' }}>
+              <ActionIcon variant="subtle" color="blue"><IconSettings size={20} /></ActionIcon>
+            </Link>
           </Tooltip>
           <Tooltip label="Notifications">
-            <ActionIcon variant="subtle" color="red"><IconBell size={20} /></ActionIcon>
+            <Link href="/admin/notification" passHref style={{ textDecoration: 'none' }}>
+              <ActionIcon variant="subtle" color="red"><IconBell size={20} /></ActionIcon>
+            </Link>
+          </Tooltip>
+          <Tooltip label="Refresh data">
+            <ActionIcon variant="subtle" color="blue" onClick={() => window.location.reload()}><IconDownload size={20} /></ActionIcon>
           </Tooltip>
         </Group>
       </Group>

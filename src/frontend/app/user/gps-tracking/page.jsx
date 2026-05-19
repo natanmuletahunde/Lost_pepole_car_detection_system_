@@ -1,4 +1,5 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
 import { useState, useEffect } from 'react';
 import {
@@ -45,6 +46,7 @@ import GpsTracker from '../../components/GpsTracker';
 const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
 
 export default function GpsTrackingPage() {
+  const t = useTranslations("GPSTracking");
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
@@ -163,7 +165,7 @@ export default function GpsTrackingPage() {
             {/* Search Bar */}
             {!isMobile && (
               <TextInput
-                placeholder="Search..."
+                placeholder={t("search")}
                 leftSection={<IconSearch size={16} />}
                 style={{ width: '30%', minWidth: 200 }}
                 radius="xl"
@@ -249,10 +251,10 @@ export default function GpsTrackingPage() {
         <Container size="xl" px={0} mb="md">
           <Flex direction={isMobile ? 'column' : 'row'} align={isMobile ? 'flex-start' : 'center'} gap="xs">
             <IconGps size={28} color="#2f80ed" />
-            <Title order={1} size={isMobile ? 'h3' : 'h2'}>GPS Smart Belt Tracking</Title>
-            {!isMobile && <Text c="dimmed" size="sm" ml="auto">Real‑time location monitoring</Text>}
+            <Title order={1} size={isMobile ? 'h3' : 'h2'}>{t("title")}</Title>
+            {!isMobile && <Text c="dimmed" size="sm" ml="auto">{t("subtitle")}</Text>}
           </Flex>
-          {isMobile && <Text c="dimmed" size="xs" mt={4}>Real‑time location monitoring</Text>}
+          {isMobile && <Text c="dimmed" size="xs" mt={4}>{t("subtitle")}</Text>}
         </Container>
 
         {/* GpsTracker takes remaining height */}

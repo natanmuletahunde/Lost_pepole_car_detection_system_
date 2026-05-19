@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import {
   Container,
   Box,
@@ -40,6 +40,7 @@ import Link from 'next/link';
 import MainFooter from '../../components/MainFooter';
 import DashboardHeader from '../dashboard/DashboardHeader'; 
 import { useMediaQuery } from '@mantine/hooks';
+import { useTranslations } from 'next-intl';
 
 // Real backend API URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
@@ -73,7 +74,7 @@ const LocationPicker = dynamic(() => import('../../components/LocationPicker'), 
   ),
 });
 
-export default function ReportSightingPage() {
+function ReportSightingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const theme = useMantineTheme();
@@ -90,6 +91,7 @@ export default function ReportSightingPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHelpVisible, setIsHelpVisible] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
   const [formValues, setFormValues] = useState({
     type: 'Person',
     name: '',
@@ -108,7 +110,7 @@ export default function ReportSightingPage() {
     const isAuth = localStorage.getItem('isAuthenticated');
     const userData = localStorage.getItem('currentUser');
     if (!isAuth || isAuth !== 'true' || !userData) {
-      sessionStorage.setItem('redirectUrl', window.location.pathname);
+      sessionStorage.setItem('redirectUrl', window.location.pathname + window.location.search);
       notifications.show({
         title: 'Login Required',
         message: 'Please login to submit a sighting',
@@ -121,8 +123,9 @@ export default function ReportSightingPage() {
     setCurrentUser(JSON.parse(userData));
   }, [router]);
 
-  // Prefill form from URL parameters — run once only on mount
-  const prefillApplied = useRef(false);
+ 
+
+  // Prefill form from URL parameters
   useEffect(() => {
     if (prefillApplied.current) return;
     prefillApplied.current = true;
@@ -214,8 +217,8 @@ export default function ReportSightingPage() {
     const missing = required.filter((f) => !formValues[f] || formValues[f].toString().trim() === '');
     if (missing.length > 0) {
       notifications.show({
-        title: 'Missing Fields',
-        message: `Please fill in: ${missing.join(', ')}`,
+        title: t('missingFields'),
+        message: `${t('missingFieldsDesc')} ${missing.join(', ')}`,
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
@@ -232,8 +235,8 @@ export default function ReportSightingPage() {
       !(latitude === 0 && longitude === 0);
     if (!hasValidCoords) {
       notifications.show({
-        title: 'Location Required',
-        message: 'Please tap a point on the map to drop a pin and set the sighting location.',
+        title: t('locationReq'),
+        message: t('locationReqDesc'),
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
@@ -248,8 +251,8 @@ export default function ReportSightingPage() {
 
     if (!authToken) {
       notifications.show({
-        title: 'Authentication Required',
-        message: 'Please login again. No API token was found.',
+        title: t('authReq'),
+        message: t('authReqDesc') || 'Please login again. No API token was found.',
         color: 'yellow',
         icon: <IconAlertCircle size={20} />,
       });
@@ -260,8 +263,8 @@ export default function ReportSightingPage() {
     const sightingType = String(formValues.type || 'Person').toLowerCase();
     if (sightingType !== 'person' && sightingType !== 'vehicle') {
       notifications.show({
-        title: 'Invalid type',
-        message: 'Please choose Person or Vehicle.',
+        title: t('invalidType') || 'Invalid type',
+        message: t('invalidTypeDesc') || 'Please choose Person or Vehicle.',
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
@@ -305,8 +308,8 @@ export default function ReportSightingPage() {
       await submitSightingToBackend(payload, authToken);
 
       notifications.show({
-        title: 'Thank you!',
-        message: 'Sighting submitted successfully.',
+        title: t('thankYou'),
+        message: t('successDesc'),
         color: 'green',
         icon: <IconCheck size={20} />,
       });
@@ -314,8 +317,8 @@ export default function ReportSightingPage() {
     } catch (err) {
       console.error('Error submitting sighting:', err);
       notifications.show({
-        title: 'Submission Failed',
-        message: err?.message || 'Failed to submit sighting. Please try again.',
+        title: t('failedTitle') || 'Submission Failed',
+        message: err?.message || t('failedDesc') || 'Failed to submit sighting. Please try again.',
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
@@ -415,7 +418,7 @@ export default function ReportSightingPage() {
           />
 
           <Title order={2} mb="md" style={{ color: PRIMARY_DARK, fontWeight: 800 }}>
-            Report a Sighting
+            {t('title')}
           </Title>
           <Text mb="xl" c="dimmed" size="sm">
             {getPromptText()}
@@ -430,12 +433,12 @@ export default function ReportSightingPage() {
           >
             <SimpleGrid cols={1} spacing="md">
               <Select
-                label="Type"
+                label={t('type')}
                 value={formValues.type}
                 onChange={(v) => setFormValues((p) => ({ ...p, type: v }))}
                 data={[
-                  { value: 'Person', label: 'Person' },
-                  { value: 'Vehicle', label: 'Vehicle' },
+                  { value: 'Person', label: t('person') },
+                  { value: 'Vehicle', label: t('vehicle') },
                 ]}
                 radius="md"
                 variant="filled"
@@ -446,7 +449,7 @@ export default function ReportSightingPage() {
 
               {formValues.type === 'Person' ? (
                 <TextInput
-                  label="Person Name"
+                  label={t('personName')}
                   placeholder="John Doe"
                   value={formValues.name}
                   onChange={(e) => setFormValues((p) => ({ ...p, name: e.target.value }))}
@@ -455,7 +458,7 @@ export default function ReportSightingPage() {
                 />
               ) : (
                 <TextInput
-                  label="Plate Number"
+                  label={t('plateNumber')}
                   placeholder="AA-12345"
                   value={formValues.plateNumber}
                   onChange={(e) => setFormValues((p) => ({ ...p, plateNumber: e.target.value }))}
@@ -465,8 +468,8 @@ export default function ReportSightingPage() {
               )}
 
               <Textarea
-                label="Additional Details"
-                placeholder="Color, clothing, distinguishing marks, etc."
+                label={t('details')}
+                placeholder={t('detailsPlaceholder')}
                 minRows={3}
                 value={formValues.description}
                 onChange={(e) => setFormValues((p) => ({ ...p, description: e.target.value }))}
@@ -475,8 +478,8 @@ export default function ReportSightingPage() {
               />
 
               <TextInput
-                label="Location"
-                placeholder="Tap map or type address"
+                label={t('location')}
+                placeholder={t('locationPlaceholder')}
                 leftSection={<IconMapPin size={16} color={PRIMARY_COLOR} />}
                 value={formValues.location}
                 onChange={(e) => setFormValues((p) => ({ ...p, location: e.target.value }))}
@@ -491,7 +494,7 @@ export default function ReportSightingPage() {
 
               <SimpleGrid cols={2} breakpoints={[{ maxWidth: 'sm', cols: 1 }]} spacing="md">
                 <TextInput
-                  label="Date"
+                  label={t('date')}
                   type="date"
                   value={formValues.date}
                   onChange={(e) => setFormValues((p) => ({ ...p, date: e.target.value }))}
@@ -499,7 +502,7 @@ export default function ReportSightingPage() {
                   variant="filled"
                 />
                 <TextInput
-                  label="Time"
+                  label={t('time')}
                   type="time"
                   value={formValues.time}
                   onChange={(e) => setFormValues((p) => ({ ...p, time: e.target.value }))}
@@ -509,8 +512,8 @@ export default function ReportSightingPage() {
               </SimpleGrid>
 
               <FileInput
-                label="Photo (optional)"
-                placeholder="Upload an image"
+                label={t('photo')}
+                placeholder={t('photoPlaceholder')}
                 leftSection={<IconUpload size={16} color={PRIMARY_COLOR} />}
                 accept="image/*"
                 onChange={handleImageChange}
@@ -536,7 +539,7 @@ export default function ReportSightingPage() {
                   height: '50px',
                 }}
               >
-                Submit Sighting
+                {isSubmitting ? t('submitting') : t('submit')}
               </Button>
             </SimpleGrid>
           </Card>
@@ -544,12 +547,34 @@ export default function ReportSightingPage() {
           <Divider my="xl" color={getBg(colorScheme, '#f0f5ff', theme.colors.dark[5])} />
           <Text size="xs" c="dimmed" ta="center">
             <IconInfoCircle size={12} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            Your sighting will help reunite families. All information is kept confidential.
+            {t('confidential')}
           </Text>
         </Paper>
       </Container>
 
       <MainFooter />
     </Box>
+  );
+}
+
+export default function ReportSightingPage() {
+  return (
+    <Suspense
+      fallback={
+        <Box
+          style={{
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#f0f5ff',
+          }}
+        >
+          <Loader size="xl" color="#0034D1" />
+        </Box>
+      }
+    >
+      <ReportSightingPageContent />
+    </Suspense>
   );
 }

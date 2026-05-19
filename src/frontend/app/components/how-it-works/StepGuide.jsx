@@ -1,19 +1,22 @@
 import { Title, Text, Grid, Card, ThemeIcon } from "@mantine/core";
+import { useTranslations } from "next-intl";
 
 const PRIMARY_GRADIENT = `linear-gradient(135deg, #0034D1 0%, #0066ff 100%)`;
 
-const steps = [
-  { number: "1", title: "Create Account", description: "Register for free. First registration is always free! No hidden fees." },
-  { number: "2", title: "Report Case", description: "Choose between Person, Vehicle, or Special Case. Upload photos and details." },
-  { number: "3", title: "Camera Detection", description: "Our 24/7 camera system scans for matches. When detected, you get instant alerts." },
-  { number: "4", title: "Get Alerted", description: "Receive notifications via email, SMS, or Telegram. Case resolved!" },
-];
-
 export default function StepGuide() {
+  const t = useTranslations("HowItWorks");
+
+  const steps = [
+    { number: "1", title: t("step1Title"), description: t("step1Desc") },
+    { number: "2", title: t("step2Title"), description: t("step2Desc") },
+    { number: "3", title: t("step3Title"), description: t("step3Desc") },
+    { number: "4", title: t("step4Title"), description: t("step4Desc") },
+  ];
+
   return (
     <>
-      <Title order={2} fw={800} ta="center" mb={10}>Simple 4-Step Process</Title>
-      <Text c="dimmed" ta="center" mb={50} maw={600} mx="auto">Four simple steps to find what you've lost or report what you've found</Text>
+      <Title order={2} fw={800} ta="center" mb={10}>{t("processTitle")}</Title>
+      <Text c="dimmed" ta="center" mb={50} maw={600} mx="auto">{t("processSubtitle")}</Text>
       
       <Grid gutter={30} mb={50}>
         {steps.map((step) => (

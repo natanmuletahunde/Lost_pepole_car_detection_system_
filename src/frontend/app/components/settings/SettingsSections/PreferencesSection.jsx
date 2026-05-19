@@ -17,9 +17,11 @@ import {
   IconDeviceLaptop,
 } from "@tabler/icons-react";
 import { GRADIENT_INFO, languages, timezones } from "../utils/constants";
+import { useTranslations } from "next-intl";
 
 export const PreferencesSection = (props) => {
   const { formData, handleChange } = props;
+  const t = useTranslations("Settings");
   
   return (
     <Card
@@ -44,10 +46,10 @@ export const PreferencesSection = (props) => {
               WebkitTextFillColor: "transparent",
             }}
           >
-            Preferences
+            {t("systemPreferences")}
           </Title>
           <Text size="sm" c="dimmed">
-            Customize your experience
+            {t("preferencesSubtitle")}
           </Text>
         </div>
       </Group>
@@ -55,8 +57,8 @@ export const PreferencesSection = (props) => {
       <Grid gutter="md">
         <Grid.Col span={{ base: 12, sm: 4 }}>
           <Select
-            label="Language"
-            placeholder="Select language"
+            label={t("language")}
+            placeholder={t("languagePlaceholder")}
             data={languages}
             value={formData.language}
             onChange={(value) => handleChange("language", value)}
@@ -67,8 +69,8 @@ export const PreferencesSection = (props) => {
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 4 }}>
           <Select
-            label="Timezone"
-            placeholder="Select timezone"
+            label={t("timezone")}
+            placeholder={t("timezonePlaceholder")}
             data={timezones}
             value={formData.timezone}
             onChange={(value) => handleChange("timezone", value)}
@@ -80,24 +82,24 @@ export const PreferencesSection = (props) => {
         </Grid.Col>
         <Grid.Col span={{ base: 12, sm: 4 }}>
           <Radio.Group
-            label="Theme"
+            label={t("theme")}
             value={formData.theme}
             onChange={(value) => handleChange("theme", value)}
           >
             <Group mt="xs">
               <Radio
                 value="light"
-                label="Light"
+                label={t("light")}
                 styles={{ radio: { borderColor: '#4158D0' } }}
               />
               <Radio
                 value="dark"
-                label="Dark"
+                label={t("dark")}
                 styles={{ radio: { borderColor: '#4158D0' } }}
               />
               <Radio
                 value="system"
-                label="System"
+                label={t("system")}
                 styles={{ radio: { borderColor: '#4158D0' } }}
               />
             </Group>
