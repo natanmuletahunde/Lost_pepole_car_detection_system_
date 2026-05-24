@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import {
   Container,
   Box,
@@ -36,9 +36,9 @@ import {
 } from '@tabler/icons-react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import MainFooter from '../../components/MainFooter';
+import DashboardHeader from '../dashboard/DashboardHeader'; 
 import { useMediaQuery } from '@mantine/hooks';
 
 // Real backend API URL
@@ -73,16 +73,25 @@ const LocationPicker = dynamic(() => import('../../components/LocationPicker'), 
   ),
 });
 
-export default function ReportSightingPage() {
+function ReportSightingPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams(); // get query parameters
+  const searchParams = useSearchParams();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
+  
+
+  // Read query parameters for dynamic message & prefill
+  const caseId = searchParams.get('caseId');
+  const typeParam = searchParams.get('type');       // 'person' or 'vehicle'
+  const nameParam = searchParams.get('name');
+  const plateNumberParam = searchParams.get('plateNumber');
+  const locationParam = searchParams.get('location');
 
   const [currentUser, setCurrentUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHelpVisible, setIsHelpVisible] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
   const [formValues, setFormValues] = useState({
     type: 'Person',
     name: '',
@@ -101,7 +110,7 @@ export default function ReportSightingPage() {
     const isAuth = localStorage.getItem('isAuthenticated');
     const userData = localStorage.getItem('currentUser');
     if (!isAuth || isAuth !== 'true' || !userData) {
-      sessionStorage.setItem('redirectUrl', window.location.pathname);
+      sessionStorage.setItem('redirectUrl', window.location.pathname + window.location.search);
       notifications.show({
         title: 'Login Required',
         message: 'Please login to submit a sighting',
@@ -114,22 +123,23 @@ export default function ReportSightingPage() {
     setCurrentUser(JSON.parse(userData));
   }, [router]);
 
-  // Prefill form from URL parameters — run once only on mount
-  const prefillApplied = useRef(false);
+ 
+
+  // Prefill form from URL parameters
   useEffect(() => {
     if (prefillApplied.current) return;
     prefillApplied.current = true;
     if (!searchParams) return;
-    const typeParam = searchParams.get('type');
-    const nameParam = searchParams.get('name');
-    const plateNumberParam = searchParams.get('plateNumber');
-    const locationParam = searchParams.get('location');
+    const typeFromParam = typeParam;
+    const nameFromParam = nameParam;
+    const plateFromParam = plateNumberParam;
+    const locationFromParam = locationParam;
     setFormValues(prev => ({
       ...prev,
-      type: typeParam || prev.type,
-      name: nameParam || prev.name,
-      plateNumber: plateNumberParam || prev.plateNumber,
-      location: locationParam || prev.location,
+      type: typeFromParam === 'person' ? 'Person' : typeFromParam === 'vehicle' ? 'Vehicle' : prev.type,
+      name: nameFromParam || prev.name,
+      plateNumber: plateFromParam || prev.plateNumber,
+      location: locationFromParam || prev.location,
     }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -207,8 +217,8 @@ export default function ReportSightingPage() {
     const missing = required.filter((f) => !formValues[f] || formValues[f].toString().trim() === '');
     if (missing.length > 0) {
       notifications.show({
-        title: 'Missing Fields',
-        message: `Please fill in: ${missing.join(', ')}`,
+        title: t('missingFields'),
+        message: `${t('missingFieldsDesc')} ${missing.join(', ')}`,
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
@@ -225,8 +235,8 @@ export default function ReportSightingPage() {
       !(latitude === 0 && longitude === 0);
     if (!hasValidCoords) {
       notifications.show({
-        title: 'Location Required',
-        message: 'Please tap a point on the map to drop a pin and set the sighting location.',
+        title: t('locationReq'),
+        message: t('locationReqDesc'),
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
@@ -241,8 +251,8 @@ export default function ReportSightingPage() {
 
     if (!authToken) {
       notifications.show({
-        title: 'Authentication Required',
-        message: 'Please login again. No API token was found.',
+        title: t('authReq'),
+        message: t('authReqDesc') || 'Please login again. No API token was found.',
         color: 'yellow',
         icon: <IconAlertCircle size={20} />,
       });
@@ -253,8 +263,8 @@ export default function ReportSightingPage() {
     const sightingType = String(formValues.type || 'Person').toLowerCase();
     if (sightingType !== 'person' && sightingType !== 'vehicle') {
       notifications.show({
-        title: 'Invalid type',
-        message: 'Please choose Person or Vehicle.',
+        title: t('invalidType') || 'Invalid type',
+        message: t('invalidTypeDesc') || 'Please choose Person or Vehicle.',
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
@@ -298,18 +308,17 @@ export default function ReportSightingPage() {
       await submitSightingToBackend(payload, authToken);
 
       notifications.show({
-        title: 'Thank you!',
-        message: 'Sighting submitted successfully.',
+        title: t('thankYou'),
+        message: t('successDesc'),
         color: 'green',
         icon: <IconCheck size={20} />,
       });
-      // Navigate directly to dashboard — avoid root redirect chain
       router.push('/user/dashboard');
     } catch (err) {
       console.error('Error submitting sighting:', err);
       notifications.show({
-        title: 'Submission Failed',
-        message: err?.message || 'Failed to submit sighting. Please try again.',
+        title: t('failedTitle') || 'Submission Failed',
+        message: err?.message || t('failedDesc') || 'Failed to submit sighting. Please try again.',
         color: 'red',
         icon: <IconAlertCircle size={20} />,
       });
@@ -326,6 +335,25 @@ export default function ReportSightingPage() {
     };
     reader.readAsDataURL(file);
   };
+
+  // ---------- Dynamic prompt text ----------
+  const getPromptText = () => {
+    // If the user came from a specific case (has caseId)
+    if (caseId) {
+      if (typeParam === 'person' && nameParam) {
+        return `📍 Have you seen ${nameParam}? Please share any details below.`;
+      }
+      if (typeParam === 'vehicle') {
+        const vehicleName = nameParam || plateNumberParam || 'this vehicle';
+        return `🚗 Have you seen ${vehicleName}? Let us know where and when.`;
+      }
+      // fallback if type not clear
+      return `Have you seen this missing person or vehicle? Your information may help.`;
+    }
+    // Generic message for non‑specific reports
+    return `Let us know if you've seen a missing person or vehicle. Your information may help recover them faster.`;
+  };
+  // -----------------------------------------
 
   return (
     <Box
@@ -360,71 +388,8 @@ export default function ReportSightingPage() {
         </ActionIcon>
       </Tooltip>
 
-      {/* Header */}
-      <Box
-        bg={getBg(colorScheme, 'white', theme.colors.dark[7])}
-        style={{
-          borderBottom: `2px solid ${getBg(colorScheme, '#f0f5ff', theme.colors.dark[5])}`,
-          boxShadow: `0 2px 15px rgba(0, 52, 209, 0.1)`,
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-        }}
-      >
-        <Container size="lg">
-          <Flex justify="space-between" align="center" py="sm" direction={isMobile ? 'column' : 'row'} gap={isMobile ? 'md' : 'xs'}>
-            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-              <Flex align="center" gap="md">
-                <Box style={{ display: 'inline-block', height: '40px', width: 'auto', overflow: 'hidden' }}>
-                  <Image src="/logo.jpg" alt="Logo" width={2040} height={952} style={{ height: '100%', width: 'auto' }} />
-                </Box>
-                <Box>
-                  <Text size={isMobile ? 'lg' : 'xl'} fw={900} style={{ color: PRIMARY_COLOR, letterSpacing: '-0.5px' }}>
-                    Sighting
-                  </Text>
-                  <Text size="xs" c={PRIMARY_DARK} fw={600} style={{ letterSpacing: '1px' }}>
-                    Report a sighting
-                  </Text>
-                </Box>
-              </Flex>
-            </Link>
-            {currentUser && (
-              <Flex align="center" gap="lg">
-                <Flex gap="xs">
-                  <Tooltip label="Dashboard" position="bottom">
-                    <ActionIcon size="lg" radius="md" variant="light" color="blue" onClick={() => router.push('/')} style={{ border: `1px solid ${PRIMARY_COLOR}30` }}>
-                      <IconDashboard size={20} />
-                    </ActionIcon>
-                  </Tooltip>
-                  <Tooltip label="Home" position="bottom">
-                    <ActionIcon size="lg" radius="md" variant="light" color="blue" onClick={() => router.push('/')} style={{ border: `1px solid ${PRIMARY_COLOR}30` }}>
-                      <IconHome size={20} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Flex>
-                <Flex
-                  align="center"
-                  gap="sm"
-                  style={{
-                    padding: '8px 16px',
-                    background: getBg(colorScheme, '#f0f5ff', theme.colors.dark[6]),
-                    borderRadius: '30px',
-                  }}
-                >
-                  <Avatar size="sm" radius="xl" src={currentUser?.avatar} style={{ background: PRIMARY_GRADIENT, border: `2px solid white` }}>
-                    {currentUser?.firstName?.[0]}{currentUser?.lastName?.[0]}
-                  </Avatar>
-                  <Box>
-                    <Text size="sm" fw={600} style={{ color: PRIMARY_DARK }}>
-                      {currentUser?.firstName} {currentUser?.lastName}
-                    </Text>
-                  </Box>
-                </Flex>
-              </Flex>
-            )}
-          </Flex>
-        </Container>
-      </Box>
+      {/* ✅ Use the common DashboardHeader instead of custom header */}
+      <DashboardHeader />
 
       {/* Main Form Container */}
       <Container size="lg" py={isMobile ? 20 : 40}>
@@ -439,7 +404,6 @@ export default function ReportSightingPage() {
             overflow: 'hidden',
           }}
         >
-          {/* Decorative corner */}
           <Box
             style={{
               position: 'absolute',
@@ -453,13 +417,11 @@ export default function ReportSightingPage() {
             }}
           />
 
-          {/* Title */}
           <Title order={2} mb="md" style={{ color: PRIMARY_DARK, fontWeight: 800 }}>
-            Report a Sighting
+            {"Report a Sighting"}
           </Title>
           <Text mb="xl" c="dimmed" size="sm">
-            Let us know if you&apos;ve seen a missing person or vehicle. Your information may help
-            recover them faster.
+            {getPromptText()}
           </Text>
 
           <Card
@@ -471,12 +433,12 @@ export default function ReportSightingPage() {
           >
             <SimpleGrid cols={1} spacing="md">
               <Select
-                label="Type"
+                label={t('type')}
                 value={formValues.type}
                 onChange={(v) => setFormValues((p) => ({ ...p, type: v }))}
                 data={[
-                  { value: 'Person', label: 'Person' },
-                  { value: 'Vehicle', label: 'Vehicle' },
+                  { value: 'Person', label: t('person') },
+                  { value: 'Vehicle', label: t('vehicle') },
                 ]}
                 radius="md"
                 variant="filled"
@@ -487,7 +449,7 @@ export default function ReportSightingPage() {
 
               {formValues.type === 'Person' ? (
                 <TextInput
-                  label="Person Name"
+                  label={t('personName')}
                   placeholder="John Doe"
                   value={formValues.name}
                   onChange={(e) => setFormValues((p) => ({ ...p, name: e.target.value }))}
@@ -496,7 +458,7 @@ export default function ReportSightingPage() {
                 />
               ) : (
                 <TextInput
-                  label="Plate Number"
+                  label={t('plateNumber')}
                   placeholder="AA-12345"
                   value={formValues.plateNumber}
                   onChange={(e) => setFormValues((p) => ({ ...p, plateNumber: e.target.value }))}
@@ -506,8 +468,8 @@ export default function ReportSightingPage() {
               )}
 
               <Textarea
-                label="Additional Details"
-                placeholder="Color, clothing, distinguishing marks, etc."
+                label={t('details')}
+                placeholder={t('detailsPlaceholder')}
                 minRows={3}
                 value={formValues.description}
                 onChange={(e) => setFormValues((p) => ({ ...p, description: e.target.value }))}
@@ -516,8 +478,8 @@ export default function ReportSightingPage() {
               />
 
               <TextInput
-                label="Location"
-                placeholder="Tap map or type address"
+                label={t('location')}
+                placeholder={t('locationPlaceholder')}
                 leftSection={<IconMapPin size={16} color={PRIMARY_COLOR} />}
                 value={formValues.location}
                 onChange={(e) => setFormValues((p) => ({ ...p, location: e.target.value }))}
@@ -532,7 +494,7 @@ export default function ReportSightingPage() {
 
               <SimpleGrid cols={2} breakpoints={[{ maxWidth: 'sm', cols: 1 }]} spacing="md">
                 <TextInput
-                  label="Date"
+                  label={t('date')}
                   type="date"
                   value={formValues.date}
                   onChange={(e) => setFormValues((p) => ({ ...p, date: e.target.value }))}
@@ -540,7 +502,7 @@ export default function ReportSightingPage() {
                   variant="filled"
                 />
                 <TextInput
-                  label="Time"
+                  label={t('time')}
                   type="time"
                   value={formValues.time}
                   onChange={(e) => setFormValues((p) => ({ ...p, time: e.target.value }))}
@@ -550,8 +512,8 @@ export default function ReportSightingPage() {
               </SimpleGrid>
 
               <FileInput
-                label="Photo (optional)"
-                placeholder="Upload an image"
+                label={t('photo')}
+                placeholder={t('photoPlaceholder')}
                 leftSection={<IconUpload size={16} color={PRIMARY_COLOR} />}
                 accept="image/*"
                 onChange={handleImageChange}
@@ -577,7 +539,7 @@ export default function ReportSightingPage() {
                   height: '50px',
                 }}
               >
-                Submit Sighting
+                {isSubmitting ? t('submitting') : "Submit Report"}
               </Button>
             </SimpleGrid>
           </Card>
@@ -585,12 +547,34 @@ export default function ReportSightingPage() {
           <Divider my="xl" color={getBg(colorScheme, '#f0f5ff', theme.colors.dark[5])} />
           <Text size="xs" c="dimmed" ta="center">
             <IconInfoCircle size={12} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            Your sighting will help reunite families. All information is kept confidential.
+            {t('confidential')}
           </Text>
         </Paper>
       </Container>
 
       <MainFooter />
     </Box>
+  );
+}
+
+export default function ReportSightingPage() {
+  return (
+    <Suspense
+      fallback={
+        <Box
+          style={{
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#f0f5ff',
+          }}
+        >
+          <Loader size="xl" color="#0034D1" />
+        </Box>
+      }
+    >
+      <ReportSightingPageContent />
+    </Suspense>
   );
 }

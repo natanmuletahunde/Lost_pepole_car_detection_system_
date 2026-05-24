@@ -38,6 +38,7 @@
     "multer": "^2.1.1",
     "node-telegram-bot-api": "^0.67.0",
     "nodemailer": "^8.0.6",
+    "resend": "^6.12.3",
     "serialport": "^13.0.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"

@@ -7,11 +7,9 @@ export default getRequestConfig(async () => {
 
   let messages;
   if (locale === 'am') {
-    const imported = await import('../messages/am.json');
-    messages = imported.default || imported;
+    messages = (await import('../messages/am.json')).default;
   } else {
-    const imported = await import('../messages/en.json');
-    messages = imported.default || imported;
+    messages = (await import('../messages/en.json')).default;
   }
 
   return {
