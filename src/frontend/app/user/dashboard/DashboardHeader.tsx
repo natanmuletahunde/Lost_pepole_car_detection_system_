@@ -93,10 +93,18 @@ export default function DashboardHeader({
     }
   }, [propUser]);
 
+  // Resolve final variables using props or autonomous state fallbacks
+  const user = propUser !== undefined ? propUser : internalUser;
+  const unreadCount = propUnreadCount !== undefined ? propUnreadCount : internalUnread;
+  const colorScheme = propColorScheme || (mantineColorScheme as any) || "light";
+  
+  const notifications = propNotifications !== undefined ? propNotifications : notificationsList;
+
   // Fetch unread count autonomously if not provided
   const fetchNotifications = async () => {
+    if (!user) return;
     try {
-      const res = await apiClient(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1"}/notifications`);
+      const res = await apiClient(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1"}/notifications/my-notifications`);
       if (res.ok) {
         const payload = await res.json();
         const list = Array.isArray(payload?.data)
@@ -111,20 +119,13 @@ export default function DashboardHeader({
   };
 
   useEffect(() => {
-    if (propUnreadCount === undefined) {
+    if (propUnreadCount === undefined && user) {
       fetchNotifications();
       // Periodically refresh notifications
       const interval = setInterval(fetchNotifications, 15000);
       return () => clearInterval(interval);
     }
-  }, [propUnreadCount]);
-
-  // Resolve final variables using props or autonomous state fallbacks
-  const user = propUser !== undefined ? propUser : internalUser;
-  const unreadCount = propUnreadCount !== undefined ? propUnreadCount : internalUnread;
-  const colorScheme = propColorScheme || (mantineColorScheme as any) || "light";
-  
-  const notifications = propNotifications !== undefined ? propNotifications : notificationsList;
+  }, [propUnreadCount, user]);
 
   const alertNotifications = notifications.filter(
     (n: any) =>
