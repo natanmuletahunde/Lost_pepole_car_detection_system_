@@ -148,20 +148,52 @@ export default function AIAssistantWidget() {
   const handleSendMessage = async (text) => {
     if (!text.trim()) return;
 
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+
     // 1. Add User Message
     const userMsg = { id: Date.now().toString(), sender: 'user', text };
-    setMessages(prev => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInputValue('');
 
     // 2. Trigger Typing Animation
     setIsTyping(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
+    try {
+      // Exclude welcome message from the history sent to DeepSeek
+      const historyToSend = updatedMessages.filter(msg => msg.id !== 'welcome');
+
+      const res = await fetch(`${API_BASE_URL}/public/ai-assistant`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messages: historyToSend,
+          lang: lang
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error('AI Assistant request failed');
+      }
+
+      const payload = await res.json();
+      const replyText = payload?.data?.reply || payload?.reply;
+
+      if (!replyText) {
+        throw new Error('Invalid AI response payload');
+      }
+
+      const botMsg = { id: (Date.now() + 1).toString(), sender: 'bot', text: replyText };
+      setMessages(prev => [...prev, botMsg]);
+    } catch (error) {
+      console.error('DeepSeek AI Error:', error);
+      
+      // Fallback local response if AI server is unreachable or fails
       let matchedKey = null;
       const lowerText = text.toLowerCase();
 
-      // Check keyword mapping for a match
       for (const [key, keywordList] of Object.entries(activeLang.keywords)) {
         if (keywordList.some(kw => lowerText.includes(kw))) {
           matchedKey = key;
@@ -169,13 +201,12 @@ export default function AIAssistantWidget() {
         }
       }
 
-      // Find reply
       const replyText = matchedKey ? activeLang.responses[matchedKey] : activeLang.responses.fallback;
-      
       const botMsg = { id: (Date.now() + 1).toString(), sender: 'bot', text: replyText };
       setMessages(prev => [...prev, botMsg]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   const handleChipClick = (value) => {
