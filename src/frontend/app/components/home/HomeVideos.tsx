@@ -17,7 +17,6 @@ import {
   AspectRatio,
 } from "@mantine/core";
 import {
-  IconPlay,
   IconChevronLeft,
   IconChevronRight,
   IconPlayerPlay,
@@ -121,13 +120,13 @@ export default function HomeVideos() {
           <Card
             radius="lg"
             withBorder
-            overflow="hidden"
             bg={getBg("white", "#2C2E33")}
             shadow="lg"
             style={{
               borderColor: "#2f80ed",
               borderWidth: 2,
               borderStyle: "solid",
+              overflow: "hidden",
             }}
           >
             {/* Video Container */}
@@ -318,7 +317,7 @@ export default function HomeVideos() {
                         transition: "all 0.3s ease",
                       }}
                     >
-                      <IconPlay size={24} color="#2f80ed" fill="#2f80ed" />
+                      <IconPlayerPlay size={24} color="#2f80ed" fill="#2f80ed" />
                     </Box>
                   </Box>
                 </AspectRatio>
