@@ -59,6 +59,7 @@ import {
   IconBike,
   IconTruck,
   IconBattery,
+  IconRefresh,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import Link from "next/link";
@@ -167,6 +168,10 @@ export default function AlertDetailPage() {
   // Current user state for logging
   const [currentUser, setCurrentUser] = useState<any>(null);
 
+  // Analysis statistics
+  const [confirmedSightings, setConfirmedSightings] = useState<number>(0);
+  const [confirmedSightingIds, setConfirmedSightingIds] = useState<Set<string>>(new Set());
+
   // Confirmation modal state
   const [foundModalOpen, setFoundModalOpen] = useState(false);
   const [foundNotes, setFoundNotes] = useState("");
@@ -196,6 +201,22 @@ export default function AlertDetailPage() {
       } catch (e) { /* ignore */ }
     }
   }, []);
+
+  // Load confirmed sighting IDs from localStorage (for immediate UI feedback)
+  useEffect(() => {
+    const confirmedIdsData = JSON.parse(localStorage.getItem('confirmedSightingIds') || '[]');
+    setConfirmedSightingIds(new Set(confirmedIdsData));
+  }, [params?.id]);
+
+  // Calculate confirmed sightings from database data
+  useEffect(() => {
+    if (detectionHistory.length > 0) {
+      const confirmedCount = detectionHistory.filter(d => d.status === 'confirmed').length;
+      console.log('Detection history:', detectionHistory.map(d => ({ id: d.id, status: d.status })));
+      console.log('Confirmed count:', confirmedCount);
+      setConfirmedSightings(confirmedCount);
+    }
+  }, [detectionHistory]);
 
   // Logging function
   const createActionLog = async (action: any, details: any = {}) => {
@@ -232,6 +253,55 @@ export default function AlertDetailPage() {
     localStorage.removeItem('currentUser');
     localStorage.removeItem('isAuthenticated');
     router.push('/');
+  };
+
+  // Refresh sightings data
+  const handleRefreshSightings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const alertId = params?.id;
+      if (!alertId) throw new Error('No alert ID provided');
+
+      // Fetch sightings linked to this alert
+      let sightingsUrl = `${MY_SIGHTINGS_API}?caseId=${alertId}`;
+      let sightingsRes = await apiClient(sightingsUrl);
+      let sightings = [];
+      if (sightingsRes.ok) {
+        sightings = extractArray(await sightingsRes.json());
+        console.log('Sightings from API:', sightings.map(s => ({ id: s._id || s.id, status: s.status })));
+      }
+
+      // Transform sightings into detection objects
+      const detections = sightings.map((s: any, idx: number) => ({
+        id: s._id || s.id,
+        name: s.type === 'Person' ? s.name : s.plateNumber || `Sighting ${idx + 1}`,
+        location: s.location?.address || s.location || 'Unknown',
+        date: s.date ? new Date(s.date).toLocaleDateString() : (s.reportedAt ? new Date(s.reportedAt).toLocaleDateString() : 'Unknown'),
+        time: s.time || (s.reportedAt ? new Date(s.reportedAt).toLocaleTimeString() : '00:00'),
+        accuracy: (s.type === 'person' || s.type === 'Person') ? null : (s.confidence || '85%'),
+        type: (s.type === 'person' || s.type === 'Person') ? 'Person' : 'CCTV',
+        status: s.status || 'active',
+        startDate: s.date || s.reportedAt,
+        startTime: s.time || (s.reportedAt ? new Date(s.reportedAt).toLocaleTimeString() : '00:00'),
+        lat: s.latitude || (s.location?.coordinates ? s.location.coordinates[1] : null) || 9.03 + (Math.random() - 0.5) * 0.1,
+        lng: s.longitude || (s.location?.coordinates ? s.location.coordinates[0] : null) || 38.74 + (Math.random() - 0.5) * 0.1,
+      }));
+
+      console.log('Transformed detections:', detections.map(d => ({ id: d.id, status: d.status })));
+      setDetectionHistory(detections);
+      setLoading(false);
+      notifications.show({
+        title: 'Sightings Refreshed',
+        message: 'Sighting data has been updated',
+        color: 'green',
+      });
+    } catch (err: any) {
+      console.error('Error refreshing sightings:', err);
+      setError(err.message || 'Failed to refresh sightings');
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -284,24 +354,14 @@ export default function AlertDetailPage() {
           startTime: s.time || (s.reportedAt ? new Date(s.reportedAt).toLocaleTimeString() : '00:00'),
           lat: s.latitude || (s.location?.coordinates ? s.location.coordinates[1] : null) || 9.03 + (Math.random() - 0.5) * 0.1,
           lng: s.longitude || (s.location?.coordinates ? s.location.coordinates[0] : null) || 38.74 + (Math.random() - 0.5) * 0.1,
-          description: s.description,
         }));
 
         setAlertData(alert);
         setDetectionHistory(detections);
-        // Do NOT set selectedDetection by default so the map shows ALL pins on load
-
-        createActionLog('alert_detail_view', {
-          alertId: alert.id,
-          alertCode: alert.code,
-          alertType: alert.type,
-          sightingCount: detections.length,
-        });
-
+        setLoading(false);
       } catch (err: any) {
-        console.error('Error fetching data:', err);
-        setError(err.message);
-      } finally {
+        console.error('Error fetching alert and sightings:', err);
+        setError(err.message || 'Failed to load alert data');
         setLoading(false);
       }
     };
@@ -655,17 +715,17 @@ export default function AlertDetailPage() {
           </Paper>
           <Paper p="md" withBorder radius="md" ta="center">
             <Group justify="center" mb="xs">
+              <IconCheck size={20} />
+              <Text size="sm" c="dimmed">Confirmed Sightings</Text>
+            </Group>
+            <Title order={2}>{confirmedSightings || 0}</Title>
+          </Paper>
+          <Paper p="md" withBorder radius="md" ta="center">
+            <Group justify="center" mb="xs">
               <IconClock size={20} />
               <Text size="sm" c="dimmed">Active Duration</Text>
             </Group>
             <Title order={2}>{alertData.duration || "N/A"}</Title>
-          </Paper>
-          <Paper p="md" withBorder radius="md" ta="center">
-            <Group justify="center" mb="xs">
-              <IconCamera size={20} />
-              <Text size="sm" c="dimmed">CCTV Confidence</Text>
-            </Group>
-            <Title order={2}>{alertData.cctvInfo?.confidence || "N/A"}</Title>
           </Paper>
           <Paper p="md" withBorder radius="md" ta="center">
             <Group justify="center" mb="xs">
@@ -675,6 +735,76 @@ export default function AlertDetailPage() {
             <Title order={2}>{alertData.status === "active" ? "Active" : "Resolved"}</Title>
           </Paper>
         </SimpleGrid>
+
+        {/* Analysis Section */}
+        <Paper p="xl" mb="xl" withBorder radius="md" bg={paperBg}>
+          <Group justify="space-between" mb="md">
+            <Group>
+              <IconAlertCircle size={24} color="#3b82f6" />
+              <Text fw={700} size="lg">Sighting Analysis</Text>
+            </Group>
+            <Badge color="blue" variant="light" size="lg">
+              {detectionHistory.length > 0 ? ((confirmedSightings / detectionHistory.length) * 100).toFixed(1) : 0}% Confirmation Rate
+            </Badge>
+          </Group>
+          <SimpleGrid cols={{ base: 1, md: 2 }}>
+            {/* Pie Chart */}
+            <Box style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+              <Box
+                style={{
+                  width: '200px',
+                  height: '200px',
+                  borderRadius: '50%',
+                  background: `conic-gradient(
+                    #22c55e 0deg ${detectionHistory.length > 0 ? (confirmedSightings / detectionHistory.length) * 360 : 0}deg,
+                    #eab308 ${detectionHistory.length > 0 ? (confirmedSightings / detectionHistory.length) * 360 : 0}deg 360deg
+                  )`,
+                  position: 'relative',
+                }}
+              >
+                <Box
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '50%',
+                    backgroundColor: paperBg,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text fw={800} size="xl" c="#3b82f6">{detectionHistory.length || 0}</Text>
+                  <Text size="xs" c="dimmed">Total</Text>
+                </Box>
+              </Box>
+            </Box>
+            {/* Legend */}
+            <Stack gap="md" style={{ justifyContent: 'center' }}>
+              <Group gap="xs">
+                <Box style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: '#22c55e' }} />
+                <Text fw={600}>Confirmed Sightings</Text>
+                <Badge color="green" variant="light">{confirmedSightings || 0}</Badge>
+              </Group>
+              <Group gap="xs">
+                <Box style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: '#eab308' }} />
+                <Text fw={600}>Pending Review</Text>
+                <Badge color="yellow" variant="light">{(detectionHistory.length || 0) - confirmedSightings}</Badge>
+              </Group>
+              <Divider />
+              <Group gap="xs">
+                <Text size="sm" c="dimmed">Confirmation Rate:</Text>
+                <Text fw={700} size="lg" c="#3b82f6">
+                  {detectionHistory.length > 0 ? ((confirmedSightings / detectionHistory.length) * 100).toFixed(1) : 0}%
+                </Text>
+              </Group>
+            </Stack>
+          </SimpleGrid>
+        </Paper>
 
         {/* Map + Table */}
         <Grid gutter="xl">
@@ -756,6 +886,15 @@ export default function AlertDetailPage() {
                     <Badge color="white" variant="filled" size="lg">
                       {detectionHistory.length} Total
                     </Badge>
+                    <ActionIcon
+                      variant="light"
+                      color="white"
+                      size="lg"
+                      onClick={handleRefreshSightings}
+                      title="Refresh sightings"
+                    >
+                      <IconRefresh size={20} />
+                    </ActionIcon>
                   </Group>
                 </Group>
               </Box>
@@ -772,6 +911,7 @@ export default function AlertDetailPage() {
                         <Table.Th style={{ textAlign: "center", fontWeight: 700, color: tableHeaderText }}>Accuracy</Table.Th>
                         <Table.Th style={{ textAlign: "center", fontWeight: 700, color: tableHeaderText }}>Type</Table.Th>
                         <Table.Th style={{ textAlign: "center", fontWeight: 700, color: tableHeaderText }}>Status</Table.Th>
+                        <Table.Th style={{ textAlign: "center", fontWeight: 700, color: tableHeaderText }}>Confirmed</Table.Th>
                         <Table.Th style={{ textAlign: "center", fontWeight: 700, color: tableHeaderText }}>Actions</Table.Th>
                       </Table.Tr>
                     </Table.Thead>
@@ -853,6 +993,17 @@ export default function AlertDetailPage() {
                               >
                                 {detection.status === "active" ? "ACTIVE" : "RESOLVED"}
                               </Badge>
+                            </Table.Td>
+                            <Table.Td style={{ textAlign: "center" }}>
+                              {detection.status === 'confirmed' || confirmedSightingIds.has(detection.id) ? (
+                                <Badge color="green" variant="filled" size="sm" leftSection={<IconCheck size={12} />}>
+                                  Confirmed
+                                </Badge>
+                              ) : (
+                                <Badge color="gray" variant="light" size="sm">
+                                  Pending
+                                </Badge>
+                              )}
                             </Table.Td>
                             <Table.Td style={{ textAlign: "center" }}>
                               <ActionIcon
@@ -937,7 +1088,7 @@ export default function AlertDetailPage() {
               leftSection={<IconCheck size={18} />}
               onClick={() => setFoundModalOpen(true)}
             >
-              ✅ Yes, this is my {alertData.type === 'person' ? 'person' : 'car'}!
+              ✅ Resolve Case
             </Button>
           )}
         </Group>

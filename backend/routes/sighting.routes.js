@@ -173,7 +173,7 @@ router.post('/', protect, reportSightingValidation, validate, reportSighting);
 
 router.get('/', protect, authorize('admin', 'moderator'), getAllSightings);
 router.get('/:id', protect, getSightingById);
-router.patch('/:id', protect, authorize('admin', 'moderator'), updateSightingValidation, validate, updateSighting);
+router.patch('/:id', protect, updateSightingValidation, validate, updateSighting);
 router.delete('/:id', protect, authorize('admin'), deleteSighting);
 
 module.exports = router;

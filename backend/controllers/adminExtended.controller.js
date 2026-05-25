@@ -279,10 +279,14 @@ const getPendingVehicleValidations = async (req, res, next) => {
 const verifyVehicleDocument = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { action, reason } = req.body; // action: 'approve' or 'reject'
+    const { action, status, reason } = req.body; // Support both 'action' and 'status' for compatibility
 
-    if (!['approve', 'reject'].includes(action)) {
-      return ApiResponse.error(res, 'Invalid action', 400);
+    // Normalize the input - support both formats from mobile app and other clients
+    const decision = action || status;
+    const isApproved = decision?.toLowerCase() === 'approved' || decision?.toLowerCase() === 'approve';
+
+    if (!decision || !['approved', 'rejected', 'approve', 'reject'].includes(decision.toLowerCase())) {
+      return ApiResponse.error(res, 'Invalid decision. Must be Approved or Rejected', 400);
     }
 
     const vehicle = await MissingVehicle.findById(id);
@@ -290,7 +294,7 @@ const verifyVehicleDocument = async (req, res, next) => {
       return ApiResponse.error(res, 'Vehicle not found', 404);
     }
 
-    if (action === 'approve') {
+    if (isApproved) {
       vehicle.verificationStatus = 'Verified';
       vehicle.verified = true;
       vehicle.status = 'Active';
@@ -311,11 +315,11 @@ const verifyVehicleDocument = async (req, res, next) => {
       const vehicleName = [vehicle.brand, vehicle.model].filter(Boolean).join(' ') || 'Your vehicle';
       const plateInfo = vehicle.plateNumber ? ` (${vehicle.plateNumber})` : '';
 
-      const notificationTitle = action === 'approve'
+      const notificationTitle = isApproved
         ? '✅ Ownership Document Approved'
         : '❌ Ownership Document Rejected';
 
-      const notificationMessage = action === 'approve'
+      const notificationMessage = isApproved
         ? `Your ownership document for ${vehicleName}${plateInfo} has been reviewed and approved. Your case is now fully verified.`
         : `Your ownership document for ${vehicleName}${plateInfo} has been reviewed and rejected.${reason ? ` Reason: ${reason}` : ' Please re-upload a valid ownership document.'}`;
 
@@ -323,12 +327,12 @@ const verifyVehicleDocument = async (req, res, next) => {
         recipient: reporterUserId,
         title: notificationTitle,
         message: notificationMessage,
-        type: action === 'approve' ? 'success' : 'warning',
+        type: isApproved ? 'success' : 'warning',
         priority: 'high',
       });
     }
 
-    return ApiResponse.success(res, `Vehicle document ${action}d successfully`, { vehicle });
+    return ApiResponse.success(res, `Vehicle document ${isApproved ? 'approved' : 'rejected'} successfully`, { vehicle });
   } catch (error) {
     next(error);
   }

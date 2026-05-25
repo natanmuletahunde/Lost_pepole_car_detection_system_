@@ -83,6 +83,7 @@ export default function SingleDetectionDetailPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>("");
+  const [confirmedCount, setConfirmedCount] = useState<number>(0);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<any>(null);
@@ -348,7 +349,7 @@ export default function SingleDetectionDetailPage() {
     setSelectedOption(option);
   };
 
-  const handleSubmitResponse = () => {
+  const handleSubmitResponse = async () => {
     if (!selectedOption) return;
 
     const isPerson = isPersonType(); // use the robust check
@@ -360,6 +361,30 @@ export default function SingleDetectionDetailPage() {
 
     if (isPerson) {
       if (selectedOption === "yes_person") {
+        // Update sighting status to confirmed in database
+        try {
+          const response = await apiClient(`${SIGHTINGS_API}/${params.detection_id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'confirmed' }),
+          });
+          console.log('PATCH response:', response);
+          if (response.ok) {
+            const result = await response.json();
+            console.log('PATCH result:', result);
+          }
+        } catch (err) {
+          console.error('Failed to update sighting status:', err);
+        }
+
+        // Store individual sighting ID in localStorage for immediate UI feedback
+        const confirmedIdsData = JSON.parse(localStorage.getItem('confirmedSightingIds') || '[]');
+        const sightingId = String(params.detection_id);
+        if (!confirmedIdsData.includes(sightingId)) {
+          confirmedIdsData.push(sightingId);
+          localStorage.setItem('confirmedSightingIds', JSON.stringify(confirmedIdsData));
+        }
+
         createActionLog("person_found_match", logDetails);
         notifications.show({
           title: "Response Submitted",
@@ -376,6 +401,25 @@ export default function SingleDetectionDetailPage() {
       }
     } else {
       if (selectedOption === "owner") {
+        // Update sighting status to confirmed in database
+        try {
+          await apiClient(`${SIGHTINGS_API}/${params.detection_id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'confirmed' }),
+          });
+        } catch (err) {
+          console.error('Failed to update sighting status:', err);
+        }
+
+        // Store individual sighting ID in localStorage for immediate UI feedback
+        const confirmedIdsData = JSON.parse(localStorage.getItem('confirmedSightingIds') || '[]');
+        const sightingId = String(params.detection_id);
+        if (!confirmedIdsData.includes(sightingId)) {
+          confirmedIdsData.push(sightingId);
+          localStorage.setItem('confirmedSightingIds', JSON.stringify(confirmedIdsData));
+        }
+
         createActionLog("vehicle_owner_confirmed", logDetails);
         notifications.show({
           title: "Response Submitted",
@@ -1161,7 +1205,7 @@ export default function SingleDetectionDetailPage() {
                                         : getBg(colorScheme, "#374151", theme.colors.gray[3]),
                                   }}
                                 >
-                                  ✅ Yes, that's the person
+                                  ✅ Resolve Case
                                 </Text>
                                 <Text size="sm" c="dimmed">
                                   Confirm this is the missing person

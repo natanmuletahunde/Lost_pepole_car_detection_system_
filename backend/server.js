@@ -35,6 +35,7 @@ const chapaRoutes = require("./routes/chapa.routes");
 const publicRoutes = require("./routes/public.routes");
 
 const pcLocationRoutes = require("./routes/pcLocation.routes");
+const aiRoutes = require("./routes/ai.routes");
 const app = express();
 
 // ================= DB =================
@@ -140,17 +141,14 @@ app.use(
   notificationUserRoutes
 );
 
-// 🔥 ADMIN feedback (PATCH /:id with { text, status }; list overlaps GET with admin.routes /feedback)
-app.use(
-  "/api/v1/admin/feedback",
-  protect,
-  authorize("admin"),
-  feedbackAdminRoutes
-);
+// Feedback admin routes are already included in admin.routes.js - no duplicate mount needed
 app.use("/api/v1/missing-persons", missingPersonRoutes);
 app.use("/api/v1/missing-vehicles", missingVehicleRoutes);
 app.use("/api/v1/chapa", chapaRoutes);
 app.use("/api/v1/public", publicRoutes);
+app.use("/api/v1/ai", aiRoutes);
+
+// Remove duplicate feedback admin routes - they're already in admin.routes.js
 
 // ================= ERROR =================
 app.use(notFound);

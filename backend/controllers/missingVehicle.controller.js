@@ -210,3 +210,54 @@ exports.resolveMissingVehicle = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// ==============================
+// ADMIN: Fetch pending vehicle document validations
+// ==============================
+exports.getPendingVehicleValidations = async (req, res) => {
+  try {
+    const vehicles = await MissingVehicle.find({
+      verificationStatus: 'Pending',
+      ownershipDocumentUrl: { $exists: true, $ne: [] }
+    }).sort({ createdAt: -1 });
+
+    res.json({ success: true, data: vehicles });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ==============================
+// ADMIN: Verify vehicle document
+// ==============================
+exports.verifyVehicleDocument = async (req, res) => {
+  try {
+    const vehicle = await MissingVehicle.findById(req.params.id);
+    if (!vehicle) {
+      return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    }
+
+    const { status } = req.body;
+    if (!status || !['Approved', 'Rejected'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status. Must be Approved or Rejected' });
+    }
+
+    vehicle.verificationStatus = status === 'Approved' ? 'Verified' : 'Rejected';
+    
+    // If approved, also mark as verified and active
+    if (status === 'Approved') {
+      vehicle.verified = true;
+      vehicle.status = 'Active';
+    } else {
+      vehicle.verified = false;
+      vehicle.status = 'Rejected';
+    }
+
+    vehicle.lastUpdated = new Date();
+    await vehicle.save();
+
+    res.json({ success: true, message: `Document ${status.toLowerCase()} successfully`, data: vehicle });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
