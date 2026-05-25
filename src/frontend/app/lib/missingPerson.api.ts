@@ -51,9 +51,10 @@ export const createReport = async ({
   // Append additional documents
   if (ownershipDocument) {
     const docs = Array.isArray(ownershipDocument) ? ownershipDocument : [ownershipDocument];
-    docs.forEach(doc => {
-      if (doc instanceof File) {
-        formData.append('ownershipDocument', doc);
+    docs.forEach((doc: any) => {
+      const actualFile = doc instanceof File ? doc : doc?.file;
+      if (actualFile instanceof File) {
+        formData.append('ownershipDocument', actualFile);
       }
     });
   }

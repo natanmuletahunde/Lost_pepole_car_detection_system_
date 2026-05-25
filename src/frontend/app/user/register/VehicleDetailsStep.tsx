@@ -14,10 +14,19 @@ import { useTranslations } from 'next-intl';
 export const VehicleDetailsStep = ({
   formValues,
   handleInputChange,
+  selectedBrand,
+  setSelectedBrand,
+  selectedModel,
+  setSelectedModel,
+  selectedSubmodel,
+  setSelectedSubmodel,
+  brands = [],
+  models = [],
+  submodels = [],
+  ownershipDoc,
+  setOwnershipDoc,
   vehicleImages,
   setVehicleImages,
-  ownershipDocs,
-  setOwnershipDocs,
   completed,
   colorScheme,
   theme,
@@ -30,6 +39,8 @@ export const VehicleDetailsStep = ({
 }: any) => {
   const t = useTranslations("Register");
   const tCommon = useTranslations("Common");
+
+  const ownershipDocs = Array.isArray(ownershipDoc) ? ownershipDoc : (ownershipDoc ? [ownershipDoc] : []);
 
   const handleImageUpload = (event: any) => {
     const files = event.target.files;
@@ -56,22 +67,21 @@ export const VehicleDetailsStep = ({
       file,
       preview: URL.createObjectURL(file)
     }));
-    setOwnershipDocs((prev: any[]) => [...prev, ...newDocs]);
+    if (typeof setOwnershipDoc === 'function') {
+      setOwnershipDoc([...ownershipDocs, ...newDocs]);
+    }
     event.target.value = '';
   };
 
   const removeDoc = (indexToRemove: number) => {
-    setOwnershipDocs((prev: any[]) => {
-      URL.revokeObjectURL(prev[indexToRemove].preview);
-      return prev.filter((_, idx) => idx !== indexToRemove);
-    });
+    if (ownershipDocs[indexToRemove]?.preview) {
+      URL.revokeObjectURL(ownershipDocs[indexToRemove].preview);
+    }
+    const updatedDocs = ownershipDocs.filter((_, idx) => idx !== indexToRemove);
+    if (typeof setOwnershipDoc === 'function') {
+      setOwnershipDoc(updatedDocs);
+    }
   };
-
-  // Curated lists with localized labels
-  const brandOptions = ['Toyota', 'Hyundai', 'Suzuki', 'Lifan', 'Isuzu', 'Ford', 'Chevrolet', 'Other'].map(b => ({
-    value: b,
-    label: b === 'Other' ? t("other") : b
-  }));
 
   const colorOptions = ['Black', 'White', 'Silver', 'Grey', 'Red', 'Blue', 'Green', 'Yellow', 'Other'].map(c => ({
     value: c,
@@ -144,29 +154,39 @@ export const VehicleDetailsStep = ({
           name="brand"
           label={<Text fw={600} size="sm">{t("brandLabel")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
           placeholder={t("brandPlaceholder")}
-          data={brandOptions}
+          data={brands}
           radius="md"
           variant="filled"
-          value={formValues.brand}
-          onChange={(value) => handleInputChange('brand', value)}
+          value={selectedBrand}
+          onChange={setSelectedBrand}
+          searchable
+          clearable
         />
-        <TextInput
+        <Select
           name="model"
           label={<Text fw={600} size="sm">{t("modelLabel")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
           placeholder={t("modelPlaceholder")}
+          data={models}
           radius="md"
           variant="filled"
-          value={formValues.model}
-          onChange={(e) => handleInputChange('model', e.target.value)}
+          value={selectedModel}
+          onChange={setSelectedModel}
+          disabled={!selectedBrand}
+          searchable
+          clearable
         />
-        <TextInput
+        <Select
           name="submodel"
           label={<Text fw={600} size="sm">{t("submodelLabel")}</Text>}
           placeholder={t("submodelPlaceholder")}
+          data={submodels}
           radius="md"
           variant="filled"
-          value={formValues.submodel}
-          onChange={(e) => handleInputChange('submodel', e.target.value)}
+          value={selectedSubmodel}
+          onChange={setSelectedSubmodel}
+          disabled={!selectedModel}
+          searchable
+          clearable
         />
         <Select
           name="color"

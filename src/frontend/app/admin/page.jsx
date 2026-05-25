@@ -488,7 +488,7 @@ function StatCard({ label, value, color, icon, darkText = false }) {
       <Link href="/admin/registered_data" passHref>
         <UnstyledButton w="100%" py={5} bg={overlayBg} component="a">
           <Group justify="center" gap={5}>
-            <Text size="xs" fw={700} c={textColor}>More info</Text>
+
             <IconChevronRight size={12} stroke={3} color={textColor} />
           </Group>
         </UnstyledButton>

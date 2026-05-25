@@ -78,6 +78,7 @@ export default function DashboardHeader({
   const [internalUser, setInternalUser] = useState<any>(null);
   const [internalUnread, setInternalUnread] = useState(0);
   const [searchVal, setSearchVal] = useState("");
+  const [notificationsList, setNotificationsList] = useState<any[]>([]);
 
   useEffect(() => {
     if (!propUser) {
@@ -93,25 +94,27 @@ export default function DashboardHeader({
   }, [propUser]);
 
   // Fetch unread count autonomously if not provided
+  const fetchNotifications = async () => {
+    try {
+      const res = await apiClient(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1"}/notifications`);
+      if (res.ok) {
+        const payload = await res.json();
+        const list = Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload)
+          ? payload
+          : [];
+        setNotificationsList(list);
+        setInternalUnread(list.filter((n: any) => !n.isRead).length);
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     if (propUnreadCount === undefined) {
-      const fetchUnread = async () => {
-        try {
-          const res = await apiClient(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1"}/notifications`);
-          if (res.ok) {
-            const payload = await res.json();
-            const list = Array.isArray(payload?.data)
-              ? payload.data
-              : Array.isArray(payload)
-              ? payload
-              : [];
-            setInternalUnread(list.filter((n: any) => !n.isRead).length);
-          }
-        } catch (_) {}
-      };
-      fetchUnread();
+      fetchNotifications();
       // Periodically refresh notifications
-      const interval = setInterval(fetchUnread, 30000);
+      const interval = setInterval(fetchNotifications, 15000);
       return () => clearInterval(interval);
     }
   }, [propUnreadCount]);
@@ -120,6 +123,27 @@ export default function DashboardHeader({
   const user = propUser !== undefined ? propUser : internalUser;
   const unreadCount = propUnreadCount !== undefined ? propUnreadCount : internalUnread;
   const colorScheme = propColorScheme || (mantineColorScheme as any) || "light";
+  
+  const notifications = propNotifications !== undefined ? propNotifications : notificationsList;
+
+  const alertNotifications = notifications.filter(
+    (n: any) =>
+      n.type === "alert" ||
+      n.title?.toLowerCase().includes("alert") ||
+      n.title?.toLowerCase().includes("match")
+  );
+
+  const generalNotifications = notifications.filter(
+    (n: any) =>
+      !(
+        n.type === "alert" ||
+        n.title?.toLowerCase().includes("alert") ||
+        n.title?.toLowerCase().includes("match")
+      )
+  );
+
+  const alertUnreadCount = alertNotifications.filter((n: any) => !n.isRead).length;
+  const generalUnreadCount = generalNotifications.filter((n: any) => !n.isRead).length;
   
   const toggleColorScheme = propToggleColorScheme || (() => {
     setColorScheme(colorScheme === "dark" ? "light" : "dark");
@@ -336,6 +360,17 @@ export default function DashboardHeader({
           border-color: #2f80ed !important;
           color: #2f80ed !important;
         }
+        .lpc-dropdown-item {
+          width: 100% !important;
+          border-radius: 8px !important;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          text-align: left !important;
+          cursor: pointer !important;
+        }
+        .lpc-dropdown-item:hover {
+          background-color: var(--btn-bg-hover) !important;
+          transform: translateX(4px) !important;
+        }
       ` }} />
 
       <Container size="xl">
@@ -455,47 +490,131 @@ export default function DashboardHeader({
            
 
             {/* 5. CCTV & Sightings Alerts (Bell Icon) - Always accessible for logged-in users */}
-            {user && !isAlerts &&  (
-              <Tooltip label={t("alerts")} withArrow position="bottom" zIndex={5000} offset={12}>
-                <Indicator
-                  inline
-                  label={unreadCount}
-                  size={16}
-                  color="red"
-                  disabled={unreadCount === 0}
-                  styles={{ indicator: { fontWeight: 700, zIndex: 10 } }}
-                >
-                  <ActionIcon
-                    className={`lpc-nav-btn ${isAlerts ? "lpc-nav-btn-active" : ""}`}
-                    component={Link}
-                    href="/user/alert"
-                  >
-                    <IconBell size={22} />
-                  </ActionIcon>
-                </Indicator>
-              </Tooltip>
+            {user && !isAlerts && (
+              <Menu shadow="md" width={340} radius="md" position="bottom-end" transitionProps={{ transition: "pop-top-right" }}>
+                <Menu.Target>
+                  <UnstyledButton style={{ outline: 'none' }}>
+                    <Tooltip label={t("alerts")} withArrow position="bottom" zIndex={5000} offset={12}>
+                      <Indicator
+                        inline
+                        label={alertUnreadCount}
+                        size={16}
+                        color="red"
+                        disabled={alertUnreadCount === 0}
+                        styles={{ indicator: { fontWeight: 700, zIndex: 10 } }}
+                      >
+                        <ActionIcon className={`lpc-nav-btn ${isAlerts ? "lpc-nav-btn-active" : ""}`}>
+                          <IconBell size={22} />
+                        </ActionIcon>
+                      </Indicator>
+                    </Tooltip>
+                  </UnstyledButton>
+                </Menu.Target>
+                <Menu.Dropdown bg={getBg("white", "#1A1B1E")}>
+                  <Box p="xs">
+                    <Group justify="space-between" mb="xs" pb="5px" style={{ borderBottom: `1px solid ${getBg("#e9ecef", "#2C2E33")}` }}>
+                      <Text fw={800} size="sm">{t("alerts") || "Match Alerts"}</Text>
+                      {alertUnreadCount > 0 && (
+                        <Badge color="red" variant="light" size="sm">{alertUnreadCount} Critical</Badge>
+                      )}
+                    </Group>
+                    <Stack gap={4} style={{ maxHeight: 280, overflowY: 'auto' }}>
+                      {alertNotifications.length === 0 ? (
+                        <Box py="xl" ta="center">
+                          <IconBell size={32} color="#94a3b8" style={{ marginBottom: 8, opacity: 0.6 }} />
+                          <Text size="xs" c="dimmed">No active CCTV alerts</Text>
+                        </Box>
+                      ) : (
+                        alertNotifications.slice(0, 5).map((n: any) => (
+                          <UnstyledButton
+                            key={n._id || n.id}
+                            className="lpc-dropdown-item"
+                            p="xs"
+                            onClick={() => router.push('/user/alert')}
+                            style={{
+                              background: n.isRead ? 'transparent' : getBg('rgba(255, 77, 77, 0.04)', 'rgba(255, 77, 77, 0.08)')
+                            }}
+                          >
+                            <Box>
+                              <Text fw={n.isRead ? 600 : 800} size="xs" c="red.7" truncate>{n.title}</Text>
+                              <Text size="xs" c="dimmed" truncate>{n.message}</Text>
+                              <Text size="10px" c="dimmed" mt={2}>{new Date(n.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                            </Box>
+                          </UnstyledButton>
+                        ))
+                      )}
+                    </Stack>
+                    <Menu.Divider mt="xs" />
+                    <Button fullWidth size="xs" variant="light" color="red" mt="xs" onClick={() => router.push('/user/alert')}>
+                      {tCommon("viewAll") || "View All Alerts"}
+                    </Button>
+                  </Box>
+                </Menu.Dropdown>
+              </Menu>
             )}
 
             {/* 6. Notifications Hub / Inbox (Mail Icon) - Always accessible for logged-in users */}
             {user && !isNotifications && (
-              <Tooltip label={t("inbox")} withArrow position="bottom" zIndex={5000} offset={12}>
-                <Indicator
-                  inline
-                  label={unreadCount}
-                  size={16}
-                  color="red"
-                  disabled={unreadCount === 0}
-                  styles={{ indicator: { fontWeight: 700, zIndex: 10 } }}
-                >
-                  <ActionIcon
-                    className={`lpc-nav-btn ${isNotifications ? "lpc-nav-btn-active" : ""}`}
-                    component={Link}
-                    href="/user/notifications"
-                  >
-                    <IconMail size={22} />
-                  </ActionIcon>
-                </Indicator>
-              </Tooltip>
+              <Menu shadow="md" width={340} radius="md" position="bottom-end" transitionProps={{ transition: "pop-top-right" }}>
+                <Menu.Target>
+                  <UnstyledButton style={{ outline: 'none' }}>
+                    <Tooltip label={t("inbox")} withArrow position="bottom" zIndex={5000} offset={12}>
+                      <Indicator
+                        inline
+                        label={generalUnreadCount}
+                        size={16}
+                        color="blue"
+                        disabled={generalUnreadCount === 0}
+                        styles={{ indicator: { fontWeight: 700, zIndex: 10 } }}
+                      >
+                        <ActionIcon className={`lpc-nav-btn ${isNotifications ? "lpc-nav-btn-active" : ""}`}>
+                          <IconMail size={22} />
+                        </ActionIcon>
+                      </Indicator>
+                    </Tooltip>
+                  </UnstyledButton>
+                </Menu.Target>
+                <Menu.Dropdown bg={getBg("white", "#1A1B1E")}>
+                  <Box p="xs">
+                    <Group justify="space-between" mb="xs" pb="5px" style={{ borderBottom: `1px solid ${getBg("#e9ecef", "#2C2E33")}` }}>
+                      <Text fw={800} size="sm">{tCommon("notifications") || "Notifications"}</Text>
+                      {generalUnreadCount > 0 && (
+                        <Badge color="blue" variant="light" size="sm">{generalUnreadCount} New</Badge>
+                      )}
+                    </Group>
+                    <Stack gap={4} style={{ maxHeight: 280, overflowY: 'auto' }}>
+                      {generalNotifications.length === 0 ? (
+                        <Box py="xl" ta="center">
+                          <IconMail size={32} color="#94a3b8" style={{ marginBottom: 8, opacity: 0.6 }} />
+                          <Text size="xs" c="dimmed">Inbox is empty</Text>
+                        </Box>
+                      ) : (
+                        generalNotifications.slice(0, 5).map((n: any) => (
+                          <UnstyledButton
+                            key={n._id || n.id}
+                            className="lpc-dropdown-item"
+                            p="xs"
+                            onClick={() => router.push('/user/notifications')}
+                            style={{
+                              background: n.isRead ? 'transparent' : getBg('rgba(47, 128, 237, 0.04)', 'rgba(47, 128, 237, 0.08)')
+                            }}
+                          >
+                            <Box>
+                              <Text fw={n.isRead ? 600 : 800} size="xs" truncate>{n.title}</Text>
+                              <Text size="xs" c="dimmed" truncate>{n.message}</Text>
+                              <Text size="10px" c="dimmed" mt={2}>{new Date(n.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                            </Box>
+                          </UnstyledButton>
+                        ))
+                      )}
+                    </Stack>
+                    <Menu.Divider mt="xs" />
+                    <Button fullWidth size="xs" variant="light" color="blue" mt="xs" onClick={() => router.push('/user/notifications')}>
+                      {tCommon("viewAll") || "View All Inbox"}
+                    </Button>
+                  </Box>
+                </Menu.Dropdown>
+              </Menu>
             )}
 
             {/* 7. Theme Toggle Icon */}
