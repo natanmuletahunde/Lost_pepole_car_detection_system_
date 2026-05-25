@@ -1,34 +1,51 @@
-'use client';
+"use client";
 
-import { Container, Text, SimpleGrid, Box, Anchor, Divider, Group, Stack, useMantineTheme, useMantineColorScheme } from '@mantine/core';
-import { 
-  IconBrandFacebook, 
-  IconBrandTwitter, 
-  IconBrandInstagram, 
-  IconBrandLinkedin, 
-  IconBrandYoutube 
-} from '@tabler/icons-react';
-import Link from 'next/link';
-import Image from 'next/image';
+import {
+  Container,
+  Text,
+  SimpleGrid,
+  Box,
+  Anchor,
+  Divider,
+  Group,
+  Stack,
+  useMantineTheme,
+  useMantineColorScheme,
+} from "@mantine/core";
+import {
+  IconBrandFacebook,
+  IconBrandTwitter,
+  IconBrandInstagram,
+  IconBrandLinkedin,
+  IconBrandYoutube,
+} from "@tabler/icons-react";
+import Link from "next/link";
+import Image from "next/image";
 
 // Helper to get dynamic background/color values
-const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
-const getTextColor = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
+const getBg = (colorScheme, light, dark) =>
+  colorScheme === "dark" ? dark : light;
+const getTextColor = (colorScheme, light, dark) =>
+  colorScheme === "dark" ? dark : light;
 
 export default function MainFooter() {
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
 
   // Dynamic colors
-  const footerBg = getBg(colorScheme, 'white', theme.colors.dark[7]);
-  const borderColor = getBg(colorScheme, '#f0f0f0', theme.colors.dark[5]);
-  const headingColor = getTextColor(colorScheme, theme.colors.dark[9], theme.colors.gray[2]); // dark in light mode, light in dark mode
-  const dimmedColor = 'dimmed'; // already adapts
+  const footerBg = getBg(colorScheme, "white", theme.colors.dark[7]);
+  const borderColor = getBg(colorScheme, "#f0f0f0", theme.colors.dark[5]);
+  const headingColor = getTextColor(
+    colorScheme,
+    theme.colors.dark[9],
+    theme.colors.gray[2],
+  ); // dark in light mode, light in dark mode
+  const dimmedColor = "dimmed"; // already adapts
 
   // Social icon hover style (optional – you can keep the same)
   const iconStyle = {
-    transition: 'color 0.2s ease',
-    cursor: 'pointer',
+    transition: "color 0.2s ease",
+    cursor: "pointer",
   };
 
   return (
@@ -38,24 +55,31 @@ export default function MainFooter() {
       pb={40}
       style={{
         borderTop: `1px solid ${borderColor}`,
-        position: 'relative',
+        position: "relative",
         zIndex: 20,
       }}
     >
-      <Container size="lg">
+      <Container size="xl">
         <SimpleGrid cols={{ base: 1, sm: 2, md: 5 }} spacing={40} mb={50}>
           {/* Brand Column */}
           <Stack gap="md">
-            <Group gap="xs" component={Link} href="/" style={{ textDecoration: 'none' }}>
+            <Group
+              gap="xs"
+              component={Link}
+              href="/"
+              style={{ textDecoration: "none" }}
+            >
               <Image
                 src="/logo.jpg"
                 alt="Logo"
                 width={0}
                 height={30}
                 sizes="100vw"
-                style={{ width: 'auto', height: '30px', borderRadius: '6px' }}
+                style={{ width: "auto", height: "30px", borderRadius: "6px" }}
               />
-              <Text fw={800} size="xl" c={headingColor}>Flega</Text>
+              <Text fw={800} size="xl" c={headingColor}>
+                Flega
+              </Text>
             </Group>
             <Text size="sm" c={dimmedColor}>
               Ethiopian based platform that is made for local and global use.
@@ -111,43 +135,118 @@ export default function MainFooter() {
           </Stack>
 
           {/* Product Column */}
-          <Stack gap="sm">
-            <Text fw={700} c={headingColor}>Product</Text>
-            {['Features', 'Pricing', 'Updates'].map((link) => (
-              <Anchor key={link} href="#" size="sm" c={dimmedColor} underline="never">
+          {/* <Stack gap="sm">
+            <Text fw={700} c={headingColor}>
+              Product
+            </Text>
+            {["Features", "Pricing", "Updates"].map((link) => (
+              <Anchor
+                key={link}
+                href="#"
+                size="sm"
+                c={dimmedColor}
+                underline="never"
+              >
                 {link}
               </Anchor>
             ))}
+          </Stack> */}
+
+          <Stack gap="sm">
+            <Text fw={700} c={headingColor}>
+              Product
+            </Text>
+            <Anchor
+              component={Link}
+              href="../user/how-it-works"
+              size="sm"
+              c={dimmedColor}
+              underline="never"
+            >
+              Features
+            </Anchor>
+            <Anchor
+              component={Link}
+              href="../user/subscribe"
+              size="sm"
+              c={dimmedColor}
+              underline="never"
+            >
+              Pricing
+            </Anchor>
+            <Anchor href="../user/notifications" size="sm" c={dimmedColor} underline="never">
+              Updates
+            </Anchor>
           </Stack>
 
           {/* Company Column */}
           <Stack gap="sm">
-            <Text fw={700} c={headingColor}>Company</Text>
-            <Anchor component={Link} href="/about" size="sm" c={dimmedColor} underline="never">
+            <Text fw={700} c={headingColor}>
+              Company
+            </Text>
+            <Anchor
+              component={Link}
+              href="../user/about"
+              size="sm"
+              c={dimmedColor}
+              underline="never"
+            >
               About
             </Anchor>
-            <Anchor component={Link} href="/about" size="sm" c={dimmedColor} underline="never">
+            <Anchor
+              component={Link}
+              href="../user/about/#contact"
+              size="sm"
+              c={dimmedColor}
+              underline="never"
+            >
               Contact us
             </Anchor>
-            <Anchor href="#" size="sm" c={dimmedColor} underline="never">
+            <Anchor href="../user/about" size="sm" c={dimmedColor} underline="never">
               Blog
             </Anchor>
           </Stack>
 
           {/* Support Column */}
+
           <Stack gap="sm">
-            <Text fw={700} c={headingColor}>Support</Text>
-            {['Help center', 'Report a bug', 'Chat support'].map((link) => (
-              <Anchor key={link} href="#" size="sm" c={dimmedColor} underline="never">
-                {link}
-              </Anchor>
-            ))}
+            <Text fw={700} c={headingColor}>
+              Support
+            </Text>
+            <Anchor
+              component={Link}
+              href="../user/feedback"
+              size="sm"
+              c={dimmedColor}
+              underline="never"
+            >
+              Help center
+            </Anchor>
+            <Anchor
+              component={Link}
+              href="../user/feedback"
+              size="sm"
+              c={dimmedColor}
+              underline="never"
+            >
+              Report a bug
+            </Anchor>
+            <Anchor href="../user/feedback" size="sm" c={dimmedColor} underline="never">
+              Chat support
+            </Anchor>
           </Stack>
 
           {/* Contacts Column */}
           <Stack gap="sm">
-            <Text fw={700} c={headingColor}>Contact us</Text>
-            <Anchor href="mailto:contact@flega.com" size="sm" c={dimmedColor} underline="never">
+            <Text fw={700} c={headingColor}>
+              Contact us
+            </Text>
+            <Anchor
+              href="mailto:contact@flega.com"
+              size="sm"
+              c={dimmedColor}
+              underline="never"
+            >
               ✉️ contact@flega.com
             </Anchor>
             <Text size="sm" c={dimmedColor}>
@@ -159,12 +258,16 @@ export default function MainFooter() {
         <Divider mb="xl" color={borderColor} />
 
         <Group justify="space-between">
-          <Text size="xs" c={dimmedColor}>Copyright © 2026 Flega™</Text>
+          <Text size="xs" c={dimmedColor}>
+            Copyright © 2026 Flega™
+          </Text>
           <Group gap="xs">
             <Anchor href="#" size="xs" c={dimmedColor}>
               Terms
             </Anchor>
-            <Text size="xs" c={dimmedColor}>|</Text>
+            <Text size="xs" c={dimmedColor}>
+              |
+            </Text>
             <Anchor href="#" size="xs" c={dimmedColor}>
               Privacy
             </Anchor>

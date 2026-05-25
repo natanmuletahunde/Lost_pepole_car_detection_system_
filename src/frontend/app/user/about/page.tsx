@@ -201,11 +201,16 @@ export default function AboutPage() {
               order={1}
               size={rem(72)}
               fw={900}
-              variant="gradient"
-              gradient={{ from: 'blue', to: 'teal', deg: 45 }}
               mb="md"
             >
-              About Our Project
+              <Text
+                component="span"
+                variant="gradient"
+                gradient={{ from: 'blue', to: 'teal', deg: 45 }}
+                inherit
+              >
+                About Our Project
+              </Text>
             </Title>
             <Text size="xl" c="dimmed" maw={700} mx="auto" mb={40}>
               Meet the team, explore our journey, and see how we're building the future of public safety in Ethiopia.

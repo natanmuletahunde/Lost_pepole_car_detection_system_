@@ -33,6 +33,7 @@ const feedbackUserRoutes = require("./routes/feedback.user.routes");
 const feedbackAdminRoutes = require("./routes/feedback.admin.route");
 const chapaRoutes = require("./routes/chapa.routes");
 const publicRoutes = require("./routes/public.routes");
+const contactRoutes = require("./routes/contact.routes");
 
 const pcLocationRoutes = require("./routes/pcLocation.routes");
 const aiRoutes = require("./routes/ai.routes");
@@ -146,9 +147,7 @@ app.use("/api/v1/missing-persons", missingPersonRoutes);
 app.use("/api/v1/missing-vehicles", missingVehicleRoutes);
 app.use("/api/v1/chapa", chapaRoutes);
 app.use("/api/v1/public", publicRoutes);
-app.use("/api/v1/ai", aiRoutes);
-
-// Remove duplicate feedback admin routes - they're already in admin.routes.js
+app.use("/api/v1", contactRoutes);
 
 // ================= ERROR =================
 app.use(notFound);
@@ -157,7 +156,7 @@ app.use(errorHandler);
 // ================= SERVER =================
 const server = app.listen(config.server.port, "0.0.0.0", () => {
   console.log(`🚀 Server running on http://0.0.0.0:${config.server.port}`);
-  
+
 });
 
 

@@ -148,49 +148,61 @@ export default function AIAssistantWidget() {
   const handleSendMessage = async (text) => {
     if (!text.trim()) return;
 
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+
     // 1. Add User Message
     const userMsg = { id: Date.now().toString(), sender: 'user', text };
-    const chatHistory = [...messages];
-    setMessages(prev => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInputValue('');
 
     // 2. Trigger Typing Animation
     setIsTyping(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/v1/ai/chat", {
-        method: "POST",
+      // Exclude welcome message from the history sent to DeepSeek
+      const historyToSend = updatedMessages.filter(msg => msg.id !== 'welcome');
+
+      const res = await fetch(`${API_BASE_URL}/public/ai-assistant`, {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          message: text,
-          history: chatHistory,
-          language: lang
+          messages: historyToSend,
+          lang: lang
         })
       });
 
-      if (!response.ok) {
-        throw new Error("API call failed");
+      if (!res.ok) {
+        throw new Error('AI Assistant request failed');
       }
 
-      const resData = await response.json();
-      
-      if (resData && resData.success && resData.data) {
-        const botMsg = { id: Date.now().toString(), sender: 'bot', text: resData.data };
-        setMessages(prev => [...prev, botMsg]);
-      } else {
-        throw new Error("Invalid API response format");
+      const payload = await res.json();
+      const replyText = payload?.data?.reply || payload?.reply;
+
+      if (!replyText) {
+        throw new Error('Invalid AI response payload');
       }
+
+      const botMsg = { id: (Date.now() + 1).toString(), sender: 'bot', text: replyText };
+      setMessages(prev => [...prev, botMsg]);
     } catch (error) {
-      console.error("Chatbot API Error:", error);
-      const errorReplies = {
-        en: "I'm having trouble connecting to my brain right now. Please ensure the backend server is running, or try again in a moment!",
-        am: "በአሁኑ ጊዜ ከእውቀት ማዕከሌ ጋር መገናኘት አልቻልኩም። እባክዎ የጀርባ አገልጋዩ (backend) መሥራቱን ያረጋግጡ ወይም ትንሽ ቆይተው እንደገና ይሞክሩ!",
-        om: "Yeroo ammaa sammuu koo wajjin wal qunnamuu hin dandeenye. Maaloo backend server hojjechaa jiraachuu isaa mirkaneessi, ykn sekondii muraasa booda irra deebi'ii yaali!"
-      };
-      const errorText = errorReplies[lang] || errorReplies.en;
-      const botMsg = { id: Date.now().toString(), sender: 'bot', text: errorText };
+      console.error('DeepSeek AI Error:', error);
+      
+      // Fallback local response if AI server is unreachable or fails
+      let matchedKey = null;
+      const lowerText = text.toLowerCase();
+
+      for (const [key, keywordList] of Object.entries(activeLang.keywords)) {
+        if (keywordList.some(kw => lowerText.includes(kw))) {
+          matchedKey = key;
+          break;
+        }
+      }
+
+      const replyText = matchedKey ? activeLang.responses[matchedKey] : activeLang.responses.fallback;
+      const botMsg = { id: (Date.now() + 1).toString(), sender: 'bot', text: replyText };
       setMessages(prev => [...prev, botMsg]);
     } finally {
       setIsTyping(false);
