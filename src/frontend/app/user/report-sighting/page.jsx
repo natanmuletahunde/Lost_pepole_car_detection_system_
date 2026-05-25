@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useTranslations } from "next-intl";
 import {
   Container,
   Box,
@@ -22,8 +23,8 @@ import {
   Divider,
   useMantineTheme,
   useMantineColorScheme,
-} from '@mantine/core';
-import { notifications } from '@mantine/notifications';
+} from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import {
   IconMapPin,
   IconAlertCircle,
@@ -33,45 +34,50 @@ import {
   IconDashboard,
   IconQuestionMark,
   IconInfoCircle,
-} from '@tabler/icons-react';
-import dynamic from 'next/dynamic';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import MainFooter from '../../components/MainFooter';
-import DashboardHeader from '../dashboard/DashboardHeader'; 
-import { useMediaQuery } from '@mantine/hooks';
+} from "@tabler/icons-react";
+import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import MainFooter from "../../components/MainFooter";
+import DashboardHeader from "../dashboard/DashboardHeader";
+import { useMediaQuery } from "@mantine/hooks";
 
 // Real backend API URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 const SIGHTINGS_API = `${API_BASE_URL}/sightings`;
 
 // Theme constants (same as registration form)
-const PRIMARY_COLOR = '#0034D1';
-const PRIMARY_LIGHT = '#4d79ff';
-const PRIMARY_DARK = '#0029a8';
+const PRIMARY_COLOR = "#0034D1";
+const PRIMARY_LIGHT = "#4d79ff";
+const PRIMARY_DARK = "#0029a8";
 const PRIMARY_GRADIENT = `linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #0066ff 100%)`;
 
 // Helper for dynamic background/text colors
-const getBg = (colorScheme, light, dark) => (colorScheme === 'dark' ? dark : light);
+const getBg = (colorScheme, light, dark) =>
+  colorScheme === "dark" ? dark : light;
 
 // Dynamic import of the map (no SSR)
-const LocationPicker = dynamic(() => import('../../components/LocationPicker'), {
-  ssr: false,
-  loading: () => (
-    <Box
-      style={{
-        height: 300,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#f0f5ff',
-        borderRadius: '12px',
-      }}
-    >
-      <Loader size="lg" color={PRIMARY_COLOR} />
-    </Box>
-  ),
-});
+const LocationPicker = dynamic(
+  () => import("../../components/LocationPicker"),
+  {
+    ssr: false,
+    loading: () => (
+      <Box
+        style={{
+          height: 300,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f0f5ff",
+          borderRadius: "12px",
+        }}
+      >
+        <Loader size="lg" color={PRIMARY_COLOR} />
+      </Box>
+    ),
+  },
+);
 
 function ReportSightingPageContent() {
   const router = useRouter();
@@ -79,51 +85,53 @@ function ReportSightingPageContent() {
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
   const isMobile = useMediaQuery(`(max-width: ${theme.breakpoints.sm})`);
-  
+  const t = useTranslations("ReportSighting");
+  const prefillApplied = useRef(false);
 
   // Read query parameters for dynamic message & prefill
-  const caseId = searchParams.get('caseId');
-  const typeParam = searchParams.get('type');       // 'person' or 'vehicle'
-  const nameParam = searchParams.get('name');
-  const plateNumberParam = searchParams.get('plateNumber');
-  const locationParam = searchParams.get('location');
+  const caseId = searchParams.get("caseId");
+  const typeParam = searchParams.get("type"); // 'person' or 'vehicle'
+  const nameParam = searchParams.get("name");
+  const plateNumberParam = searchParams.get("plateNumber");
+  const locationParam = searchParams.get("location");
 
   const [currentUser, setCurrentUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHelpVisible, setIsHelpVisible] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
   const [formValues, setFormValues] = useState({
-    type: 'Person',
-    name: '',
-    plateNumber: '',
-    description: '',
-    location: '',
-    date: '',
-    time: '',
-    latitude: '',
-    longitude: '',
+    type: "Person",
+    name: "",
+    plateNumber: "",
+    description: "",
+    location: "",
+    date: "",
+    time: "",
+    latitude: "",
+    longitude: "",
     imagePreview: null,
   });
 
   // Load authenticated user
   useEffect(() => {
-    const isAuth = localStorage.getItem('isAuthenticated');
-    const userData = localStorage.getItem('currentUser');
-    if (!isAuth || isAuth !== 'true' || !userData) {
-      sessionStorage.setItem('redirectUrl', window.location.pathname + window.location.search);
+    const isAuth = localStorage.getItem("isAuthenticated");
+    const userData = localStorage.getItem("currentUser");
+    if (!isAuth || isAuth !== "true" || !userData) {
+      sessionStorage.setItem(
+        "redirectUrl",
+        window.location.pathname + window.location.search,
+      );
       notifications.show({
-        title: 'Login Required',
-        message: 'Please login to submit a sighting',
-        color: 'yellow',
+        title: "Login Required",
+        message: "Please login to submit a sighting",
+        color: "yellow",
         icon: <IconAlertCircle size={20} />,
       });
-      router.push('/authentication/login');
+      router.push("/authentication/login");
       return;
     }
     setCurrentUser(JSON.parse(userData));
   }, [router]);
-
- 
 
   // Prefill form from URL parameters
   useEffect(() => {
@@ -134,14 +142,19 @@ function ReportSightingPageContent() {
     const nameFromParam = nameParam;
     const plateFromParam = plateNumberParam;
     const locationFromParam = locationParam;
-    setFormValues(prev => ({
+    setFormValues((prev) => ({
       ...prev,
-      type: typeFromParam === 'person' ? 'Person' : typeFromParam === 'vehicle' ? 'Vehicle' : prev.type,
+      type:
+        typeFromParam === "person"
+          ? "Person"
+          : typeFromParam === "vehicle"
+            ? "Vehicle"
+            : prev.type,
       name: nameFromParam || prev.name,
       plateNumber: plateFromParam || prev.plateNumber,
       location: locationFromParam || prev.location,
     }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLocationSelect = (lat, lng, address) => {
@@ -154,13 +167,13 @@ function ReportSightingPageContent() {
   };
 
   const tryRefreshAccessToken = async () => {
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = localStorage.getItem("refreshToken");
     if (!refreshToken) return null;
     try {
       const res = await fetch(`${API_BASE_URL}/auth/refresh-token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ refreshToken }),
       });
       const data = await res.json().catch(() => ({}));
@@ -168,9 +181,9 @@ function ReportSightingPageContent() {
       const access = data.data.accessToken || data.data.token;
       const nextRefresh = data.data.refreshToken;
       if (!access) return null;
-      localStorage.setItem('accessToken', access);
-      localStorage.setItem('token', access);
-      if (nextRefresh) localStorage.setItem('refreshToken', nextRefresh);
+      localStorage.setItem("accessToken", access);
+      localStorage.setItem("token", access);
+      if (nextRefresh) localStorage.setItem("refreshToken", nextRefresh);
       return access;
     } catch {
       return null;
@@ -180,12 +193,12 @@ function ReportSightingPageContent() {
   const submitSightingToBackend = async (data, token) => {
     const post = (t) =>
       fetch(SIGHTINGS_API, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${t}`,
         },
-        credentials: 'include',
+        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -210,16 +223,18 @@ function ReportSightingPageContent() {
   const handleSubmit = async () => {
     if (isSubmitting) return;
 
-    const required = ['type', 'location'];
-    if (formValues.type === 'Person') required.push('name');
-    else required.push('plateNumber');
+    const required = ["type", "location"];
+    if (formValues.type === "Person") required.push("name");
+    else required.push("plateNumber");
 
-    const missing = required.filter((f) => !formValues[f] || formValues[f].toString().trim() === '');
+    const missing = required.filter(
+      (f) => !formValues[f] || formValues[f].toString().trim() === "",
+    );
     if (missing.length > 0) {
       notifications.show({
-        title: t('missingFields'),
-        message: `${t('missingFieldsDesc')} ${missing.join(', ')}`,
-        color: 'red',
+        title: t("missingFields"),
+        message: `${t("missingFieldsDesc")} ${missing.join(", ")}`,
+        color: "red",
         icon: <IconAlertCircle size={20} />,
       });
       return;
@@ -230,42 +245,43 @@ function ReportSightingPageContent() {
     const hasValidCoords =
       !Number.isNaN(latitude) &&
       !Number.isNaN(longitude) &&
-      formValues.latitude !== '' &&
-      formValues.longitude !== '' &&
+      formValues.latitude !== "" &&
+      formValues.longitude !== "" &&
       !(latitude === 0 && longitude === 0);
     if (!hasValidCoords) {
       notifications.show({
-        title: t('locationReq'),
-        message: t('locationReqDesc'),
-        color: 'red',
+        title: t("locationReq"),
+        message: t("locationReqDesc"),
+        color: "red",
         icon: <IconAlertCircle size={20} />,
       });
       return;
     }
 
     const authToken =
-      localStorage.getItem('accessToken') ||
-      localStorage.getItem('token') ||
+      localStorage.getItem("accessToken") ||
+      localStorage.getItem("token") ||
       currentUser?.token ||
       null;
 
     if (!authToken) {
       notifications.show({
-        title: t('authReq'),
-        message: t('authReqDesc') || 'Please login again. No API token was found.',
-        color: 'yellow',
+        title: t("authReq"),
+        message:
+          t("authReqDesc") || "Please login again. No API token was found.",
+        color: "yellow",
         icon: <IconAlertCircle size={20} />,
       });
-      router.push('/authentication/login');
+      router.push("/authentication/login");
       return;
     }
 
-    const sightingType = String(formValues.type || 'Person').toLowerCase();
-    if (sightingType !== 'person' && sightingType !== 'vehicle') {
+    const sightingType = String(formValues.type || "Person").toLowerCase();
+    if (sightingType !== "person" && sightingType !== "vehicle") {
       notifications.show({
-        title: t('invalidType') || 'Invalid type',
-        message: t('invalidTypeDesc') || 'Please choose Person or Vehicle.',
-        color: 'red',
+        title: t("invalidType") || "Invalid type",
+        message: t("invalidTypeDesc") || "Please choose Person or Vehicle.",
+        color: "red",
         icon: <IconAlertCircle size={20} />,
       });
       return;
@@ -280,9 +296,9 @@ function ReportSightingPageContent() {
 
       const baseDescription = formValues.description?.trim()
         ? formValues.description.trim()
-        : 'No additional details provided';
+        : "No additional details provided";
       const subjectInfo =
-        formValues.type === 'Person'
+        formValues.type === "Person"
           ? `Person name: ${formValues.name}`
           : `Vehicle plate: ${formValues.plateNumber}`;
 
@@ -294,13 +310,14 @@ function ReportSightingPageContent() {
 
       const payload = {
         type: sightingType,
-        name: formValues.type === 'Person' ? formValues.name : undefined,
-        plateNumber: formValues.type === 'Vehicle' ? formValues.plateNumber : undefined,
+        name: formValues.type === "Person" ? formValues.name : undefined,
+        plateNumber:
+          formValues.type === "Vehicle" ? formValues.plateNumber : undefined,
         description,
         location: {
-          type: 'Point',
+          type: "Point",
           coordinates: [longitude, latitude],
-          address: (formValues.location || '').slice(0, 300),
+          address: (formValues.location || "").slice(0, 300),
         },
         images: formValues.imagePreview ? [formValues.imagePreview] : [],
       };
@@ -308,18 +325,21 @@ function ReportSightingPageContent() {
       await submitSightingToBackend(payload, authToken);
 
       notifications.show({
-        title: t('thankYou'),
-        message: t('successDesc'),
-        color: 'green',
+        title: t("thankYou"),
+        message: t("successDesc"),
+        color: "green",
         icon: <IconCheck size={20} />,
       });
-      router.push('/user/dashboard');
+      router.push("/user/dashboard");
     } catch (err) {
-      console.error('Error submitting sighting:', err);
+      console.error("Error submitting sighting:", err);
       notifications.show({
-        title: t('failedTitle') || 'Submission Failed',
-        message: err?.message || t('failedDesc') || 'Failed to submit sighting. Please try again.',
-        color: 'red',
+        title: t("failedTitle") || "Submission Failed",
+        message:
+          err?.message ||
+          t("failedDesc") ||
+          "Failed to submit sighting. Please try again.",
+        color: "red",
         icon: <IconAlertCircle size={20} />,
       });
     } finally {
@@ -340,11 +360,11 @@ function ReportSightingPageContent() {
   const getPromptText = () => {
     // If the user came from a specific case (has caseId)
     if (caseId) {
-      if (typeParam === 'person' && nameParam) {
+      if (typeParam === "person" && nameParam) {
         return `📍 Have you seen ${nameParam}? Please share any details below.`;
       }
-      if (typeParam === 'vehicle') {
-        const vehicleName = nameParam || plateNumberParam || 'this vehicle';
+      if (typeParam === "vehicle") {
+        const vehicleName = nameParam || plateNumberParam || "this vehicle";
         return `🚗 Have you seen ${vehicleName}? Let us know where and when.`;
       }
       // fallback if type not clear
@@ -358,13 +378,13 @@ function ReportSightingPageContent() {
   return (
     <Box
       style={{
-        minHeight: '100vh',
+        minHeight: "100vh",
         background: isMobile
-          ? getBg(colorScheme, '#f0f5ff', theme.colors.dark[7])
-          : colorScheme === 'dark'
+          ? getBg(colorScheme, "#f0f5ff", theme.colors.dark[7])
+          : colorScheme === "dark"
             ? `radial-gradient(circle at 10% 20%, rgba(0, 52, 209, 0.3) 0%, ${theme.colors.dark[7]} 100%)`
             : `radial-gradient(circle at 10% 20%, rgba(0, 52, 209, 0.05) 0%, #ffffff 100%)`,
-        position: 'relative',
+        position: "relative",
       }}
     >
       {/* Floating Help Button (optional) */}
@@ -374,7 +394,7 @@ function ReportSightingPageContent() {
           radius="xl"
           variant="filled"
           style={{
-            position: 'fixed',
+            position: "fixed",
             bottom: 20,
             right: 20,
             zIndex: 100,
@@ -395,29 +415,33 @@ function ReportSightingPageContent() {
       <Container size="lg" py={isMobile ? 20 : 40}>
         <Paper
           radius="lg"
-          p={isMobile ? 'md' : 'xl'}
-          bg={getBg(colorScheme, 'white', theme.colors.dark[7])}
+          p={isMobile ? "md" : "xl"}
+          bg={getBg(colorScheme, "white", theme.colors.dark[7])}
           style={{
-            border: `2px solid ${getBg(colorScheme, '#f0f5ff', theme.colors.dark[5])}`,
+            border: `2px solid ${getBg(colorScheme, "#f0f5ff", theme.colors.dark[5])}`,
             boxShadow: `0 8px 30px rgba(0, 52, 209, 0.08)`,
-            position: 'relative',
-            overflow: 'hidden',
+            position: "relative",
+            overflow: "hidden",
           }}
         >
           <Box
             style={{
-              position: 'absolute',
+              position: "absolute",
               top: 0,
               right: 0,
               width: 100,
               height: 100,
               background: PRIMARY_GRADIENT,
-              borderBottomLeftRadius: '100%',
+              borderBottomLeftRadius: "100%",
               opacity: 0.05,
             }}
           />
 
-          <Title order={2} mb="md" style={{ color: PRIMARY_DARK, fontWeight: 800 }}>
+          <Title
+            order={2}
+            mb="md"
+            style={{ color: PRIMARY_DARK, fontWeight: 800 }}
+          >
             {"Report a Sighting"}
           </Title>
           <Text mb="xl" c="dimmed" size="sm">
@@ -428,92 +452,122 @@ function ReportSightingPageContent() {
             withBorder
             radius="lg"
             padding="xl"
-            bg={getBg(colorScheme, '#f8fbff', theme.colors.dark[6])}
+            bg={getBg(colorScheme, "#f8fbff", theme.colors.dark[6])}
             style={{ borderLeft: `4px solid ${PRIMARY_COLOR}` }}
           >
             <SimpleGrid cols={1} spacing="md">
               <Select
-                label={t('type')}
+                label={t("type")}
                 value={formValues.type}
                 onChange={(v) => setFormValues((p) => ({ ...p, type: v }))}
                 data={[
-                  { value: 'Person', label: t('person') },
-                  { value: 'Vehicle', label: t('vehicle') },
+                  { value: "Person", label: t("person") },
+                  { value: "Vehicle", label: t("vehicle") },
                 ]}
                 radius="md"
                 variant="filled"
                 styles={{
-                  input: { borderColor: getBg(colorScheme, '#f0f5ff', theme.colors.dark[5]) },
+                  input: {
+                    borderColor: getBg(
+                      colorScheme,
+                      "#f0f5ff",
+                      theme.colors.dark[5],
+                    ),
+                  },
                 }}
               />
 
-              {formValues.type === 'Person' ? (
+              {formValues.type === "Person" ? (
                 <TextInput
-                  label={t('personName')}
+                  label={t("personName")}
                   placeholder="John Doe"
                   value={formValues.name}
-                  onChange={(e) => setFormValues((p) => ({ ...p, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormValues((p) => ({ ...p, name: e.target.value }))
+                  }
                   radius="md"
                   variant="filled"
                 />
               ) : (
                 <TextInput
-                  label={t('plateNumber')}
+                  label={t("plateNumber")}
                   placeholder="AA-12345"
                   value={formValues.plateNumber}
-                  onChange={(e) => setFormValues((p) => ({ ...p, plateNumber: e.target.value }))}
+                  onChange={(e) =>
+                    setFormValues((p) => ({
+                      ...p,
+                      plateNumber: e.target.value,
+                    }))
+                  }
                   radius="md"
                   variant="filled"
                 />
               )}
 
               <Textarea
-                label={t('details')}
-                placeholder={t('detailsPlaceholder')}
+                label={t("details")}
+                placeholder={t("detailsPlaceholder")}
                 minRows={3}
                 value={formValues.description}
-                onChange={(e) => setFormValues((p) => ({ ...p, description: e.target.value }))}
+                onChange={(e) =>
+                  setFormValues((p) => ({ ...p, description: e.target.value }))
+                }
                 radius="md"
                 variant="filled"
               />
 
               <TextInput
-                label={t('location')}
-                placeholder={t('locationPlaceholder')}
+                label={t("location")}
+                placeholder={t("locationPlaceholder")}
                 leftSection={<IconMapPin size={16} color={PRIMARY_COLOR} />}
                 value={formValues.location}
-                onChange={(e) => setFormValues((p) => ({ ...p, location: e.target.value }))}
+                onChange={(e) =>
+                  setFormValues((p) => ({ ...p, location: e.target.value }))
+                }
                 radius="md"
                 variant="filled"
               />
 
               {/* Interactive Map */}
-              <Card withBorder radius="lg" padding={0} style={{ overflow: 'hidden' }}>
+              <Card
+                withBorder
+                radius="lg"
+                padding={0}
+                style={{ overflow: "hidden" }}
+              >
                 <LocationPicker onLocationSelect={handleLocationSelect} />
               </Card>
 
-              <SimpleGrid cols={2} breakpoints={[{ maxWidth: 'sm', cols: 1 }]} spacing="md">
+              <SimpleGrid
+                cols={2}
+                breakpoints={[{ maxWidth: "sm", cols: 1 }]}
+                spacing="md"
+              >
                 <TextInput
-                  label={t('date')}
+                  label={t("date")}
                   type="date"
                   value={formValues.date}
-                  onChange={(e) => setFormValues((p) => ({ ...p, date: e.target.value }))}
+                  onChange={(e) =>
+                    setFormValues((p) => ({ ...p, date: e.target.value }))
+                  }
                   radius="md"
                   variant="filled"
                 />
                 <TextInput
-                  label={t('time')}
+                  label={t("time")}
                   type="time"
                   value={formValues.time}
-                  onChange={(e) => setFormValues((p) => ({ ...p, time: e.target.value }))}
+                  onChange={(e) =>
+                    setFormValues((p) => ({ ...p, time: e.target.value }))
+                  }
                   radius="md"
                   variant="filled"
                 />
               </SimpleGrid>
 
               <FileInput
-                label={t('photo')}
-                placeholder={t('photoPlaceholder')}
+                label={t("photo")}
+                placeholder={t("photoPlaceholder")}
                 leftSection={<IconUpload size={16} color={PRIMARY_COLOR} />}
                 accept="image/*"
                 onChange={handleImageChange}
@@ -533,21 +587,27 @@ function ReportSightingPageContent() {
                 radius="xl"
                 style={{
                   background: PRIMARY_GRADIENT,
-                  border: 'none',
+                  border: "none",
                   boxShadow: `0 8px 30px ${PRIMARY_COLOR}40`,
                   fontWeight: 700,
-                  height: '50px',
+                  height: "50px",
                 }}
               >
-                {isSubmitting ? t('submitting') : "Submit Report"}
+                {isSubmitting ? t("submitting") : "Submit Report"}
               </Button>
             </SimpleGrid>
           </Card>
 
-          <Divider my="xl" color={getBg(colorScheme, '#f0f5ff', theme.colors.dark[5])} />
+          <Divider
+            my="xl"
+            color={getBg(colorScheme, "#f0f5ff", theme.colors.dark[5])}
+          />
           <Text size="xs" c="dimmed" ta="center">
-            <IconInfoCircle size={12} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            {t('confidential')}
+            <IconInfoCircle
+              size={12}
+              style={{ marginRight: 6, verticalAlign: "middle" }}
+            />
+            {t("confidential")}
           </Text>
         </Paper>
       </Container>
@@ -563,11 +623,11 @@ export default function ReportSightingPage() {
       fallback={
         <Box
           style={{
-            height: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#f0f5ff',
+            height: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#f0f5ff",
           }}
         >
           <Loader size="xl" color="#0034D1" />

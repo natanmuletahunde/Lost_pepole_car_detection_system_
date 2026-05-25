@@ -44,7 +44,7 @@ export default function SubscriptionPage() {
   const router = useRouter();
   const theme = useMantineTheme();
   const { colorScheme } = useMantineColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = colorScheme === "dark";
   const isMobile = useMediaQuery("(max-width: 768px)");
   const isTablet = useMediaQuery("(max-width: 1024px)");
   const [user, setUser] = useState(null);
@@ -81,15 +81,17 @@ export default function SubscriptionPage() {
   }, []);
 
   const handleClose = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const fromParam = urlParams.get('from');
-    const referrer = typeof document !== 'undefined' ? document.referrer || "" : "";
-    
-    if (fromParam === 'dashboard' || referrer.includes('dashboard')) {
-      router.push('/user/dashboard');
-    } else {
-      router.push('/');
-    }
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get("from");
+
+    const referrer = document.referrer || "";
+
+    const cameFromDashboard =
+      from === "dashboard" || referrer.includes("/dashboard");
+
+    router.push(cameFromDashboard ? "/user/dashboard" : "/");
   };
 
   useEffect(() => {
@@ -178,22 +180,26 @@ export default function SubscriptionPage() {
   const [plans, setPlans] = useState(defaultPlans);
 
   useEffect(() => {
-    const savedPlans = localStorage.getItem('subscription_plans');
+    const savedPlans = localStorage.getItem("subscription_plans");
     if (savedPlans) {
       try {
         const parsed = JSON.parse(savedPlans);
-        const mappedPlans = parsed.map(plan => ({
-          ...plan,
-          price: plan.price === 0 ? "Custom" : plan.price,
-          period: plan.interval || "month",
-          features: plan.features.map(f => typeof f === 'string' ? { text: f, included: true } : f)
-        })).filter(p => p.status === 'Active');
-        
+        const mappedPlans = parsed
+          .map((plan) => ({
+            ...plan,
+            price: plan.price === 0 ? "Custom" : plan.price,
+            period: plan.interval || "month",
+            features: plan.features.map((f) =>
+              typeof f === "string" ? { text: f, included: true } : f,
+            ),
+          }))
+          .filter((p) => p.status === "Active");
+
         if (mappedPlans.length > 0) {
           setPlans(mappedPlans);
         }
       } catch (e) {
-        console.error('Failed to parse plans from local storage', e);
+        console.error("Failed to parse plans from local storage", e);
       }
     }
   }, []);
@@ -235,7 +241,8 @@ export default function SubscriptionPage() {
   };
 
   const handleUpgrade = async (planToUpgrade) => {
-    const selectedPlanData = planToUpgrade || plans.find((p) => p.id === selectedPlan);
+    const selectedPlanData =
+      planToUpgrade || plans.find((p) => p.id === selectedPlan);
 
     if (selectedPlanData.id === "enterprise") {
       router.push("/contact?plan=enterprise");
@@ -262,8 +269,9 @@ export default function SubscriptionPage() {
     });
 
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
-      
+      const API_BASE_URL =
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
+
       const nameParts = (user?.name || "").trim().split(/\s+/);
       const firstName = user?.firstName || nameParts[0] || "User";
       const lastName = user?.lastName || nameParts.slice(1).join(" ") || "User";
@@ -282,7 +290,7 @@ export default function SubscriptionPage() {
       });
 
       const data = await response.json();
-      
+
       if (response.ok && data?.success && data?.data?.checkout_url) {
         notifications.update({
           id: "chapa-init",
@@ -309,7 +317,9 @@ export default function SubscriptionPage() {
       notifications.update({
         id: "chapa-init",
         title: "Payment Error",
-        message: error.message || "Failed to initiate payment. Please try again later.",
+        message:
+          error.message ||
+          "Failed to initiate payment. Please try again later.",
         color: "red",
         loading: false,
         autoClose: 5000,
@@ -427,7 +437,9 @@ export default function SubscriptionPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: isDark ? `linear-gradient(135deg, ${primaryColor}15 0%, ${theme.colors.dark[8]} 100%)` : `linear-gradient(135deg, ${primaryColor}15 0%, white 100%)`,
+          background: isDark
+            ? `linear-gradient(135deg, ${primaryColor}15 0%, ${theme.colors.dark[8]} 100%)`
+            : `linear-gradient(135deg, ${primaryColor}15 0%, white 100%)`,
         }}
       >
         <motion.div
@@ -452,7 +464,10 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <Box bg={isDark ? "dark.8" : "white"} style={{ minHeight: "100vh", overflowX: "hidden" }}>
+    <Box
+      bg={isDark ? "dark.8" : "white"}
+      style={{ minHeight: "100vh", overflowX: "hidden" }}
+    >
       {/* Animated Background Elements */}
       <Box
         style={{
@@ -490,8 +505,6 @@ export default function SubscriptionPage() {
                 background: `${primaryColor}10`,
                 marginTop: 5,
               }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
             >
               <IconX size={20} stroke={2.5} color={primaryColor} />
             </ActionIcon>
@@ -525,7 +538,9 @@ export default function SubscriptionPage() {
                   fw={1600}
                   ta="center"
                   style={{
-                    background: isDark ? `linear-gradient(135deg, #60A5FA 0%, #93C5FD 100%)` : `linear-gradient(135deg, ${primaryColor} 0%, ${primaryLight} 100%)`,
+                    background: isDark
+                      ? `linear-gradient(135deg, #60A5FA 0%, #93C5FD 100%)`
+                      : `linear-gradient(135deg, ${primaryColor} 0%, ${primaryLight} 100%)`,
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     backgroundClip: "text",
@@ -999,7 +1014,11 @@ export default function SubscriptionPage() {
                   }}
                 >
                   <Group gap={spacing.xs} justify="center">
-                    <Text size="sm" c={isDark ? "#60A5FA" : primaryColor} fw={600}>
+                    <Text
+                      size="sm"
+                      c={isDark ? "#60A5FA" : primaryColor}
+                      fw={600}
+                    >
                       ← Swipe to view plans →
                     </Text>
                   </Group>
@@ -1022,7 +1041,9 @@ export default function SubscriptionPage() {
                 p="lg"
                 radius="lg"
                 style={{
-                  background: isDark ? `linear-gradient(135deg, ${primaryColor}15 0%, ${theme.colors.dark[6]} 100%)` : `linear-gradient(135deg, ${primaryColor}15 0%, ${accentLight} 100%)`,
+                  background: isDark
+                    ? `linear-gradient(135deg, ${primaryColor}15 0%, ${theme.colors.dark[6]} 100%)`
+                    : `linear-gradient(135deg, ${primaryColor}15 0%, ${accentLight} 100%)`,
                   border: `2px solid ${primaryColor}30`,
                   position: "relative",
                   overflow: "hidden",

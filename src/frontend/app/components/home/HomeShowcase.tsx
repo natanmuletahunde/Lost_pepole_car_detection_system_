@@ -28,7 +28,8 @@ import { useTranslations } from "next-intl";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
-const API_ROOT = API_BASE_URL.replace(/\/api\/v1\/?$/, "") || "http://localhost:5000";
+const API_ROOT =
+  API_BASE_URL.replace(/\/api\/v1\/?$/, "") || "http://localhost:5000";
 
 // Simple auth hook (same as in About page) – replace with your shared hook if available
 const useAuth = () => {
@@ -36,10 +37,11 @@ const useAuth = () => {
   const pathname = usePathname();
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token') 
-      || localStorage.getItem('accessToken') 
-      || localStorage.getItem('token')
-      || sessionStorage.getItem('auth_token');
+    const token =
+      localStorage.getItem("auth_token") ||
+      localStorage.getItem("accessToken") ||
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("auth_token");
     setIsLoggedIn(!!token);
   }, [pathname]);
 
@@ -49,8 +51,8 @@ const useAuth = () => {
 function getImageUrl(item: any) {
   if (item.imagePreview) {
     const path = item.imagePreview;
-    if (path.startsWith('http') || path.startsWith('data:')) return path;
-    return `${API_ROOT}${path.startsWith('/') ? path : `/${path}`}`;
+    if (path.startsWith("http") || path.startsWith("data:")) return path;
+    return `${API_ROOT}${path.startsWith("/") ? path : `/${path}`}`;
   }
   if (Array.isArray(item.images) && item.images[0]) {
     const path = item.images[0];
@@ -111,19 +113,22 @@ export default function HomeShowcase() {
   }, []);
 
   const handleReportSighting = (url: string) => {
-  // Try common token keys
-  const token = localStorage.getItem('auth_token') 
-    || localStorage.getItem('accessToken') 
-    || localStorage.getItem('token')
-    || sessionStorage.getItem('auth_token');
+    // Try common token keys
+    const token =
+      localStorage.getItem("auth_token") ||
+      localStorage.getItem("accessToken") ||
+      localStorage.getItem("token") ||
+      sessionStorage.getItem("auth_token");
 
-  if (!token) {
-    sessionStorage.setItem('returnUrl', url);
-    router.replace(`/authentication/login?returnUrl=${encodeURIComponent(url)}`);
-  } else {
-    router.push(url);
-  }
-};
+    if (!token) {
+      sessionStorage.setItem("returnUrl", url);
+      router.replace(
+        `/authentication/login?returnUrl=${encodeURIComponent(url)}`,
+      );
+    } else {
+      router.push(url);
+    }
+  };
 
   // Helper to render a scrollable, centered card row
   const renderCardRow = (items: any[], type: "person" | "vehicle") => {
@@ -195,7 +200,13 @@ export default function HomeShowcase() {
                         {item.location || "Location unknown"}
                       </Text>
                     </Group>
-                    <Badge size="xs" color="red" variant="filled" fullWidth mt={6}>
+                    <Badge
+                      size="xs"
+                      color="red"
+                      variant="filled"
+                      fullWidth
+                      mt={6}
+                    >
                       ACTIVE
                     </Badge>
                     <Button
@@ -207,7 +218,7 @@ export default function HomeShowcase() {
                       mt="xs"
                       leftSection={<IconMap size={14} />}
                     >
-                      Report Sighting
+                      {isLoggedIn ? "Report Sighting" : "Login to Report"}
                     </Button>
                   </Box>
                 </Card>
@@ -252,11 +263,21 @@ export default function HomeShowcase() {
                       <Badge size="xs" color="blue" variant="light">
                         {item.color || "N/A"}
                       </Badge>
-                      <Text size="xs" fw={600} style={{ fontFamily: "monospace" }}>
+                      <Text
+                        size="xs"
+                        fw={600}
+                        style={{ fontFamily: "monospace" }}
+                      >
                         {item.plateNumber || "No plate"}
                       </Text>
                     </Group>
-                    <Badge size="xs" color="red" variant="filled" fullWidth mt={6}>
+                    <Badge
+                      size="xs"
+                      color="red"
+                      variant="filled"
+                      fullWidth
+                      mt={6}
+                    >
                       ACTIVE
                     </Badge>
                     <Button
@@ -268,7 +289,7 @@ export default function HomeShowcase() {
                       mt="xs"
                       leftSection={<IconMap size={14} />}
                     >
-                      Report Sighting
+                      {isLoggedIn ? "Report Sighting" : "Login to Report"}
                     </Button>
                   </Box>
                 </Card>
