@@ -9,6 +9,7 @@ import HomeHowItWorks from "./components/home/HomeHowItWorks";
 import HomeShowcase from "./components/home/HomeShowcase";
 import HomeTestimonials from "./components/home/HomeTestimonials";
 import HomeEmergencyCTA from "./components/home/HomeEmergencyCTA";
+import HomeVideos from "./components/home/HomeVideos";
 import MainFooter from "./components/MainFooter";
 import DashboardHeader from "./user/dashboard/DashboardHeader";
 
@@ -42,10 +43,13 @@ export default function RootPage() {
     return `/user${path}`;
   };
 
-  const getBg = (light: string, dark: string) => (colorScheme === "dark" ? dark : light);
+  const getBg = (light: string, dark: string) =>
+    colorScheme === "dark" ? dark : light;
 
   return (
-    <Box style={{ overflowX: "hidden", background: getBg("#f5f7fb", "#090d16") }}>
+    <Box
+      style={{ overflowX: "hidden", background: getBg("#f5f7fb", "#090d16") }}
+    >
       <DashboardHeader
         user={user}
         notifications={[]}
@@ -58,17 +62,19 @@ export default function RootPage() {
       />
 
       <HomeHero isAuthenticated={isAuthenticated} />
-      
+
       <HomeFeatures />
       <HomeShowcase />
       <HomeAbout />
-      
+
       <HomeStats />
-      
+
       <HomeTestimonials />
-      
+
+      <HomeVideos />
+
       {!isAuthenticated && <HomeEmergencyCTA />}
-      
+
       <MainFooter />
     </Box>
   );
