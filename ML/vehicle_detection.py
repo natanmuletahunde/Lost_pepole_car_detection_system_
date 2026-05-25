@@ -1,11 +1,14 @@
+# pyrefly: ignore [missing-import]
 import cv2
 import requests
 import numpy as np
 import time
 import base64
 import logging
+# pyrefly: ignore [missing-import]
 import easyocr
 
+# pyrefly: ignore [missing-import]
 from ultralytics import YOLO
 from datetime import datetime
 
