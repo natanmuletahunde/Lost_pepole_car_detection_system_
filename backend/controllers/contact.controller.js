@@ -1,9 +1,20 @@
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend only if API key is available
+let resend = null;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+} else {
+  console.warn('RESEND_API_KEY not set. Email functionality will be disabled.');
+}
 
 const sendContactEmail = async (req, res) => {
   try {
+    // Check if Resend is available
+    if (!resend) {
+      return res.status(503).json({ error: 'Email service is not configured. Please set RESEND_API_KEY.' });
+    }
+
     // ✅ Include 'organization' field
     const { firstName, lastName, email, organization, message } = req.body;
 
@@ -19,8 +30,8 @@ const sendContactEmail = async (req, res) => {
     }
 
     // Optional: Trim organization if provided
-    const orgText = organization && organization.trim() !== '' 
-      ? `<p><strong>Organization / Institution:</strong> ${escapeHtml(organization.trim())}</p>` 
+    const orgText = organization && organization.trim() !== ''
+      ? `<p><strong>Organization / Institution:</strong> ${escapeHtml(organization.trim())}</p>`
       : '';
 
     // Prepare email HTML

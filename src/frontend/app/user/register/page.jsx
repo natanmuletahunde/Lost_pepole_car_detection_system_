@@ -80,7 +80,7 @@ export default function UnifiedRegisterPage() {
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [selectedModel, setSelectedModel] = useState(null);
   const [selectedSubmodel, setSelectedSubmodel] = useState(null);
-  const [ownershipDoc, setOwnershipDoc] = useState(null);
+  const [ownershipDocs, setOwnershipDocs] = useState([]);
   const [ownershipDocError, setOwnershipDocError] = useState('');
 
   const [specialCategory, setSpecialCategory] = useState(null);
@@ -257,7 +257,7 @@ export default function UnifiedRegisterPage() {
   };
 
   const handleOwnershipDocChange = (files) => {
-    setOwnershipDoc(files);
+    setOwnershipDocs(files);
     validateOwnershipDoc(files);
   };
 
@@ -297,10 +297,6 @@ export default function UnifiedRegisterPage() {
               color: 'red',
               icon: <IconAlertCircle size={20} />
             });
-            return false;
-          }
-          if (ownershipDoc && !validateOwnershipDoc(ownershipDoc)) {
-            notifications.show({ title: 'Invalid Ownership Document', message: ownershipDocError, color: 'red', icon: <IconAlertCircle size={20} /> });
             return false;
           }
           return true;
@@ -447,9 +443,9 @@ export default function UnifiedRegisterPage() {
       await createReport({
         type: regType,
         data: reportData,
-        images: regType === 'Person' ? personImages : 
+        images: regType === 'Person' ? personImages :
                 regType === 'Vehicle' ? vehicleImages : specialImages,
-        ownershipDocument: regType === 'Vehicle' ? ownershipDoc : null,
+        ownershipDocument: regType === 'Vehicle' ? ownershipDocs : null,
         doctorReport: regType === 'Special' && specialCategory === 'mentally-ill' ? doctorReport : null,
         criminalRecord: regType === 'Special' && specialCategory === 'criminal' ? criminalRecord : null,
       });
@@ -504,7 +500,7 @@ export default function UnifiedRegisterPage() {
     setSelectedBrand(null);
     setSelectedModel(null);
     setSelectedSubmodel(null);
-    setOwnershipDoc(null);
+    setOwnershipDocs([]);
     setOwnershipDocError('');
     setSpecialCategory(null);
     setDoctorReport(null);
@@ -718,7 +714,7 @@ export default function UnifiedRegisterPage() {
               </Box>
 
               {activeStep === 1 && regType === 'Person' && (<PersonDetailsStep formValues={formValues} handleInputChange={handleInputChange} personImages={personImages} setPersonImages={setPersonImages} completed={completedSteps[1]} colorScheme={colorScheme} theme={theme} PRIMARY_COLOR={PRIMARY_COLOR} PRIMARY_GRADIENT={PRIMARY_GRADIENT} PRIMARY_LIGHT={PRIMARY_LIGHT} PRIMARY_DARK={PRIMARY_DARK} getBg={getBg} gradientIconBox={gradientIconBox} />)}
-              {activeStep === 1 && regType === 'Vehicle' && (<VehicleDetailsStep formValues={formValues} handleInputChange={handleInputChange} selectedBrand={selectedBrand} setSelectedBrand={setSelectedBrand} selectedModel={selectedModel} setSelectedModel={setSelectedModel} selectedSubmodel={selectedSubmodel} setSelectedSubmodel={setSelectedSubmodel} brands={brands} models={models} submodels={submodels} ownershipDoc={ownershipDoc} setOwnershipDoc={handleOwnershipDocChange} ownershipDocError={ownershipDocError} vehicleImages={vehicleImages} setVehicleImages={setVehicleImages} completed={completedSteps[1]} colorScheme={colorScheme} theme={theme} PRIMARY_COLOR={PRIMARY_COLOR} PRIMARY_GRADIENT={PRIMARY_GRADIENT} PRIMARY_LIGHT={PRIMARY_LIGHT} PRIMARY_DARK={PRIMARY_DARK} getBg={getBg} gradientIconBox={gradientIconBox} />)}
+              {activeStep === 1 && regType === 'Vehicle' && (<VehicleDetailsStep formValues={formValues} handleInputChange={handleInputChange} selectedBrand={selectedBrand} setSelectedBrand={setSelectedBrand} selectedModel={selectedModel} setSelectedModel={setSelectedModel} selectedSubmodel={selectedSubmodel} setSelectedSubmodel={setSelectedSubmodel} brands={brands} models={models} submodels={submodels} ownershipDocs={ownershipDocs || []} setOwnershipDocs={setOwnershipDocs} ownershipDocError={ownershipDocError} vehicleImages={vehicleImages} setVehicleImages={setVehicleImages} completed={completedSteps[1]} colorScheme={colorScheme} theme={theme} PRIMARY_COLOR={PRIMARY_COLOR} PRIMARY_GRADIENT={PRIMARY_GRADIENT} PRIMARY_LIGHT={PRIMARY_LIGHT} PRIMARY_DARK={PRIMARY_DARK} getBg={getBg} gradientIconBox={gradientIconBox} />)}
               {activeStep === 1 && regType === 'Special' && (<SpecialCaseDetailsStep formValues={formValues} handleInputChange={handleInputChange} specialCategory={specialCategory} setSpecialCategory={setSpecialCategory} doctorReport={doctorReport} setDoctorReport={setDoctorReport} criminalRecord={criminalRecord} setCriminalRecord={setCriminalRecord} specialImages={specialImages} setSpecialImages={setSpecialImages} completed={completedSteps[1]} colorScheme={colorScheme} theme={theme} PRIMARY_COLOR={PRIMARY_COLOR} PRIMARY_GRADIENT={PRIMARY_GRADIENT} PRIMARY_LIGHT={PRIMARY_LIGHT} PRIMARY_DARK={PRIMARY_DARK} getBg={getBg} gradientIconBox={gradientIconBox} />)}
 
               {activeStep === 2 && (<LastSeenStep formValues={formValues} handleInputChange={handleInputChange} mapCenter={mapCenter} setMapCenter={setMapCenter} regType={regType} completed={completedSteps[2]} colorScheme={colorScheme} theme={theme} PRIMARY_COLOR={PRIMARY_COLOR} PRIMARY_GRADIENT={PRIMARY_GRADIENT} PRIMARY_LIGHT={PRIMARY_LIGHT} PRIMARY_DARK={PRIMARY_DARK} getBg={getBg} gradientIconBox={gradientIconBox} LocationPicker={LocationPicker} />)}
