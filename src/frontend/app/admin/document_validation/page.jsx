@@ -23,10 +23,6 @@ import {
   Tabs,
   Drawer,
   Textarea,
-  Modal,
-  Stack,
-  ThemeIcon,
-  Divider,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
@@ -40,11 +36,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconSettings,
-  IconBell,
-  IconCheck,
-  IconX,
-  IconAlertTriangle,
-  IconShieldCheck,
+  IconBell
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { adminFetchPaginatedList, adminFetch, uploadUrl } from "@/app/lib/adminApi";
@@ -105,18 +97,6 @@ export default function DocumentValidationPage() {
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewDocId, setPreviewDocId] = useState(null);
   const [previewReason, setPreviewReason] = useState("");
-
-  // ── Confirmation Modal State ──
-  const [confirmModal, setConfirmModal] = useState({
-    opened: false,
-    id: null,
-    action: null,       // "approve" | "reject"
-    category: null,     // "sighting" | "vehicle"
-    uploader: "",
-    type: "",
-  });
-  const [confirmReason, setConfirmReason] = useState("");
-  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const previewUrl = previewUrls[previewIndex] || "";
 
@@ -201,76 +181,61 @@ export default function DocumentValidationPage() {
     setPreviewDrawerOpen(true);
   };
 
-  // ── Open confirmation modal (from table row OR drawer) ──
-  const openConfirmModal = (id, action, category, uploader = "", type = "") => {
-    setConfirmModal({ opened: true, id, action, category, uploader, type });
-    setConfirmReason("");
-    setConfirmLoading(false);
-  };
-
-  const closeConfirmModal = () => {
-    setConfirmModal(prev => ({ ...prev, opened: false }));
-    setConfirmReason("");
-    setConfirmLoading(false);
-  };
-
-  // ── Execute the confirmed action ──
-  const executeConfirmedAction = async () => {
-    const { id, action, category } = confirmModal;
-    setConfirmLoading(true);
-
+  const approveSighting = async (id, skipConfirm = false) => {
+    if (!skipConfirm && !confirm("Approve this sighting?")) return;
     try {
-      if (category === "sighting") {
-        if (action === "approve") {
-          await adminFetch(`/admin/sightings/${id}/approve`, { method: "PATCH", body: JSON.stringify({}) });
-          notifications.show({ title: "Approved", message: "Sighting confirmed successfully", color: "green", icon: <IconCheck size={18} /> });
-        } else {
-          await adminFetch(`/admin/sightings/${id}/reject`, {
-            method: "PATCH",
-            body: JSON.stringify({ reason: confirmReason }),
-          });
-          notifications.show({ title: "Rejected", message: "Sighting marked as reviewed", color: "orange", icon: <IconX size={18} /> });
-        }
-      } else {
-        // vehicle
-        await adminFetch(`/admin/vehicles/${id}/verify`, {
-          method: "PATCH",
-          body: JSON.stringify({ action, reason: confirmReason }),
-        });
-        notifications.show({
-          title: action === "approve" ? "Document Verified" : "Document Rejected",
-          message: `Vehicle ownership document ${action === "approve" ? "verified" : "rejected"} successfully`,
-          color: action === "approve" ? "green" : "orange",
-          icon: action === "approve" ? <IconCheck size={18} /> : <IconX size={18} />,
-        });
-      }
-
+      await adminFetch(`/admin/sightings/${id}/approve`, { method: "PATCH", body: JSON.stringify({}) });
+      notifications.show({ title: "Approved", message: "Sighting confirmed", color: "green" });
       fetchDocs();
-      setPreviewDrawerOpen(false);
-      closeConfirmModal();
+      if (skipConfirm) setPreviewDrawerOpen(false);
     } catch (err) {
       console.error(err);
-      notifications.show({ title: "Error", message: err?.message || "Action failed. Please try again.", color: "red" });
-      setConfirmLoading(false);
+      notifications.show({ title: "Error", message: "Could not approve", color: "red" });
     }
   };
 
-  // Legacy wrappers kept for the Drawer buttons (they pass reason from drawer textarea)
-  const approveSighting = (id, skipConfirm = false) => {
-    const doc = docs.find(d => d.id === id);
-    openConfirmModal(id, "approve", "sighting", doc?.uploader || "", doc?.type || "Sighting");
+  const rejectSighting = async (id, reasonInput, skipConfirm = false) => {
+    const reason = skipConfirm ? reasonInput : (window.prompt("Rejection reason (optional)") || "");
+    if (!skipConfirm && !confirm("Reject this sighting?")) return;
+    try {
+      await adminFetch(`/admin/sightings/${id}/reject`, {
+        method: "PATCH",
+        body: JSON.stringify({ reason }),
+      });
+      notifications.show({ title: "Rejected", message: "Sighting marked reviewed", color: "orange" });
+      fetchDocs();
+      if (skipConfirm) setPreviewDrawerOpen(false);
+    } catch (err) {
+      console.error(err);
+      notifications.show({ title: "Error", message: "Could not reject", color: "red" });
+    }
   };
 
-  const rejectSighting = (id, reasonInput, skipConfirm = false) => {
-    const doc = docs.find(d => d.id === id);
-    setConfirmReason(skipConfirm ? reasonInput : "");
-    openConfirmModal(id, "reject", "sighting", doc?.uploader || "", doc?.type || "Sighting");
-  };
+  const verifyVehicle = async (id, action, reasonInput, skipConfirm = false) => {
+    let reason = "";
+    if (action === "reject") {
+      reason = skipConfirm ? reasonInput : (window.prompt("Rejection reason (optional)") || "");
+      if (!skipConfirm && !confirm("Reject this vehicle document?")) return;
+    } else {
+      if (!skipConfirm && !confirm("Approve this vehicle ownership document?")) return;
+    }
 
-  const verifyVehicle = (id, action, reasonInput, skipConfirm = false) => {
-    const doc = vehicles.find(d => d.id === id);
-    setConfirmReason(skipConfirm ? (reasonInput || "") : "");
-    openConfirmModal(id, action, "vehicle", doc?.uploader || "", doc?.type || "Vehicle Ownership");
+    try {
+      await adminFetch(`/admin/vehicles/${id}/verify`, {
+        method: "PATCH",
+        body: JSON.stringify({ action, reason }),
+      });
+      notifications.show({ 
+        title: action === 'approve' ? "Approved" : "Rejected", 
+        message: `Vehicle document ${action}d successfully`, 
+        color: action === 'approve' ? "green" : "orange" 
+      });
+      fetchDocs();
+      if (skipConfirm) setPreviewDrawerOpen(false);
+    } catch (err) {
+      console.error(err);
+      notifications.show({ title: "Error", message: "Could not verify vehicle", color: "red" });
+    }
   };
 
   const exportToCSV = () => {
@@ -439,19 +404,19 @@ export default function DocumentValidationPage() {
                         </ActionIcon>
                         {activeTab === "sightings" ? (
                           <>
-                            <Button size="xs" color="green" onClick={() => openConfirmModal(d.id, "approve", "sighting", d.uploader, d.type)}>
+                            <Button size="xs" color="green" onClick={() => approveSighting(d.id)}>
                               Approve
                             </Button>
-                            <Button size="xs" color="red" variant="light" onClick={() => openConfirmModal(d.id, "reject", "sighting", d.uploader, d.type)}>
+                            <Button size="xs" color="red" variant="light" onClick={() => rejectSighting(d.id)}>
                               Reject
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Button size="xs" color="green" onClick={() => openConfirmModal(d.id, "approve", "vehicle", d.uploader, d.type)}>
+                            <Button size="xs" color="green" onClick={() => verifyVehicle(d.id, "approve")}>
                               Verify
                             </Button>
-                            <Button size="xs" color="red" variant="light" onClick={() => openConfirmModal(d.id, "reject", "vehicle", d.uploader, d.type)}>
+                            <Button size="xs" color="red" variant="light" onClick={() => verifyVehicle(d.id, "reject")}>
                               Reject
                             </Button>
                           </>
@@ -557,114 +522,6 @@ export default function DocumentValidationPage() {
           </Box>
         </Box>
       </Drawer>
-
-      {/* ═══════════════ Confirmation Modal ═══════════════ */}
-      <Modal
-        opened={confirmModal.opened}
-        onClose={closeConfirmModal}
-        centered
-        radius="lg"
-        size="md"
-        withCloseButton={false}
-        overlayProps={{ backgroundOpacity: 0.45, blur: 4 }}
-        styles={{
-          content: {
-            overflow: 'visible',
-          },
-        }}
-      >
-        <Stack align="center" gap="md" py="sm">
-          {/* Icon */}
-          <ThemeIcon
-            size={72}
-            radius="xl"
-            variant="light"
-            color={confirmModal.action === "approve" ? "green" : "red"}
-            style={{
-              boxShadow: confirmModal.action === "approve"
-                ? '0 0 24px rgba(64,192,87,0.3)'
-                : '0 0 24px rgba(250,82,82,0.3)',
-            }}
-          >
-            {confirmModal.action === "approve"
-              ? <IconShieldCheck size={36} />
-              : <IconAlertTriangle size={36} />
-            }
-          </ThemeIcon>
-
-          {/* Title */}
-          <Title order={3} ta="center">
-            {confirmModal.action === "approve" ? "Approve" : "Reject"}{" "}
-            {confirmModal.category === "sighting" ? "Sighting" : "Vehicle Document"}?
-          </Title>
-
-          {/* Description */}
-          <Text size="sm" c="dimmed" ta="center" maw={380}>
-            {confirmModal.action === "approve"
-              ? `You are about to approve this ${confirmModal.category === "sighting" ? "sighting report" : "vehicle ownership document"} submitted by `
-              : `You are about to reject this ${confirmModal.category === "sighting" ? "sighting report" : "vehicle ownership document"} submitted by `
-            }
-            <Text span fw={600} c={confirmModal.action === "approve" ? "green" : "red"}>
-              {confirmModal.uploader || "Unknown"}
-            </Text>
-            . This action cannot be undone.
-          </Text>
-
-          <Divider w="100%" />
-
-          {/* Reason textarea (always shown, labeled appropriately) */}
-          <Textarea
-            w="100%"
-            label={confirmModal.action === "reject" ? "Rejection Reason" : "Approval Notes (Optional)"}
-            placeholder={
-              confirmModal.action === "reject"
-                ? "Please provide a reason for rejection..."
-                : "Add any notes about this approval..."
-            }
-            value={confirmReason}
-            onChange={(e) => setConfirmReason(e.currentTarget.value)}
-            minRows={3}
-            maxRows={5}
-            autosize
-            styles={{
-              input: {
-                borderColor: confirmModal.action === "reject" ? '#ffe3e3' : undefined,
-                '&:focus': {
-                  borderColor: confirmModal.action === "reject" ? '#fa5252' : '#40c057',
-                },
-              },
-            }}
-          />
-
-          {/* Action buttons */}
-          <Group w="100%" grow>
-            <Button
-              variant="default"
-              radius="md"
-              size="md"
-              onClick={closeConfirmModal}
-              disabled={confirmLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              radius="md"
-              size="md"
-              color={confirmModal.action === "approve" ? "green" : "red"}
-              variant={confirmModal.action === "approve" ? "filled" : "filled"}
-              loading={confirmLoading}
-              onClick={executeConfirmedAction}
-              leftSection={
-                confirmModal.action === "approve"
-                  ? <IconCheck size={18} />
-                  : <IconX size={18} />
-              }
-            >
-              {confirmModal.action === "approve" ? "Yes, Approve" : "Yes, Reject"}
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
     </Box>
   );
 }

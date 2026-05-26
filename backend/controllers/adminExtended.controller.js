@@ -197,14 +197,6 @@ const updateCaseStatus = async (req, res, next) => {
       return ApiResponse.error(res, 'Case not found', 404);
     }
 
-    if (type === 'vehicle' && status === 'Active' && caseItem.verificationStatus !== 'Verified') {
-      return ApiResponse.error(
-        res,
-        'Cannot activate this stolen car case because the ownership document is not verified. Please approve the document validation first.',
-        400
-      );
-    }
-
     caseItem.status = status;
     await caseItem.save();
 
@@ -366,13 +358,6 @@ const verifyCase = async (req, res, next) => {
     if (action === 'resolve') {
       caseItem.status = 'Resolved';
     } else {
-      if (type === 'vehicle' && action === 'approve' && caseItem.verificationStatus !== 'Verified') {
-        return ApiResponse.error(
-          res,
-          'Cannot approve this stolen car case because the ownership document is not verified. Please approve the document validation first.',
-          400
-        );
-      }
       caseItem.verified = action === 'approve';
       caseItem.status = action === 'approve' ? 'Active' : 'Rejected';
     }

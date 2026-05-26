@@ -69,8 +69,6 @@ const mapVehicleToRecord = (vehicle) => ({
   status: vehicle.status || 'Active',
   alerts: Array.isArray(vehicle.matches) ? vehicle.matches.length : 0,
   imageUrl: vehicle.imagePreview || (vehicle.images && vehicle.images[0]) || null,
-  verified: vehicle.verified || false,
-  verificationStatus: vehicle.verificationStatus || 'Pending',
 });
 
 export default function DataManagementPage() {
@@ -95,9 +93,6 @@ export default function DataManagementPage() {
   const [addModalOpened, addModalHandlers] = useDisclosure(false);
   const [editModalOpened, editModalHandlers] = useDisclosure(false);
   const [viewModalOpened, viewModalHandlers] = useDisclosure(false);
-  const [confirmModalOpened, confirmModalHandlers] = useDisclosure(false);
-  const [recordToApprove, setRecordToApprove] = useState(null);
-  const [approvalStatus, setApprovalStatus] = useState(null); // 'loading', 'success', 'error'
 
   // ---------- FETCH DATA ----------
   const fetchData = async () => {
@@ -255,17 +250,6 @@ export default function DataManagementPage() {
     const item = data.find((d) => d.id === compositeId);
     if (!item) return;
     const nextStatus = item.status === 'Resolved' ? 'Active' : 'Resolved';
-
-    if (caseType === 'vehicle' && nextStatus === 'Active' && item.verificationStatus !== 'Verified') {
-      notifications.show({
-        title: 'Action Blocked',
-        message: 'This stolen car case cannot be activated/verified because the ownership document has not been verified yet. Please approve the document validation first.',
-        color: 'red',
-        autoClose: 8000,
-      });
-      return;
-    }
-
     try {
       await adminFetch(`/admin/cases/${mongoId}/status`, {
         method: 'PATCH',
@@ -279,55 +263,6 @@ export default function DataManagementPage() {
       console.error(e);
       notifications.show({ title: 'Error', message: 'Could not update case status', color: 'red' });
     }
-  };
-
-  const handleApproveClick = (item) => {
-    setRecordToApprove(item);
-    setApprovalStatus(null);
-    confirmModalHandlers.open();
-  };
-
-  const confirmApproval = async () => {
-    if (!recordToApprove) return;
-    setApprovalStatus('loading');
-
-    const m = String(recordToApprove.id).match(/^(person|vehicle)-(.+)$/);
-    if (!m) {
-      setApprovalStatus('error');
-      return;
-    }
-    const [, caseType, mongoId] = m;
-    const item = data.find((d) => d.id === recordToApprove.id);
-    if (!item) {
-      setApprovalStatus('error');
-      return;
-    }
-    const nextStatus = item.status === 'Resolved' ? 'Active' : 'Resolved';
-
-    if (caseType === 'vehicle' && nextStatus === 'Active' && item.verificationStatus !== 'Verified') {
-      setApprovalStatus('error');
-      return;
-    }
-
-    try {
-      await adminFetch(`/admin/cases/${mongoId}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ type: caseType, status: nextStatus }),
-      });
-      setData((prev) =>
-        prev.map((row) => (row.id === recordToApprove.id ? { ...row, status: nextStatus } : row))
-      );
-      setApprovalStatus('success');
-    } catch (e) {
-      console.error(e);
-      setApprovalStatus('error');
-    }
-  };
-
-  const closeConfirmModal = () => {
-    confirmModalHandlers.close();
-    setRecordToApprove(null);
-    setApprovalStatus(null);
   };
 
   // Export CSV
@@ -545,7 +480,7 @@ export default function DataManagementPage() {
                       <Text size="sm">{item.user}</Text>  {/* Now safely a string */}
                     </Table.Td>
                     <Table.Td>
-                      <Badge color={item.status === 'Resolved' ? 'green' : item.status === 'Active' ? 'blue' : 'gray'} variant="light" radius="xl">
+                      <Badge color={item.status === 'Verified' ? 'green' : 'gray'} variant="light" radius="xl">
                         {item.status}
                       </Badge>
                     </Table.Td>
@@ -588,10 +523,10 @@ export default function DataManagementPage() {
                           </Menu.Target>
                           <Menu.Dropdown>
                             <Menu.Item
-                              leftSection={item.status === 'Resolved' ? <IconX size={14} /> : <IconCheck size={14} />}
-                              onClick={() => handleApproveClick(item)}
+                              leftSection={item.status === 'Verified' ? <IconX size={14} /> : <IconCheck size={14} />}
+                              onClick={() => toggleStatus(item.id)}
                             >
-                              {item.status === 'Resolved' ? 'Mark Active' : 'Mark Resolved'}
+                              {item.status === 'Verified' ? 'Unverify' : 'Verify'}
                             </Menu.Item>
                             <Menu.Item
                               color="red"
@@ -752,61 +687,6 @@ export default function DataManagementPage() {
                 Edit Record
               </Button>
             </Group>
-          </Stack>
-        )}
-      </Modal>
-
-      <Modal opened={confirmModalOpened} onClose={closeConfirmModal} title={<Text fw={700} size="lg">Confirm Approval</Text>} centered size="md" radius="md">
-        {recordToApprove && (
-          <Stack gap="md">
-            {approvalStatus === null && (
-              <>
-                <Text size="sm">
-                  Are you sure you want to change the status of <Text fw={700} span>{recordToApprove.brand}</Text> from <Text fw={700} c={recordToApprove.status === 'Resolved' ? 'green' : 'blue'} span>{recordToApprove.status}</Text> to <Text fw={700} c={recordToApprove.status === 'Resolved' ? 'blue' : 'green'} span>{recordToApprove.status === 'Resolved' ? 'Active' : 'Resolved'}</Text>?
-                </Text>
-                <Group justify="flex-end" mt="md">
-                  <Button variant="subtle" onClick={closeConfirmModal}>Cancel</Button>
-                  <Button bg="#2B3674" onClick={confirmApproval}>Confirm</Button>
-                </Group>
-              </>
-            )}
-            {approvalStatus === 'loading' && (
-              <Group justify="center" py="xl">
-                <Loader size="md" />
-                <Text size="sm">Processing...</Text>
-              </Group>
-            )}
-            {approvalStatus === 'success' && (
-              <>
-                <Group justify="center" py="xl">
-                  <IconCheck size={48} color="#20C997" />
-                </Group>
-                <Text ta="center" fw={600} size="lg">Status Updated Successfully</Text>
-                <Text ta="center" size="sm" c="dimmed">
-                  The status has been changed to <Text fw={700} span>{recordToApprove.status === 'Resolved' ? 'Active' : 'Resolved'}</Text>
-                </Text>
-                <Group justify="flex-end" mt="md">
-                  <Button bg="#2B3674" onClick={closeConfirmModal}>Done</Button>
-                </Group>
-              </>
-            )}
-            {approvalStatus === 'error' && (
-              <>
-                <Group justify="center" py="xl">
-                  <IconX size={48} color="#FF6B6B" />
-                </Group>
-                <Text ta="center" fw={600} size="lg" c="red">Error</Text>
-                <Text ta="center" size="sm" c="dimmed">
-                  {recordToApprove.verificationStatus !== 'Verified' && recordToApprove.status === 'Resolved'
-                    ? 'This stolen car case cannot be activated because the ownership document has not been verified yet.'
-                    : 'Could not update the case status. Please try again.'}
-                </Text>
-                <Group justify="flex-end" mt="md">
-                  <Button variant="subtle" onClick={closeConfirmModal}>Close</Button>
-                  <Button bg="#2B3674" onClick={confirmApproval}>Retry</Button>
-                </Group>
-              </>
-            )}
           </Stack>
         )}
       </Modal>

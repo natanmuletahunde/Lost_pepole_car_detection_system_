@@ -5,9 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   Box, Title, Text, Paper, Group, Avatar, Badge, Grid,
   Button, Divider, Alert, ActionIcon, Loader,
-  Container, Stack, Modal
+  Container, Stack
 } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconArrowLeft, IconEdit, IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react';
 import Link from 'next/link';
@@ -29,9 +28,6 @@ export default function RecordDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
-  const [confirmModalOpened, confirmModalHandlers] = useDisclosure(false);
-  const [verifyAction, setVerifyAction] = useState<'approve' | 'reject' | null>(null);
-  const [approvalStatus, setApprovalStatus] = useState<'loading' | 'success' | 'error' | null>(null);
 
   const rawIdParam = params.id as string;
   const m = rawIdParam?.match(/^(person|vehicle)-(.+)$/);
@@ -88,49 +84,36 @@ export default function RecordDetailPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
-  const handleVerifyClick = (action: 'approve' | 'reject') => {
+  const handleVerify = async (action: 'approve' | 'reject') => {
     if (!type || !id) return;
+    const label = action === 'approve' ? 'Approve' : 'Reject';
+    if (!confirm(`${label} this ${type} report?`)) return;
 
-    if (type === 'vehicle' && action === 'approve') {
-      const rawObj = record?.raw as Record<string, any>;
-      if (rawObj?.verificationStatus !== 'Verified') {
-        notifications.show({
-          title: 'Approval Blocked',
-          message: 'The ownership document for this vehicle is not verified yet. Please approve the document in Document Validation first.',
-          color: 'red',
-          autoClose: 8000,
-        });
-        return;
-      }
-    }
-
-    setVerifyAction(action);
-    setApprovalStatus(null);
-    confirmModalHandlers.open();
-  };
-
-  const confirmVerify = async () => {
-    if (!type || !id || !verifyAction) return;
-    setApprovalStatus('loading');
-
+    setVerifying(true);
     try {
       await adminFetch(`/admin/cases/${type}/${id}/verify`, {
         method: 'PATCH',
-        body: JSON.stringify({ action: verifyAction }),
+        body: JSON.stringify({ action }),
       });
 
-      setApprovalStatus('success');
+      notifications.show({
+        title: action === 'approve' ? '✅ Approved' : '❌ Rejected',
+        message: `Report has been ${action}d. The reporter has been notified.`,
+        color: action === 'approve' ? 'green' : 'red',
+      });
+
+      // Refresh record to reflect new verified state
       await fetchRecord();
     } catch (err) {
       console.error(err);
-      setApprovalStatus('error');
+      notifications.show({
+        title: 'Error',
+        message: `Could not ${action} this report. Please try again.`,
+        color: 'red',
+      });
+    } finally {
+      setVerifying(false);
     }
-  };
-
-  const closeConfirmModal = () => {
-    confirmModalHandlers.close();
-    setVerifyAction(null);
-    setApprovalStatus(null);
   };
 
   if (loading) {
@@ -158,7 +141,6 @@ export default function RecordDetailPage() {
   const rawImgs = (raw.images as string[] | undefined) || [];
   const imgs = rawImgs.length > 0 ? rawImgs : (raw.imagePreview ? [raw.imagePreview as string] : []);
   const isVerified = Boolean(record.verified);
-  const isVehicleDocPending = record.model === 'Vehicle' && raw.verificationStatus !== 'Verified';
 
   return (
     <Box p="xl" bg="#F4F7FE" style={{ minHeight: '100vh' }}>
@@ -187,13 +169,6 @@ export default function RecordDetailPage() {
             Back to list
           </Button>
         </Group>
-
-        {isVehicleDocPending && (
-          <Alert icon={<IconAlertCircle size={16} />} title="Ownership Document Pending Verification" color="yellow" mb="lg" radius="md">
-            The ownership document for this stolen car case has not been verified. 
-            You must review and approve the document in the <Link href="/admin/document_validation" style={{ fontWeight: 600, color: '#228be6', textDecoration: 'underline' }}>Document Validation</Link> section before this case can be approved and published.
-          </Alert>
-        )}
 
         <Paper p="xl" radius="lg" shadow="md" withBorder>
           <Group gap="xl" mb="lg" justify="space-between" align="flex-start">
@@ -227,7 +202,7 @@ export default function RecordDetailPage() {
                   variant="light"
                   leftSection={<IconX size={16} />}
                   loading={verifying}
-                  onClick={() => handleVerifyClick('reject')}
+                  onClick={() => handleVerify('reject')}
                 >
                   Revoke Approval
                 </Button>
@@ -238,7 +213,7 @@ export default function RecordDetailPage() {
                     variant="light"
                     leftSection={<IconX size={16} />}
                     loading={verifying}
-                    onClick={() => handleVerifyClick('reject')}
+                    onClick={() => handleVerify('reject')}
                   >
                     Reject
                   </Button>
@@ -246,8 +221,7 @@ export default function RecordDetailPage() {
                     color="green"
                     leftSection={<IconCheck size={16} />}
                     loading={verifying}
-                    onClick={() => handleVerifyClick('approve')}
-                    disabled={isVehicleDocPending}
+                    onClick={() => handleVerify('approve')}
                   >
                     Approve & Publish
                   </Button>
@@ -287,25 +261,6 @@ export default function RecordDetailPage() {
                 {isVerified ? 'Verified & Public' : 'Pending — Hidden from public'}
               </Text>
             </Grid.Col>
-            {record.model === 'Vehicle' && (
-              <Grid.Col span={{ base: 12, sm: 6 }}>
-                <Text size="sm" c="dimmed">Ownership Document Validation</Text>
-                <Badge
-                  color={
-                    String(raw.verificationStatus) === 'Verified'
-                      ? 'green'
-                      : String(raw.verificationStatus) === 'Rejected'
-                      ? 'red'
-                      : 'yellow'
-                  }
-                  variant="filled"
-                  size="md"
-                  mt={4}
-                >
-                  {String(raw.verificationStatus || 'Pending')}
-                </Badge>
-              </Grid.Col>
-            )}
           </Grid>
 
           {imgs.length > 0 && (
@@ -346,60 +301,6 @@ export default function RecordDetailPage() {
             </>
           )}
         </Paper>
-
-        {/* Confirmation Modal */}
-        <Modal opened={confirmModalOpened} onClose={closeConfirmModal} title={<Text fw={700} size="lg">Confirm {verifyAction === 'approve' ? 'Approval' : 'Rejection'}</Text>} centered size="md" radius="md">
-          <Stack gap="md">
-            {approvalStatus === null && (
-              <>
-                <Text size="sm">
-                  Are you sure you want to <Text fw={700} c={verifyAction === 'approve' ? 'green' : 'red'} span>{verifyAction === 'approve' ? 'approve and publish' : 'reject'}</Text> this {type} report?
-                </Text>
-                <Group justify="flex-end" mt="md">
-                  <Button variant="subtle" onClick={closeConfirmModal}>Cancel</Button>
-                  <Button bg={verifyAction === 'approve' ? '#20C997' : '#FF6B6B'} onClick={confirmVerify}>Confirm</Button>
-                </Group>
-              </>
-            )}
-            {approvalStatus === 'loading' && (
-              <Group justify="center" py="xl">
-                <Loader size="md" />
-                <Text size="sm">Processing...</Text>
-              </Group>
-            )}
-            {approvalStatus === 'success' && (
-              <>
-                <Group justify="center" py="xl">
-                  <IconCheck size={48} color="#20C997" />
-                </Group>
-                <Text ta="center" fw={600} size="lg">
-                  {verifyAction === 'approve' ? 'Approved Successfully' : 'Rejected Successfully'}
-                </Text>
-                <Text ta="center" size="sm" c="dimmed">
-                  The report has been {verifyAction === 'approve' ? 'approved and published' : 'rejected'}. The reporter has been notified.
-                </Text>
-                <Group justify="flex-end" mt="md">
-                  <Button bg="#2B3674" onClick={closeConfirmModal}>Done</Button>
-                </Group>
-              </>
-            )}
-            {approvalStatus === 'error' && (
-              <>
-                <Group justify="center" py="xl">
-                  <IconX size={48} color="#FF6B6B" />
-                </Group>
-                <Text ta="center" fw={600} size="lg" c="red">Error</Text>
-                <Text ta="center" size="sm" c="dimmed">
-                  Could not {verifyAction === 'approve' ? 'approve' : 'reject'} this report. Please try again.
-                </Text>
-                <Group justify="flex-end" mt="md">
-                  <Button variant="subtle" onClick={closeConfirmModal}>Close</Button>
-                  <Button bg={verifyAction === 'approve' ? '#20C997' : '#FF6B6B'} onClick={confirmVerify}>Retry</Button>
-                </Group>
-              </>
-            )}
-          </Stack>
-        </Modal>
       </Container>
     </Box>
   );
