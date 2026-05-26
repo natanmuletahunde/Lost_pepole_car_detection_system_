@@ -18,9 +18,12 @@ if (!token) {
 } else {
   bot = new TelegramBot(token, { polling: true });
 
-  console.log('🤖 Telegram bot started successfully...');
-
-  console.log('🤖 Telegram bot started successfully...');
+  bot.getMe().then((me) => {
+    bot.username = me.username;
+    console.log(`🤖 Telegram bot started successfully: @${me.username}`);
+  }).catch((err) => {
+    console.error('❌ Failed to fetch Telegram bot username:', err.message);
+  });
 
   bot.on("polling_error", (error) => {
     if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
