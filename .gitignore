@@ -144,3 +144,12 @@ backend/uploads/1777884419736-3l8wueid.jpg
 backend/.env.txt
 backend/.env.txt
 backend/.env.txt
+backend/jest.config.js
+backend/TEST_RESULTS.md
+backend/controllers/auth.controller.js
+backend/routes/auth.routes.js
+backend/tests/auth/auth.controller.test.js
+backend/tests/missingPerson/missingPerson.test.js
+backend/tests/missingVehicle/missingVehicle.test.js
+backend/controllers/auth.controller.js
+backend/routes/auth.routes.js

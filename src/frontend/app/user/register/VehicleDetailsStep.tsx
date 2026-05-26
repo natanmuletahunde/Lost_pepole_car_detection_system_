@@ -28,14 +28,19 @@ import { useTranslations } from 'next-intl';
 export const VehicleDetailsStep = ({
   formValues,
   handleInputChange,
-
-  // SAFE DEFAULTS
-  vehicleImages = [],
+  selectedBrand,
+  setSelectedBrand,
+  selectedModel,
+  setSelectedModel,
+  selectedSubmodel,
+  setSelectedSubmodel,
+  brands = [],
+  models = [],
+  submodels = [],
+  ownershipDoc,
+  setOwnershipDoc,
+  vehicleImages,
   setVehicleImages,
-
-  ownershipDocs = [],
-  setOwnershipDocs,
-
   completed,
   colorScheme,
   theme,
@@ -49,9 +54,8 @@ export const VehicleDetailsStep = ({
   const t = useTranslations('Register');
   const tCommon = useTranslations('Common');
 
-  // =========================
-  // VEHICLE IMAGE HANDLING
-  // =========================
+  const ownershipDocs = Array.isArray(ownershipDoc) ? ownershipDoc : (ownershipDoc ? [ownershipDoc] : []);
+
   const handleImageUpload = (event: any) => {
     const files = event.target.files;
 
@@ -89,50 +93,23 @@ export const VehicleDetailsStep = ({
       file,
       preview: URL.createObjectURL(file)
     }));
-
-    setOwnershipDocs?.((prev: any[] = []) => [...prev, ...newDocs]);
-
+    if (typeof setOwnershipDoc === 'function') {
+      setOwnershipDoc([...ownershipDocs, ...newDocs]);
+    }
     event.target.value = '';
   };
 
   const removeDoc = (indexToRemove: number) => {
-    setOwnershipDocs?.((prev: any[] = []) => {
-      if (prev[indexToRemove]?.preview) {
-        URL.revokeObjectURL(prev[indexToRemove].preview);
-      }
-
-      return prev.filter((_: any, idx: number) => idx !== indexToRemove);
-    });
+    if (ownershipDocs[indexToRemove]?.preview) {
+      URL.revokeObjectURL(ownershipDocs[indexToRemove].preview);
+    }
+    const updatedDocs = ownershipDocs.filter((_, idx) => idx !== indexToRemove);
+    if (typeof setOwnershipDoc === 'function') {
+      setOwnershipDoc(updatedDocs);
+    }
   };
 
-  // =========================
-  // OPTIONS
-  // =========================
-  const brandOptions = [
-    'Toyota',
-    'Hyundai',
-    'Suzuki',
-    'Lifan',
-    'Isuzu',
-    'Ford',
-    'Chevrolet',
-    'Other'
-  ].map((b) => ({
-    value: b,
-    label: b === 'Other' ? t('other') : b
-  }));
-
-  const colorOptions = [
-    'Black',
-    'White',
-    'Silver',
-    'Grey',
-    'Red',
-    'Blue',
-    'Green',
-    'Yellow',
-    'Other'
-  ].map((c) => ({
+  const colorOptions = ['Black', 'White', 'Silver', 'Grey', 'Red', 'Blue', 'Green', 'Yellow', 'Other'].map(c => ({
     value: c,
     label:
       c === 'Black'
@@ -276,41 +253,41 @@ export const VehicleDetailsStep = ({
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md" mb="lg">
         <Select
           name="brand"
-          label={
-            <Text fw={600} size="sm">
-              {t('brandLabel')} <Text span c={PRIMARY_COLOR}>*</Text>
-            </Text>
-          }
-          placeholder={t('brandPlaceholder')}
-          data={brandOptions}
+          label={<Text fw={600} size="sm">{t("brandLabel")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          placeholder={t("brandPlaceholder")}
+          data={brands}
           radius="md"
           variant="filled"
-          value={formValues?.brand || ''}
-          onChange={(value) => handleInputChange('brand', value)}
+          value={selectedBrand}
+          onChange={setSelectedBrand}
+          searchable
+          clearable
         />
-
-        <TextInput
+        <Select
           name="model"
-          label={
-            <Text fw={600} size="sm">
-              {t('modelLabel')} <Text span c={PRIMARY_COLOR}>*</Text>
-            </Text>
-          }
-          placeholder={t('modelPlaceholder')}
+          label={<Text fw={600} size="sm">{t("modelLabel")} <Text span c={PRIMARY_COLOR}>*</Text></Text>}
+          placeholder={t("modelPlaceholder")}
+          data={models}
           radius="md"
           variant="filled"
-          value={formValues?.model || ''}
-          onChange={(e) => handleInputChange('model', e.target.value)}
+          value={selectedModel}
+          onChange={setSelectedModel}
+          disabled={!selectedBrand}
+          searchable
+          clearable
         />
-
-        <TextInput
+        <Select
           name="submodel"
-          label={<Text fw={600} size="sm">{t('submodelLabel')}</Text>}
-          placeholder={t('submodelPlaceholder')}
+          label={<Text fw={600} size="sm">{t("submodelLabel")}</Text>}
+          placeholder={t("submodelPlaceholder")}
+          data={submodels}
           radius="md"
           variant="filled"
-          value={formValues?.submodel || ''}
-          onChange={(e) => handleInputChange('submodel', e.target.value)}
+          value={selectedSubmodel}
+          onChange={setSelectedSubmodel}
+          disabled={!selectedModel}
+          searchable
+          clearable
         />
 
         <Select

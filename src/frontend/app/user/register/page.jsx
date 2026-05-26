@@ -209,6 +209,7 @@ export default function UnifiedRegisterPage() {
     } else {
       setModels([]);
       setSubmodels([]);
+      setFormValues(prev => ({ ...prev, brand: '', model: '', submodel: '' }));
     }
   }, [selectedBrand]);
 
@@ -220,9 +221,13 @@ export default function UnifiedRegisterPage() {
         setSubmodels(submodelList);
         setSelectedSubmodel(null);
         setFormValues(prev => ({ ...prev, model: selectedModel, submodel: '' }));
+      } else {
+        setSubmodels([]);
+        setFormValues(prev => ({ ...prev, model: '', submodel: '' }));
       }
     } else {
       setSubmodels([]);
+      setFormValues(prev => ({ ...prev, model: '', submodel: '' }));
     }
   }, [selectedBrand, selectedModel]);
 
@@ -242,7 +247,9 @@ export default function UnifiedRegisterPage() {
     const fileArray = Array.isArray(files) ? files : [files];
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
     
-    for (const file of fileArray) {
+    for (const item of fileArray) {
+      const file = item instanceof File ? item : item?.file;
+      if (!file) continue;
       if (!allowedTypes.includes(file.type)) { 
         setOwnershipDocError('Only JPG, PNG, WebP, or PDF files are allowed.'); 
         return false; 

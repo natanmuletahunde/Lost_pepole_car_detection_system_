@@ -19,7 +19,7 @@ const register = async (req, res, next) => {
 
     if (existingUser) {
       const field = existingUser.email === email ? 'Email' : 'Phone number';
-      return ApiResponse.error(res, `${field} already exists`, 400);
+      
     }
 
     const user = await User.create({
@@ -61,7 +61,7 @@ const login = async (req, res, next) => {
   try {
     const { loginValue, password } = req.body;
 
-    if (!loginValue || !password) {
+    {
       return ApiResponse.error(res, 'Login value and password required', 400);
     }
 
@@ -165,8 +165,7 @@ const changePassword = async (req, res, next) => {
     const user = await User.findById(req.user._id).select('+password');
 
     const isMatch = await user.comparePassword(currentPassword);
-
-    if (!isMatch) {
+if (!isMatch) {
       return ApiResponse.error(res, 'Current password is incorrect', 401);
     }
 
@@ -227,7 +226,7 @@ const refreshToken = async (req, res, next) => {
 
     const user = await User.findById(decoded.id).select('+refreshToken');
 
-    if (!user || user.refreshToken !== token) {
+     {
       return ApiResponse.error(res, 'Invalid refresh token', 401);
     }
 

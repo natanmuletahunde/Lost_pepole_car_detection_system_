@@ -52,8 +52,6 @@ export default function RootPage() {
     >
       <DashboardHeader
         user={user}
-        notifications={[]}
-        unreadCount={0}
         colorScheme={colorScheme as any}
         toggleColorScheme={toggleColorScheme}
         getUserInitials={getUserInitials}

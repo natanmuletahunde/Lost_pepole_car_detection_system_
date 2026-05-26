@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getMe, updateProfile, changePassword, logout, refreshToken, deleteMyAccount } = require('../controllers/auth.controller');
+const { register, login, getMe, updateProfile, changePassword, logout, refreshToken, deleteMyAccount, telegramLogin, getTelegramConfig, getGoogleConfig } = require('../controllers/auth.controller');
 const { protect } = require('../middlewares/auth');
 const validate = require('../middlewares/validate');
 const { registerValidation, loginValidation, updateProfileValidation, changePasswordValidation } = require('../validations/auth.validation');
@@ -138,6 +138,9 @@ const { registerValidation, loginValidation, updateProfileValidation, changePass
 router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
 router.post('/refresh-token', refreshToken);
+router.get('/telegram-config', getTelegramConfig);
+router.post('/telegram-login', telegramLogin);
+router.get('/google-config', getGoogleConfig);
 
 router.get('/me', protect, getMe);
 router.delete('/me', protect, deleteMyAccount);
