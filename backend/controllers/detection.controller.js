@@ -1,5 +1,6 @@
 const Detection = require('../models/Detection');
 const MissingPerson = require('../models/MissingPerson');
+const MissingVehicle = require('../models/MissingVehicle');
 const Notification = require('../models/Notification');
 const Sighting = require('../models/Sighting');
 const PcLocation = require('../models/PcLocation');
@@ -139,13 +140,26 @@ exports.createDetection = async (req, res) => {
       });
     }
 
-    const matchedPerson = await MissingPerson.findById(registrationId)
-      .populate('reportedBy');
+    if (!isValidObjectId(registrationId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid registrationId format'
+      });
+    }
 
-    if (!matchedPerson) {
+    const isCarType = type === 'Car' || type === 'Vehicle';
+    let matchedEntity = null;
+
+    if (isCarType) {
+      matchedEntity = await MissingVehicle.findById(registrationId);
+    } else {
+      matchedEntity = await MissingPerson.findById(registrationId);
+    }
+
+    if (!matchedEntity) {
       return res.status(404).json({
         success: false,
-        message: 'Missing person not found'
+        message: isCarType ? 'Missing vehicle not found' : 'Missing person not found'
       });
     }
 
@@ -163,10 +177,15 @@ exports.createDetection = async (req, res) => {
 
     const mapsLink = `https://maps.google.com/?q=${lat},${lon}`;
 
+    const defaultName = isCarType
+      ? `${matchedEntity.brand || ''} ${matchedEntity.model || ''}`.trim()
+      : `${matchedEntity.firstName || ''} ${matchedEntity.lastName || ''}`.trim();
+
     const detection = new Detection({
-      type: type || 'Person',
+      type: isCarType ? 'Car' : 'Person',
       registrationId,
-      name: name || `${matchedPerson.firstName} ${matchedPerson.lastName}`,
+      name: name || defaultName || 'Unknown',
+      licensePlate: isCarType ? (req.body.licensePlate || matchedEntity.plateNumber || '') : undefined,
       location: locationString,
       latitude: lat,
       longitude: lon,
@@ -182,12 +201,12 @@ exports.createDetection = async (req, res) => {
 
     console.log(`✅ Detection saved for ${detection.name}`);
 
-    const reporter = matchedPerson.reportedBy;
+    const reporter = matchedEntity.reportedBy;
 
     // ===================== CREATE SIGHTING RECORD =====================
     if (reporter && reporter.userId && isValidObjectId(reporter.userId)) {
       try {
-        const cctvSighting = new Sighting({
+        const sightingData = {
           user: reporter.userId,
           type: 'cctv',
           name: detection.name,
@@ -200,7 +219,13 @@ exports.createDetection = async (req, res) => {
           images: [detectionImage],
           caseId: registrationId,
           status: 'pending'
-        });
+        };
+
+        if (isCarType) {
+          sightingData.plateNumber = req.body.licensePlate || matchedEntity.plateNumber || '';
+        }
+
+        const cctvSighting = new Sighting(sightingData);
         await cctvSighting.save();
         console.log('✅ CCTV Sighting record created');
       } catch (sightingErr) {
@@ -226,13 +251,18 @@ exports.createDetection = async (req, res) => {
 
     // ===================== TELEGRAM =====================
     if (reporter && reporter.telegramChatId) {
-
-      const caption = `MISSING PERSON DETECTED!
-Name: ${detection.name}
-Location: ${locationString}
-Confidence: ${(confidence * 100).toFixed(1)}%
-Time: ${new Date().toLocaleString()}
-Maps: ${mapsLink}`;
+      const entityLabel = isCarType ? 'VEHICLE' : 'PERSON';
+      let caption = `MISSING ${entityLabel} DETECTED!\n` +
+        `Name: ${detection.name}\n`;
+      
+      if (isCarType && detection.licensePlate) {
+        caption += `Plate: ${detection.licensePlate}\n`;
+      }
+      
+      caption += `Location: ${locationString}\n` +
+        `Confidence: ${(confidence * 100).toFixed(1)}%\n` +
+        `Time: ${new Date().toLocaleString()}\n` +
+        `Maps: ${mapsLink}`;
 
       try {
         const base64Data = detectionImage.replace(/^data:image\/\w+;base64,/, "");
@@ -253,9 +283,8 @@ Maps: ${mapsLink}`;
 
     // ===================== SMS (FIXED) =====================
     if (reporter && reporter.phone) {
-
       const smsMessage =
-        `ALERT! ${detection.name} ` +
+        `ALERT! ${isCarType ? 'Vehicle ' : ''}${detection.name} ` +
         `Conf:${(confidence * 100).toFixed(0)}% ` +
         `Loc:${lat},${lon} ` +
         `Map:${mapsLink}`;

@@ -14,12 +14,12 @@ const register = async (req, res, next) => {
     const { firstName, lastName, email, phone, password, telegramUsername } = req.body;
 
     const existingUser = await User.findOne({
-      $or: [{ email }, { phone }]
+      '': [{ email }, { phone }]
     });
 
     if (existingUser) {
       const field = existingUser.email === email ? 'Email' : 'Phone number';
-      
+      return ApiResponse.error(res, `${field} already exists`, 400);
     }
 
     const user = await User.create({
@@ -34,7 +34,6 @@ const register = async (req, res, next) => {
     const token = signToken(user._id);
     const refreshToken = signRefreshToken(user._id);
 
-    // store refresh token safely (no validation triggers)
     await User.findByIdAndUpdate(user._id, {
       refreshToken
     });
@@ -43,7 +42,7 @@ const register = async (req, res, next) => {
       res,
       'User registered successfully',
       {
-        user, // schema toJSON will clean sensitive fields
+        user,
         token,
         refreshToken
       },
@@ -61,7 +60,7 @@ const login = async (req, res, next) => {
   try {
     const { loginValue, password } = req.body;
 
-    {
+    if (!loginValue || !password) {
       return ApiResponse.error(res, 'Login value and password required', 400);
     }
 
@@ -89,7 +88,6 @@ const login = async (req, res, next) => {
       return ApiResponse.error(res, 'Invalid password', 401);
     }
 
-    // update last login WITHOUT triggering hooks
     await User.findByIdAndUpdate(user._id, {
       lastLogin: new Date()
     });
@@ -102,7 +100,7 @@ const login = async (req, res, next) => {
     });
 
     return ApiResponse.success(res, 'Login successful', {
-      user, // cleaned by toJSON
+      user,
       token,
       refreshToken
     });
@@ -165,14 +163,14 @@ const changePassword = async (req, res, next) => {
     const user = await User.findById(req.user._id).select('+password');
 
     const isMatch = await user.comparePassword(currentPassword);
-if (!isMatch) {
+    if (!isMatch) {
       return ApiResponse.error(res, 'Current password is incorrect', 401);
     }
 
     user.password = newPassword;
     user.passwordChangedAt = Date.now();
 
-    await user.save(); // safe now (password exists)
+    await user.save();
 
     return ApiResponse.success(res, 'Password changed successfully');
 
@@ -226,7 +224,7 @@ const refreshToken = async (req, res, next) => {
 
     const user = await User.findById(decoded.id).select('+refreshToken');
 
-     {
+    if (!user || user.refreshToken !== token) {
       return ApiResponse.error(res, 'Invalid refresh token', 401);
     }
 
@@ -248,6 +246,38 @@ const refreshToken = async (req, res, next) => {
 };
 
 
+// ================= TELEGRAM LOGIN =================
+const telegramLogin = async (req, res, next) => {
+  try {
+    return ApiResponse.success(res, 'Telegram login endpoint', {});
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ================= GET TELEGRAM CONFIG =================
+const getTelegramConfig = async (req, res, next) => {
+  try {
+    return ApiResponse.success(res, 'Telegram config', {
+      botUsername: process.env.TELEGRAM_BOT_USERNAME || ''
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ================= GET GOOGLE CONFIG =================
+const getGoogleConfig = async (req, res, next) => {
+  try {
+    return ApiResponse.success(res, 'Google config', {
+      clientId: process.env.GOOGLE_CLIENT_ID || ''
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 // ================= EXPORTS =================
 module.exports = {
   register,
@@ -257,5 +287,8 @@ module.exports = {
   changePassword,
   logout,
   refreshToken,
-  deleteMyAccount
+  deleteMyAccount,
+  telegramLogin,
+  getTelegramConfig,
+  getGoogleConfig
 };
