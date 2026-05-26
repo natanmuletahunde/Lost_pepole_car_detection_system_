@@ -15,7 +15,7 @@ BASE_URL = "http://localhost:5000"
 PERSON_API = f"{BASE_URL}/api/v1/missing-persons"
 DETECTION_API = f"{BASE_URL}/api/v1/detections"
 
-RTSP_URL = 0
+RTSP_URL = 'rtsp://admin:admin@192.168.137.124:5000'
 SAVE_DIR = "database"
 
 # Face Recognition Settings
