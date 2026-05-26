@@ -1,13 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const passport = require('passport');
-const { signToken, signRefreshToken } = require('../utils/jwt');
 const { register, login, getMe, updateProfile, changePassword, logout, refreshToken, deleteMyAccount, telegramLogin, getTelegramConfig, getGoogleConfig } = require('../controllers/auth.controller');
 const { protect } = require('../middlewares/auth');
 const validate = require('../middlewares/validate');
 const { registerValidation, loginValidation, updateProfileValidation, changePasswordValidation } = require('../validations/auth.validation');
-const User = require('../models/User');
-require('../config/passport');
 
 /**
  * @swagger
@@ -145,25 +141,6 @@ router.post('/refresh-token', refreshToken);
 router.get('/telegram-config', getTelegramConfig);
 router.post('/telegram-login', telegramLogin);
 router.get('/google-config', getGoogleConfig);
-
-// Google OAuth Routes
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/authentication/login', session: false }), async (req, res) => {
-  try {
-    // Successful authentication - generate tokens
-    const token = signToken(req.user._id);
-    const refreshToken = signRefreshToken(req.user._id);
-
-    // Update user with refresh token
-    await User.findByIdAndUpdate(req.user._id, { refreshToken });
-
-    // Redirect to frontend with tokens
-    res.redirect(`http://localhost:3000/auth/google/callback?token=${token}&refreshToken=${refreshToken}`);
-  } catch (error) {
-    console.error('Google OAuth callback error:', error);
-    res.redirect('/authentication/login?error=oauth_failed');
-  }
-});
 
 router.get('/me', protect, getMe);
 router.delete('/me', protect, deleteMyAccount);

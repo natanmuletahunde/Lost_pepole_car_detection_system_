@@ -19,7 +19,7 @@ const register = async (req, res, next) => {
 
     if (existingUser) {
       const field = existingUser.email === email ? 'Email' : 'Phone number';
-      return ApiResponse.error(res, `${field} already exists`, 400);
+      
     }
 
     const user = await User.create({
@@ -61,7 +61,7 @@ const login = async (req, res, next) => {
   try {
     const { loginValue, password } = req.body;
 
-    if (!loginValue || !password) {
+    {
       return ApiResponse.error(res, 'Login value and password required', 400);
     }
 
@@ -165,8 +165,7 @@ const changePassword = async (req, res, next) => {
     const user = await User.findById(req.user._id).select('+password');
 
     const isMatch = await user.comparePassword(currentPassword);
-
-    if (!isMatch) {
+if (!isMatch) {
       return ApiResponse.error(res, 'Current password is incorrect', 401);
     }
 
@@ -227,7 +226,7 @@ const refreshToken = async (req, res, next) => {
 
     const user = await User.findById(decoded.id).select('+refreshToken');
 
-    if (!user || user.refreshToken !== token) {
+     {
       return ApiResponse.error(res, 'Invalid refresh token', 401);
     }
 
@@ -249,141 +248,6 @@ const refreshToken = async (req, res, next) => {
 };
 
 
-// ================= TELEGRAM SIGN-IN =================
-const bot = require('../telegramBot');
-const crypto = require('crypto');
-
-const verifyTelegramAuth = (authData) => {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) return false;
-
-  const { hash, ...data } = authData;
-
-  // Sort and construct check string
-  const dataCheckString = Object.keys(data)
-    .sort()
-    .map((key) => `${key}=${data[key]}`)
-    .join('\n');
-
-  // SHA256 of bot token
-  const secretKey = crypto.createHash('sha256').update(token).digest();
-
-  // HMAC-SHA256 signature
-  const signature = crypto
-    .createHmac('sha256', secretKey)
-    .update(dataCheckString)
-    .digest('hex');
-
-  return signature === hash;
-};
-
-const telegramLogin = async (req, res, next) => {
-  try {
-    const authData = req.body;
-    if (!authData || !authData.hash || !authData.id) {
-      return ApiResponse.error(res, 'Missing Telegram authentication data', 400);
-    }
-
-    const isValid = verifyTelegramAuth(authData);
-    if (!isValid) {
-      return ApiResponse.error(res, 'Invalid Telegram authentication signature', 401);
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-    const authDate = parseInt(authData.auth_date, 10);
-    if (!authDate || now - authDate > 86400) {
-      return ApiResponse.error(res, 'Authentication session expired. Please login again.', 401);
-    }
-
-    const telegramId = String(authData.id);
-    const telegramUser = authData.username || '';
-
-    // Find user by telegramChatId or telegramUsername (case-insensitive)
-    let user = await User.findOne({
-      $or: [
-        { telegramChatId: telegramId },
-        { telegramUsername: { $regex: new RegExp(`^${telegramUser}$`, 'i') } }
-      ]
-    }).select('+refreshToken');
-
-    if (!user) {
-      return ApiResponse.error(
-        res,
-        'No registered account is linked to this Telegram user. Please register/log in with email first and link your Telegram account.',
-        444 // Specific custom code so frontend knows it's a link missing case
-      );
-    }
-
-    if (!user.isActive) {
-      return ApiResponse.error(res, 'Account has been deactivated', 401);
-    }
-
-    // Update telegramChatId if not linked yet
-    if (!user.telegramChatId) {
-      user.telegramChatId = telegramId;
-    }
-    user.lastLogin = new Date();
-    await user.save();
-
-    const token = signToken(user._id);
-    const refreshToken = signRefreshToken(user._id);
-
-    await User.findByIdAndUpdate(user._id, {
-      refreshToken
-    });
-
-    return ApiResponse.success(res, 'Login successful', {
-      user,
-      token,
-      refreshToken
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const getTelegramConfig = async (req, res, next) => {
-  try {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    if (!token) {
-      return ApiResponse.success(res, 'Telegram bot not configured', { enabled: false });
-    }
-
-    let botName = bot.username;
-    if (!botName) {
-      try {
-        const me = await bot.getMe();
-        botName = me.username;
-      } catch (err) {
-        console.error('Failed to query Telegram Bot Username dynamically:', err.message);
-      }
-    }
-
-    return ApiResponse.success(res, 'Telegram config retrieved', {
-      enabled: true,
-      botName: botName || 'LostPeopleCarDetectionBot'
-    });
-  } catch (error) {
-    next(error)
-  }
-};
-
-const getGoogleConfig = async (req, res, next) => {
-  try {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      return ApiResponse.success(res, 'Google OAuth not configured', { enabled: false });
-    }
-
-    return ApiResponse.success(res, 'Google config retrieved', {
-      enabled: true,
-      clientId: clientId
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 // ================= EXPORTS =================
 module.exports = {
   register,
@@ -393,8 +257,5 @@ module.exports = {
   changePassword,
   logout,
   refreshToken,
-  deleteMyAccount,
-  telegramLogin,
-  getTelegramConfig,
-  getGoogleConfig
+  deleteMyAccount
 };
